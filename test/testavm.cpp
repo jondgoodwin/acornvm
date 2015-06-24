@@ -6,6 +6,7 @@
 #define AVM_LIBRARY_STATIC
 #include <avm.h>
 #include <stdio.h>
+#include <string.h>
 
 #ifdef __cplusplus
 using namespace avm;
@@ -21,7 +22,7 @@ void t(int test, const char *text) {
 	}
 }
 
-void testRecent(void) {
+void testRecent(Value th) {
 	// Integer value primitive tests
 	t(isInt(anInt(-1000)), "isInt(anInt(-1000))");
 	t(!isSame(anInt(-8), anInt(2)), "!isSame(anInt(-8), anInt(2))");
@@ -46,20 +47,30 @@ void testRecent(void) {
 	t(isBool(aFalse), "isBool(aFalse)");
 	t(!isBool(aNull), "!isBool(aNull)");
 
-	// Symbol function tests
+	// Symbol API tests
 	t(!isSym(aNull), "!isSym(aNull)");
 	t(!isSym(aTrue), "!isSym(aTrue)");
+	Value true1 = aSym(th, "true");
+	Value true2 = aSyml(th, "true", 4);
+	Value false1 = aSym(th, "false");
+	t(isSame(true1, true2), "aSym('true')==aSyml('true',4)");
+	t(isSym(true1), "isSym(true1)");
+	t(!isSame(true2, false), "aSym('true')!=aSym(false')");
+	t(strSz(true1)==4, "strSz('true')==4");
+	t(strEq(false1,"false"), "strEq(aSym('false'),'false')");
+	t(strcmp(toStr(true2),"true")==0, "toStr('true')=='true'");
 }
 
-void testAll(void) {
-	testRecent();
+void testAll(Value th) {
+	testRecent(th);
 }
 
 int main(int argc, char **argv) {
+	Value th;
 
 	printf("Testing %d-bit %s\n", AVM_ARCH, AVM_RELEASE);
-	init();
-	testAll();
+	th = newVM();
+	testAll(th);
 	printf("All %ld tests completed. %ld failed.\n", tests, fails);
 
 	// Arbitrary pause ...

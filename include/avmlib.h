@@ -17,16 +17,9 @@
 
 #include "avm.h" // Includes avm_value.h and avm_api.h
 
-#ifdef __cplusplus
-namespace avm {
-extern "C" {
-#endif
-
-	// #include "avm_xxx.h"
-
-#ifdef __cplusplus
-} // end "C"
-} // end namespace
-#endif
+#include "avm/avm_symbol.h" // Includes avm/avm_memory.h
+#include "avm/avm_hash.h"
+#include "avm/avm_vm.h"
+#include "avm/avm_thread.h"
 
 #endif

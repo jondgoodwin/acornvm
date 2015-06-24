@@ -25,28 +25,13 @@
 #define AVM_VERSION_MAJOR	"0"
 #define AVM_VERSION_MINOR	"0"
 #define AVM_VERSION_NUM		0
-#define AVM_VERSION_RELEASE	"0"
+#define AVM_VERSION_RELEASE	"1"
 
 #define AVM_VERSION	"AcornVM " AVM_VERSION_MAJOR "." AVM_VERSION_MINOR
 #define AVM_RELEASE	AVM_VERSION "." AVM_VERSION_RELEASE
 #define AVM_COPYRIGHT	AVM_RELEASE "  Copyright (C) 2015 Jonathan Goodwin"
 
-#include <assert.h>
-#include <limits.h>
-#include <stddef.h>
-
-#ifdef __cplusplus
-namespace avm {
-extern "C" {
-#endif
-
-#include "avm_env.h"
-#include "avm/avm_value.h"
+#include "avm/avm_memory.h"
 #include "avm/avm_api.h"
-
-#ifdef __cplusplus
-} // end "C"
-} // end namespace
-#endif
 
 #endif

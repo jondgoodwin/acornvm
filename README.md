@@ -18,7 +18,8 @@ It is designed to be embedded for use within another program, such as the Web3D 
 The Acorn world-building language has a comprehensive [guide and reference document][acorn].
 This includes a guide to the C-API available for implementing high-performance types.
 
-[Doxygen][] can be used to generate API documentation from the source code.
+[Doxygen][] can be used to generate [API documentation][doc] from the source code.
+The acorn_vm.conf Doxygen configuration file may be used to accomplish this.
 
 This [website][web3d] offers additional information about the Web3D vision,
 and Acorn's place in it.
@@ -62,5 +63,6 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 
 [acorn]: http://web3d.jondgoodwin.com/acorn
+[doc]: http://web3d.jondgoodwin.com/acorndoc
 [web3d]: http://web3d.jondgoodwin.com
 [doxygen]: http://doxygen.org

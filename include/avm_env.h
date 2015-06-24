@@ -8,9 +8,6 @@
 #ifndef avm_env_h
 #define avm_env_h
 
-// A convenience macro for assert(), establishing the conditions expected to be true, before returning expression e
-#define assert_exp(c,e)	(assert(c), (e))
-
 /* An imperfect way to define a float whose size is identical to ptrdiff_t. */
 #if _WIN32 || _WIN64
 	#if _WIN64

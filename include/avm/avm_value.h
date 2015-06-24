@@ -8,6 +8,20 @@
 #ifndef avm_value_h
 #define avm_value_h
 
+#include <assert.h>
+#include <limits.h>
+#include <stddef.h>
+
+#include "avm_env.h"
+
+#ifdef __cplusplus
+namespace avm {
+extern "C" {
+#endif
+
+// A convenience macro for assert(), establishing the conditions expected to be true, before returning expression e
+#define assert_exp(c,e)	(assert(c), (e))
+
 /* *******************************************************
    Define Value and C-types.
    We want all our Value-based types sized the same, 
@@ -35,9 +49,7 @@ typedef void *Value;
  * Great for null, false, true, integers and symbols.
  * Less suitable for floats (no epsilon) and comparing contents of containers (e.g., strings).
  * Is fast because it avoids using type-specific methods. */
-AVM_INLINE int isSame(Value a, Value b) {
-	return a==b;
-}
+#define isSame(a,b) (a==b)
 
 /** What type of data is encoded within the value, as established by the last 2 bits.
  * Because of 32/64-bit allocation alignment, pointers always have 0 in last 2 bits.
@@ -46,7 +58,7 @@ enum ValBits {
 	ValPtr = 0,		/*! Value points to a compound value's header */
 	ValInt = 1,  	/*! Value is a signed integer */
 	ValFloat = 2,	/*! Value is a floating-point number */
-	ValSym = 3		/*! Value is a symbol or special value (null, false, true) */
+	ValCons = 3		/*! Value is a constant (null, false, true) */
 };
 /** The mask used to isolate the value's ValBits info */
 const int ValMask = 0x3;
@@ -58,57 +70,31 @@ const int ValShift = 2;
    **************************************************** */
 
 /** Is v an Integer? */
-AVM_INLINE int isInt(Value v) {
-	return ((Auint) v & ValMask)==ValInt;
-}
+#define isInt(v) (((Auint) v & ValMask)==ValInt)
 
 /** Cast c-integer n into an Integer value
  * This loses top two-bits of integer precision.
  * If integer is too large, this could result in an unexpected value and change of sign. */
-AVM_INLINE Value anInt(Aint n) {
-	assert(n == (n << ValShift) >> ValShift); // Enforce we lost nothing (during debug)
-	return (Value) ((n << ValShift)+ValInt);
-}
+#define anInt(n) ((Value) ((n << ValShift)+ValInt))
 
 /** Cast an Integer value into a c-integer 
  * Note: It assumes (and won't verify) that v is an Integer */
-AVM_INLINE Aint toAint(Value v) {
-	assert(isInt(v)); // Enforce v is an integer (during debug)
-	return ((Aint) v) >> ValShift; // shift will keep integer's sign
-}
-
+#define toAint(v) (((Aint) v) >> ValShift)
 
 /* *******************************************************
    Float value functions
    **************************************************** */
 
-/** Helps cast between float and unsigned without any conversion */
-union Fcaster {
-	Afloat f;
-	Auint u;
-};
-
 /** Is v a Float? */
-AVM_INLINE int isFloat(Value v) {
-	return ((Auint) v & ValMask)==ValFloat;
-}
+#define isFloat(v) (((Auint) v & ValMask)==ValFloat)
 
 /** Cast c-float n into a Float value
  * This loses bottom two-bits of Float mantissa precision. */
-AVM_INLINE Value aFloat(Afloat n) {
-	union Fcaster x;
-	x.f = n;
-	return (Value) ((x.u & ~ValMask) + ValFloat); // replace bottom 2-bits with float marker
-}
+AVM_API Value aFloat(Afloat n);
 
 /** Cast an Float value into a c-float 
  * Note: It assumes (and won't verify) that v is an Float */
-AVM_INLINE Afloat toAfloat(Value v) {
-	union Fcaster x;
-	assert(isFloat(v)); // Enforce v is a float (during debug)
-	x.u = ((Auint) v & ~ValMask); // eliminate float marker bits
-	return x.f; 
-}
+AVM_API Afloat toAfloat(Value v);
 
 /* *******************************************************
    null, false and true values and functions.
@@ -116,36 +102,31 @@ AVM_INLINE Afloat toAfloat(Value v) {
    **************************************************** */
 
 /** The null value */
-#define aNull ((Value) ((0 << ValShift) + ValSym))
+#define aNull ((Value) ((0 << ValShift) + ValCons))
 /** The false value */
-#define aFalse ((Value) ((1 << ValShift) + ValSym))
+#define aFalse ((Value) ((1 << ValShift) + ValCons))
 /** The true value */
-#define aTrue ((Value) ((2 << ValShift) + ValSym))
-/** The minimum possible value for a true symbol */
-#define SymMinValue ((Value) ((3 << ValShift) + ValSym))
+#define aTrue ((Value) ((2 << ValShift) + ValCons))
 
 /** Is value null? */
-AVM_INLINE int isNull(Value v) {
-	return v==aNull;
-}
+#define isNull(v) (v==aNull)
 
 /** Is value false or null? */
-AVM_INLINE int isFalse(Value v) {
-	return v==aFalse || v==aNull;
-}
+#define isFalse(v) (v<=aFalse)
 
 /** Is value true or false? */
-AVM_INLINE int isBool(Value v) {
-	return v==aTrue || v==aFalse;
-}
+#define isBool(v) (v>=aFalse)
 
 /* *******************************************************
-   Symbol functions.
+   Pointer functions.
    **************************************************** */
 
-/** Is value a symbol? */
-AVM_INLINE int isSym(Value v) {
-	return ((Auint)v & ValMask)==ValSym && v>=SymMinValue;
-}
+/** Is value a pointer? */
+#define isPtr(v) (((Auint)v & ValMask)==ValPtr)
+
+#ifdef __cplusplus
+} // end "C"
+} // end namespace
+#endif
 
 #endif

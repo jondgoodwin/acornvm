@@ -8,8 +8,31 @@
 #ifndef avm_api_h
 #define avm_api_h
 
-	/** Initialize Acorn VM */
-	AVM_API void init(void);
+#ifdef __cplusplus
+namespace avm {
+extern "C" {
+#endif
+
+/** If string exists in symbol table, reuse it. Otherwise, add it. Return symbol value. */
+AVM_API Value aSym(Value th, const char *str);
+/** If string exists in symbol table, reuse it. Otherwise, add it. Return symbol value. */
+AVM_API Value aSyml(Value th, const char *str, Auint len);
+/** Return 1 if the value is a Symbol, otherwise 0 */
+AVM_API int isSym(Value sym);
+/** Return a read-only pointer into a C-string encoded by a symbol or string-oriented Value. 
+ * It is guaranteed to have a 0-terminating character just after its full length. 
+ * Anything other value type returns NULL.
+ */
+AVM_API const char* toStr(Value sym);
+/** Return 1 if the symbol or string value's characters match the zero-terminated c-string, otherwise 0. */
+AVM_API int strEq(Value val, const char* str);
+/** Return the byte size of a symbol or string. Any other value type returns 0 */
+AVM_API Auint strSz(Value val);
+/** Get the next symbol in symbol table after key or first, if key is NULL. Return Null if no more. */
+AVM_API Value sym_next(Value th, Value key);
+	
+/** Start a new Virtual Machine. Return the main thread */
+AVM_API Value newVM(void);
 
 	/* TO DO:
 	<h3>Type checking</h3>
@@ -122,5 +145,10 @@
 	Set the global value whose symbol key is the string with the value.</li>
 	</ul>
 	*/
+
+#ifdef __cplusplus
+} // end "C"
+} // end namespace
+#endif
 
 #endif
