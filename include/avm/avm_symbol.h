@@ -1,5 +1,10 @@
 /** Implements symbols, immutable byte-sequences.
- * Two separately-created symbols with the same sequence of bytes will have the same Value.
+ *
+ * A symbol is similar to a string, as it is a collection of characters. However, symbols are
+ * immutable and indexed in a symbol table so that any two symbols with identical characters
+ * will be represented only once. This speeds up comparing whether two symbols are the same, 
+ * making them excellent for hash table keys.
+ *
  * @file
  *
  * This source file is part of avm - Acorn Virtual Machine.
@@ -20,11 +25,10 @@ extern "C" {
 // Symbol info declaration and access macros
 // ***********
 
-/** Information about a symbol memory block. */
+/** Information about a symbol memory block. (uses MemCommonInfo) */
 typedef struct SymInfo {
 	MemCommonInfo;
 	AHash hash; //!< Calculated hash
-	Auint len;  //!< number of characters
 	// The symbol characters follow here: char sym[len+1];
 } SymInfo;
 
@@ -35,7 +39,7 @@ typedef struct SymInfo {
 #define sym_cstr(val) ((char*) (sym_info(val)+1))
 
 /** Return the length of the symbol's string (without 0-terminator) */
-#define sym_size(val) (sym_info(val)->len)
+#define sym_size(val) (sym_info(val)->size)
 
 // ***********
 // Non-API Symbol functions

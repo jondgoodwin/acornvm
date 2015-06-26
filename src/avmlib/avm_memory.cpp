@@ -13,18 +13,13 @@ namespace avm {
 extern "C" {
 #endif
 
-/** Is value a pointer to the right encoded data structure? */
-int isEnc(Value v, int enc) {
-	return isPtr(v) && ((MemInfo*) v)->enctyp==enc;
-}
-
-
+/** Keep value alive, if dead but not yet collected */
 void mem_keepalive(Value Thread, MemInfo* blk) {
 	//if (isdead(sym))  // symbol is dead (but was not collected yet)?
 		//changewhite(sym);  // resurrect it
 }
 
-//! Initialize the global state for objects, mostly for garbage collection
+/** Initialize the global state for objects, mostly for garbage collection */
 void mem_init(struct VmInfo* vm) {
 	vm->gcdebt = 0;
 	vm->gcpause = AVM_GCPAUSE;
@@ -63,7 +58,7 @@ void *mem_gcrealloc(struct VmInfo* vm, void *block, Auint osize, Auint nsize) {
 
 	// If alloc or resize failed, compact memory and try again
 	if (newblock == NULL && nsize > 0) {
-		// api_check(L, nsize > realosize, "realloc cannot fail when shrinking a block");
+		// realloc cannot fail when shrinking a block
 		mem_gcfull(1);  // try to free some memory...
 		newblock = (Value) mem_frealloc(block, nsize);  // try again
 		if (newblock == NULL)

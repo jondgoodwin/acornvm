@@ -13,23 +13,41 @@ namespace avm {
 extern "C" {
 #endif
 
-/** If string exists in symbol table, reuse it. Otherwise, add it. Return symbol value. */
+/** Return symbol for a c-string. */
 AVM_API Value aSym(Value th, const char *str);
-/** If string exists in symbol table, reuse it. Otherwise, add it. Return symbol value. */
-AVM_API Value aSyml(Value th, const char *str, Auint len);
+/** Return symbol for a byte-sequence. */
+AVM_API Value aSyml(Value th, const char *str, Auint32 len);
+/** Return string value for a c-string. */
+AVM_API Value aStr(Value th, const char *str);
+/** Return string value for a byte-sequence. str may be NULL (to reserve space for empty string). */
+AVM_API Value aStrl(Value th, const char *str, Auint32 len);
 /** Return 1 if the value is a Symbol, otherwise 0 */
 AVM_API int isSym(Value sym);
-/** Return a read-only pointer into a C-string encoded by a symbol or string-oriented Value. 
+/** Return 1 if the value is a String, otherwise 0 */
+AVM_API int isStr(Value str);
+/** Return a read-only pointer into a C-string encoded by a symbol or string Value. 
  * It is guaranteed to have a 0-terminating character just after its full length. 
- * Anything other value type returns NULL.
+ * Any other value type returns NULL.
  */
 AVM_API const char* toStr(Value sym);
 /** Return 1 if the symbol or string value's characters match the zero-terminated c-string, otherwise 0. */
 AVM_API int strEq(Value val, const char* str);
 /** Return the byte size of a symbol or string. Any other value type returns 0 */
 AVM_API Auint strSz(Value val);
-/** Get the next symbol in symbol table after key or first, if key is NULL. Return Null if no more. */
+/** Iterate to next symbol after key in symbol table (or first if key is NULL). Return Null if no more. 
+ * This can be used to sequentially iterate through the symbol table.
+ * Results may be inaccurate if the symbol table is changed during iteration.
+ */
 AVM_API Value sym_next(Value th, Value key);
+/** Resize string to a specified length, truncating as needed.
+ * Allocated space will not shrink, but may expand if required.
+ */
+AVM_API void strResize(Value th, Value val, Auint32 len);
+/**	Replace part of a string with the c-string contents starting at pos.
+ *	If sz==0, it becomes an insert. If str==NULL or len==0, it becomes a deletion.
+ *	The Acorn string will be resized automatically to accommodate excess characters.
+ *	The operation will not be performed if resizing is not possible. */
+AVM_API void strSub(Value th, Value val, Auint32 pos, Auint32 sz, const char *str, Auint32 len);
 	
 /** Start a new Virtual Machine. Return the main thread */
 AVM_API Value newVM(void);

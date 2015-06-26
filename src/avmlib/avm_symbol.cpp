@@ -1,6 +1,8 @@
 /** Symbol value manipulation
  * @file
  *
+ * This source file is part of avm - Acorn Virtual Machine.
+ * See Copyright Notice in avm.h
  */
 
 #include "avmlib.h"
@@ -75,8 +77,8 @@ void sym_init(VmInfo* vm) {
 	sym_resize_tbl(vm, AVM_SYMTBLMINSIZE);
 }
 
-/** If string exists in symbol table, reuse it. Otherwise, add it. Return symbol value. */
-Value aSyml(Value th, const char *str, Auint len) {
+/* If symbol exists in symbol table, reuse it. Otherwise, add it. Return symbol value. */
+Value aSyml(Value th, const char *str, Auint32 len) {
 	SymInfo *sym;
 	SymTable* sym_tbl = th(th)->vm->sym_table;
 	unsigned int hash = hash_bytes(str, len, th(th)->vm->hashseed);
@@ -84,7 +86,7 @@ Value aSyml(Value th, const char *str, Auint len) {
 	// Look for symbol in symbol table. Return it, if found.
 	for (sym = sym_tbl->symArray[hash_binmod(hash, sym_tbl->nbrAvail)]; sym != NULL; sym = (SymInfo*) sym->next) {
 		if (hash == sym->hash &&
-				len == sym->len &&
+				len == sym->size &&
 				(memcmp(str, sym_cstr(sym), len) == 0)) {
 			mem_keepalive(th, (MemInfo*) sym); // Keep it alive, if it had been marked for deletion
 			return (Value) sym;
@@ -95,10 +97,10 @@ Value aSyml(Value th, const char *str, Auint len) {
 	if (sym_tbl->nbrUsed >= sym_tbl->nbrAvail)
 		sym_resize_tbl(th(th)->vm, sym_tbl->nbrAvail*2);
 
-	// Create a string object, adding to symbol table at hash entry
+	// Create a symbol object, adding to symbol table at hash entry
 	MemInfo **linkp = (MemInfo**) &sym_tbl->symArray[hash_binmod(hash, sym_tbl->nbrAvail)];
 	sym = (SymInfo *) mem_new(vm(th), SymEnc, sym_memsize(len), linkp, 0);
-	sym->len = len;
+	sym->size = len;
 	sym->hash = hash;
 	memcpy(sym_cstr(sym), str, len);
 	(sym_cstr(sym))[len] = '\0';
@@ -106,14 +108,14 @@ Value aSyml(Value th, const char *str, Auint len) {
 	return (Value) sym;
 }
 
-/** If string exists in symbol table, reuse it. Otherwise, add it. Return symbol value. */
+/* Calculate length of c-string, then use aSyml(). */
 Value aSym(Value th, const char *str) {
 	return aSyml(th,str,strlen(str));
 }
 
-/** Iterate to next symbol after key in symbol table (or first if key is NULL). Return Null if no more. 
+/* Iterate to next symbol after key in symbol table (or first if key is NULL). Return Null if no more. 
  * This can be used to sequentially iterate through the symbol table.
- * Results can be inaccurate if the symbol table is changed during iteration.
+ * Results may be inaccurate if the symbol table is changed during iteration.
  */
 Value sym_next(Value th, Value key) {
 	SymTable *sym_tbl = th(th)->vm->sym_table;
@@ -136,11 +138,11 @@ Value sym_next(Value th, Value key) {
 
 	// Look for the symbol in table, then return next one
 	AHash hash = ((SymInfo*)key)->hash;
-	Auint len = ((SymInfo*)key)->len;
+	Auint len = ((SymInfo*)key)->size;
 	Auint i = hash_binmod(hash, sym_tbl->nbrAvail);
 	for (sym = sym_tbl->symArray[i]; sym != NULL; sym = (SymInfo*) sym->next) {
 		if (hash == sym->hash &&
-				len == sym->len &&
+				len == sym->size &&
 				(memcmp(sym_cstr(key), sym_cstr(sym), len) == 0)) {
 			// If the next one is populated, return it
 			if ((sym = (SymInfo*) sym->next))

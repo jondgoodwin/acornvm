@@ -11,6 +11,9 @@
 #ifndef avm_memory_h
 #define avm_memory_h
 
+/** C99 include file for 32-bit integer definitions */
+#include <stdint.h>
+
 #include "avm/avm_value.h"
 
 #ifdef __cplusplus
@@ -18,27 +21,70 @@ namespace avm {
 extern "C" {
 #endif
 
-/** The type for a hash value */
-typedef unsigned int AHash;
+/** A 32-bit signed integer */
+typedef int32_t Aint32;
 
-/** The common header fields for any variable-sized Value. */
+/** A 32-bit unsigned integer */
+typedef uint32_t Auint32;
+
+/** The type for a hash value */
+typedef uint32_t AHash;
+
+/** The type for a byte */
+typedef unsigned char AByte;
+
+/** The common header fields for any variable-sized pointer Value. 
+ * We want to conserve space given the way C compilers automatically align data.
+ * The following structure should be economical for both 32-bit and 64-bit
+ * machines (resolving to 12 bytes for 32-bit and 16 for 64-bits). 
+ * However, sometimes there will be some wasted space as some data structures
+ * will not use the flags1-2 fields. Most will use the size field, but not all.
+ *
+ * Because the size field is forced 32-bit, it means no individual object
+ * can address higher than 4 billion, which should rarely (if ever) be an impediment.
+*/
 #define MemCommonInfo \
-	struct MemInfo *next;  /** Pointer to next memory block in chain */ \
-	char enctyp;    /** Encoding type (see EncType) */ \
-	char marked     /** Garbage collection flags */
+	struct MemInfo *next;  /**< Pointer to next memory block in chain */ \
+	AByte enctyp;    /**< Encoding type (see EncType) */ \
+	AByte marked;    /**< Garbage collection flags */ \
+	AByte flags1;	/**< Encoding-specific flags */ \
+	AByte flags2;	/**< Encoding-specific flags */ \
+	Auint32 size	/**< Encoding-specific sizing info */
+
+/** The common header fields for any Typed variable-sized pointer Value (see MemCommonInfo). */
+#define MemCommonInfoT \
+	MemCommonInfo; \
+	Value type		/**< Specifies data structure's Type (for methods) */
 
 /** The header structure for any variable-sized Value (see MemCommonInfo) */
 typedef struct MemInfo {
   MemCommonInfo;
 } MemInfo;
 
+/** The generic structure for all typed variable-sized Value */
+typedef struct MemInfoT {
+	MemCommonInfoT;
+} MemInfoT;
+
 enum EncType {
 	SymEnc,
+	ThrEnc,
+
+	/* after this, all encodings use typed info header */
 	StrEnc,
 	ArrEnc,
 	HashEnc,
-	ThrEnc
+	NbrEnc  /**< The number of encodings */
 };
+#define TypedEnc StrEnc /** Below this, encodings are self-typed */
+
+/** Is value a pointer to the encoding data structure? */
+#define isEnc(val, enc) (isPtr(val) && ((MemInfo*) val)->enctyp==enc)
+
+/** The bit that indicates whether Value's type is fixed by encoding or dynamically set */ 
+#define TypedInfo 0x80
+/** Does the value provide its type information? */
+#define isTyped(val) (((Meminfo*)val)->enctyp & TypedInfo)
 
 // Bit arithmetic macros
 #define resetbits(x,m)		((x) &= ((char) ~(m))) //!< Turn off the m bits in x
@@ -68,9 +114,6 @@ enum EncType {
 #define resetoldbit(o)	resetbit((o)->marked, OLDBIT)
 
 void mem_keepalive(Value Thread, MemInfo* blk);
-
-/** Is value a pointer to the encoding data structure? */
-AVM_API int isEnc(Value v, int enc);
 
 /** Initialize memory and garbage collection for VM */
 void mem_init(struct VmInfo* vm);

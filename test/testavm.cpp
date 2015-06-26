@@ -59,6 +59,31 @@ void testRecent(Value th) {
 	t(strSz(true1)==4, "strSz('true')==4");
 	t(strEq(false1,"false"), "strEq(aSym('false'),'false')");
 	t(strcmp(toStr(true2),"true")==0, "toStr('true')=='true'");
+
+	// String API tests
+	Value stringx = aStrl(th, NULL, 21);
+	strResize(th, stringx, 22);
+	t(!isStr(aNull), "!isSym(aNull)");
+	t(!isStr(aTrue), "!isSym(aTrue)");
+	Value string1 = aStr(th, "Happiness is hard-won");
+	Value string2 = aStrl(th, "Happiness is hard-won", 21);
+	Value string3 = aStr(th, "True happiness require work");
+	t(!isSame(string1,string2), "aStr('Happiness is hard-won')!=aStrl('Happiness is hard-won',21)");
+	t(isStr(string1), "isStr(aStr('Happiness is hard-won'))");
+	t(strSz(string1)==21, "strSz('Happiness is hard-won')==21");
+	t(strEq(string1,"Happiness is hard-won"), "strEq(aStr('Happiness is hard-won'),'Happiness is hard-won')");
+	t(strcmp(toStr(string3),"True happiness require work")==0, "toStr('True happiness require work')=='True happiness require work'");
+	strResize(th, string2, 4);
+	t(strSz(string2)==4, "strSz(strResize(string2, 4))==4");
+	t(strEq(string2,"Happ"), "strEq(strResize(string2, 4))=='Happ'");
+	strSub(th, string2, 4, 0, "y Birthday", 10); // Append
+	t(strEq(string2,"Happy Birthday"), "string2=='Happy Birthday'");
+	strSub(th, string2, 6, 0, "Pucking ", 8); // Insert
+	t(strEq(string2,"Happy Pucking Birthday"), "string2=='Happy Pucking Birthday'");
+	strSub(th, string2, 6, 2, "Fri", 3); // Replace & grow
+	t(strEq(string2, "Happy Fricking Birthday"), "string2=='Happy Fricking Birthday'");
+	strSub(th, string2, 6, 9, NULL, 0); // Delete
+	t(strEq(string2, "Happy Birthday"), "string2=='Happy Birthday'");
 }
 
 void testAll(Value th) {

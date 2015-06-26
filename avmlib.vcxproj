@@ -14,12 +14,24 @@
     <ClInclude Include="include\avm.h" />
     <ClInclude Include="include\avmlib.h" />
     <ClInclude Include="include\avm\avm_api.h" />
+    <ClInclude Include="include\avm\avm_hash.h" />
+    <ClInclude Include="include\avm\avm_memory.h" />
+    <ClInclude Include="include\avm\avm_string.h" />
+    <ClInclude Include="include\avm\avm_symbol.h" />
+    <ClInclude Include="include\avm\avm_thread.h" />
     <ClInclude Include="include\avm\avm_value.h" />
+    <ClInclude Include="include\avm\avm_vm.h" />
     <ClInclude Include="include\avm_config.h" />
     <ClInclude Include="include\avm_env.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\avmlib\avm_main.cpp" />
+    <ClCompile Include="src\avmlib\avm_api.cpp" />
+    <ClCompile Include="src\avmlib\avm_hash.cpp" />
+    <ClCompile Include="src\avmlib\avm_memory.cpp" />
+    <ClCompile Include="src\avmlib\avm_string.cpp" />
+    <ClCompile Include="src\avmlib\avm_symbol.cpp" />
+    <ClCompile Include="src\avmlib\avm_value.cpp" />
+    <ClCompile Include="src\avmlib\avm_vm.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8B302A7E-1179-481B-8EBB-C599161470F1}</ProjectGuid>

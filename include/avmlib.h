@@ -18,6 +18,7 @@
 #include "avm.h" // Includes avm_value.h and avm_api.h
 
 #include "avm/avm_symbol.h" // Includes avm/avm_memory.h
+#include "avm/avm_string.h"
 #include "avm/avm_hash.h"
 #include "avm/avm_vm.h"
 #include "avm/avm_thread.h"
