@@ -113,6 +113,11 @@ Value aSym(Value th, const char *str) {
 	return aSyml(th,str,strlen(str));
 }
 
+/* Return 1 if the value is a Symbol, otherwise 0 */
+int isSym(Value sym) {
+	return isEnc(sym, SymEnc);
+}
+
 /* Iterate to next symbol after key in symbol table (or first if key is NULL). Return Null if no more. 
  * This can be used to sequentially iterate through the symbol table.
  * Results may be inaccurate if the symbol table is changed during iteration.

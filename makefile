@@ -11,7 +11,7 @@ INCLUDE   =-Iinclude
 
 # Important file names
 LIBNAME   =avmlib
-OBJECTS   = avm_api.o avm_hash.o avm_memory.o avm_string.o avm_symbol.o avm_value.o avm_vm.o
+OBJECTS   = avm_api.o avm_hash.o avm_memory.o avm_array.o avm_string.o avm_symbol.o avm_value.o avm_vm.o
 TESTOBJS  = testavm.o
 TESTEXE   =testavm
 

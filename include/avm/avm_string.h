@@ -42,13 +42,13 @@ typedef struct StrInfo {
 /** Flag in flags1 showing whether string hash value has been calculated */
 #define StrHashed 0x80
 
-/** Point to symbol information, by recasting a Value pointer */
+/** Point to string information, by recasting a Value pointer */
 #define str_info(val) (assert_exp(isEnc(val,StrEnc), (StrInfo*) val))
 
-/** Point to the symbol's 0-terminated c-string value */
+/** Point to the string's 0-terminated c-string value */
 #define str_cstr(val) ((char*) (str_info(val)->str))
 
-/** Return the length of the symbol's string (without 0-terminator) */
+/** Return the length of the string's bytes (without 0-terminator) */
 #define str_size(val) (str_info(val)->size)
 
 // ***********

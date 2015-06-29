@@ -56,25 +56,23 @@ void testRecent(Value th) {
 	t(isSame(true1, true2), "aSym('true')==aSyml('true',4)");
 	t(isSym(true1), "isSym(true1)");
 	t(!isSame(true2, false), "aSym('true')!=aSym(false')");
-	t(strSz(true1)==4, "strSz('true')==4");
+	t(getSize(true1)==4, "getSize('true')==4");
 	t(strEq(false1,"false"), "strEq(aSym('false'),'false')");
 	t(strcmp(toStr(true2),"true")==0, "toStr('true')=='true'");
 
 	// String API tests
-	Value stringx = aStrl(th, NULL, 21);
-	strResize(th, stringx, 22);
 	t(!isStr(aNull), "!isSym(aNull)");
 	t(!isStr(aTrue), "!isSym(aTrue)");
-	Value string1 = aStr(th, "Happiness is hard-won");
-	Value string2 = aStrl(th, "Happiness is hard-won", 21);
-	Value string3 = aStr(th, "True happiness require work");
+	Value string1 = newStr(th, "Happiness is hard-won");
+	Value string2 = newStrl(th, "Happiness is hard-won", 21);
+	Value string3 = newStr(th, "True happiness requires work");
 	t(!isSame(string1,string2), "aStr('Happiness is hard-won')!=aStrl('Happiness is hard-won',21)");
 	t(isStr(string1), "isStr(aStr('Happiness is hard-won'))");
-	t(strSz(string1)==21, "strSz('Happiness is hard-won')==21");
+	t(getSize(string1)==21, "getSize('Happiness is hard-won')==21");
 	t(strEq(string1,"Happiness is hard-won"), "strEq(aStr('Happiness is hard-won'),'Happiness is hard-won')");
-	t(strcmp(toStr(string3),"True happiness require work")==0, "toStr('True happiness require work')=='True happiness require work'");
-	strResize(th, string2, 4);
-	t(strSz(string2)==4, "strSz(strResize(string2, 4))==4");
+	t(strcmp(toStr(string3),"True happiness requires work")==0, "toStr('True happiness requires work')=='True happiness requires work'");
+	strSub(th, string2, 4, getSize(string1)-4, NULL, 0); // Truncates size to 4
+	t(getSize(string2)==4, "getSize(strResize(string2, 4))==4");
 	t(strEq(string2,"Happ"), "strEq(strResize(string2, 4))=='Happ'");
 	strSub(th, string2, 4, 0, "y Birthday", 10); // Append
 	t(strEq(string2,"Happy Birthday"), "string2=='Happy Birthday'");
@@ -84,6 +82,39 @@ void testRecent(Value th) {
 	t(strEq(string2, "Happy Fricking Birthday"), "string2=='Happy Fricking Birthday'");
 	strSub(th, string2, 6, 9, NULL, 0); // Delete
 	t(strEq(string2, "Happy Birthday"), "string2=='Happy Birthday'");
+
+	// Array API tests
+	Value array1 = newArr(th, 10);
+	t(getTuple(array1)==aFalse, "getTuple(array1)==aFalse");
+	setTuple(array1, aTrue);
+	t(getTuple(array1)==aTrue, "getTuple(array1)==aTrue");
+	t(!isArr(string1), "!isArr('a string')");
+	t(isArr(array1), "isArr(array1)");
+	t(getSize(array1)==0, "getSize(array1)==0");
+	arrSet(th, array1, 4, 2, aTrue); // Test Set: early elements will be aNull
+	t(arrGet(th, array1, 0)==aNull, "arrGet(th, array1, 0)==aNull");
+	t(arrGet(th, array1, 5)==aTrue, "arrGet(th, array1, 5)==aTrue");
+	t(getSize(array1)==6, "getSize(array1)==6");
+	arrDel(th, array1, 0, 4); // Test Del 
+	arrDel(th, array1, 1, 20); // should clip n
+	t(arrGet(th, array1, 0)==aTrue, "arrGet(th, array1, 0)==aTrue");
+	t(getSize(array1)==1, "getSize(array1)==1");
+	arrDel(th, array1, 1, 20); // Nop
+	t(getSize(array1)==1, "getSize(array1)==1");
+	arrIns(th, array1, 0, 2, aFalse);
+	t(getSize(array1)==3, "getSize(array1)==3");
+	t(arrGet(th, array1, 0)==aFalse, "arrGet(th, array1, 0)==aFalse");
+	t(arrGet(th, array1, 1)==aFalse, "arrGet(th, array1, 1)==aFalse");
+	t(arrGet(th, array1, 2)==aTrue, "arrGet(th, array1, 2)==aTrue");
+	arrSub(th, array1, 2, 0, array1, 2, 1); // Insert from self
+	t(getSize(array1)==4, "getSize(array1)==4");
+	t(arrGet(th, array1, 3)==aTrue, "arrGet(th, array1, 3)==aTrue");
+	Value array2 = newArr(th,4);
+	arrSet(th, array2, 4, 5, string1);
+	t(getSize(array2)==9, "getSize(array2)==9");
+	arrSub(th, array1, 1, 2, array2, 2, 4);
+	t(getSize(array1)==6, "getSize(array1)==6");
+	t(getSize(arrGet(th, array1, 4))==21, "getSize(arrGet(th, array1, 5))==21");
 }
 
 void testAll(Value th) {

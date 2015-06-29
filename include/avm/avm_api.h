@@ -18,9 +18,9 @@ AVM_API Value aSym(Value th, const char *str);
 /** Return symbol for a byte-sequence. */
 AVM_API Value aSyml(Value th, const char *str, Auint32 len);
 /** Return string value for a c-string. */
-AVM_API Value aStr(Value th, const char *str);
+AVM_API Value newStr(Value th, const char *str);
 /** Return string value for a byte-sequence. str may be NULL (to reserve space for empty string). */
-AVM_API Value aStrl(Value th, const char *str, Auint32 len);
+AVM_API Value newStrl(Value th, const char *str, Auint32 len);
 /** Return 1 if the value is a Symbol, otherwise 0 */
 AVM_API int isSym(Value sym);
 /** Return 1 if the value is a String, otherwise 0 */
@@ -32,23 +32,57 @@ AVM_API int isStr(Value str);
 AVM_API const char* toStr(Value sym);
 /** Return 1 if the symbol or string value's characters match the zero-terminated c-string, otherwise 0. */
 AVM_API int strEq(Value val, const char* str);
-/** Return the byte size of a symbol or string. Any other value type returns 0 */
-AVM_API Auint strSz(Value val);
 /** Iterate to next symbol after key in symbol table (or first if key is NULL). Return Null if no more. 
  * This can be used to sequentially iterate through the symbol table.
  * Results may be inaccurate if the symbol table is changed during iteration.
  */
 AVM_API Value sym_next(Value th, Value key);
-/** Resize string to a specified length, truncating as needed.
- * Allocated space will not shrink, but may expand if required.
- */
-AVM_API void strResize(Value th, Value val, Auint32 len);
+/** Ensure string has room for len Values, allocating memory as needed.
+ * Allocated space will not shrink. Changes nothing about string's contents. */
+AVM_API void strMakeRoom(Value th, Value val, Auint32 len);
 /**	Replace part of a string with the c-string contents starting at pos.
  *	If sz==0, it becomes an insert. If str==NULL or len==0, it becomes a deletion.
  *	The Acorn string will be resized automatically to accommodate excess characters.
  *	The operation will not be performed if resizing is not possible. */
 AVM_API void strSub(Value th, Value val, Auint32 pos, Auint32 sz, const char *str, Auint32 len);
-	
+
+/** Return new array with allocated space for len Values. */
+AVM_API Value newArr(Value th, Auint32 len);
+/** Return 1 if the value is an Array, otherwise 0 */
+AVM_API int isArr(Value sym);
+/** Ensure array has room for len Values, allocating memory as needed.
+ * Allocated space will not shrink. Changes nothing about array's contents. */
+AVM_API void arrMakeRoom(Value th, Value val, Auint32 len);
+/** Force allocated and used array to a specified size, truncating 
+ * or expanding as needed. Growth space is initialized to aNull. */
+AVM_API void arrForceSize(Value th, Value val, Auint32 len);
+/** Get the array's "tuple" status: on (aTrue) or off (aFalse). */
+AVM_API Value getTuple(Value arr);
+/** Set the array's "tuple" status on (aTrue) or off (aFalse). */
+AVM_API void setTuple(Value arr, Value flag);
+/** Retrieve the value in array at specified position. */
+AVM_API Value arrGet(Value th, Value arr, Auint32 pos);
+/** Propagate n copies of val into the array starting at pos.
+ * This can expand the size of the array.*/
+AVM_API void arrSet(Value th, Value arr, Auint32 pos, Auint32 n, Value val);
+/** Delete n values out of the array starting at pos. 
+ * All values after these are preserved, essentially shrinking the array. */
+AVM_API void arrDel(Value th, Value arr, Auint32 pos, Auint32 n);
+/** Insert n copies of val into the array starting at pos, expanding the array's size. */
+AVM_API void arrIns(Value th, Value arr, Auint32 pos, Auint32 n, Value val);
+/** Copy n2 values from arr2 starting at pos2 into array, replacing the n values in first array starting at pos.
+ * This can increase or decrease the size of the array. arr and arr2 may be the same array. */
+AVM_API void arrSub(Value th, Value arr, Auint32 pos, Auint32 n, Value arr2, Auint32 pos2, Auint32 n2);
+
+
+/** Return the size of a symbol, array, hash, or other collection. Any other value type returns 0 */
+AVM_API Auint getSize(Value val);
+
+/** Set the type used by a value (if encoding allows it to change) */
+AVM_API void setType(Value val, Value type);
+/** Return the value's type (works for all values) */
+AVM_API Value getType(Value th, Value val);
+
 /** Start a new Virtual Machine. Return the main thread */
 AVM_API Value newVM(void);
 

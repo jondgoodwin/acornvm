@@ -74,9 +74,17 @@ enum EncType {
 	StrEnc,
 	ArrEnc,
 	HashEnc,
+
+	/* Immediate value encodings */
+	NullEnc,
+	BoolEnc,
+	IntEnc,
+	FloatEnc,
+
 	NbrEnc  /**< The number of encodings */
 };
 #define TypedEnc StrEnc /** Below this, encodings are self-typed */
+#define NbrPEnc NullEnc /** Number of pointer encodings */
 
 /** Is value a pointer to the encoding data structure? */
 #define isEnc(val, enc) (isPtr(val) && ((MemInfo*) val)->enctyp==enc)

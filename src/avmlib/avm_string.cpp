@@ -15,10 +15,10 @@ extern "C" {
 #endif
 
 /* Return a string value containing the byte sequence. */
-Value aStrl(Value th, const char *str, Auint32 len) {
+Value newStrl(Value th, const char *str, Auint32 len) {
 	StrInfo *val;
 
-	// Create a string object, adding to symbol table at hash entry
+	// Create a string object
 	MemInfo **linkp = NULL;
 	val = (StrInfo *) mem_new(vm(th), StrEnc, sizeof(StrInfo), linkp, 0);
 	val->avail = len;
@@ -40,13 +40,18 @@ Value aStrl(Value th, const char *str, Auint32 len) {
 		val->size = 0;
 	}
 	val->str[len] = '\0'; // put guaranteed 0-terminator, just in case
-	val->type = aNull; // type is unspecified
+	val->type = vm(th)->defEncTypes[StrEnc]; // Assume default type
 	return (Value) val;
 }
 
 /* Calculate length of c-string, then use aStrl(). */
-Value aStr(Value th, const char *str) {
-	return aStrl(th,str,strlen(str));
+Value newStr(Value th, const char *str) {
+	return newStrl(th,str,strlen(str));
+}
+
+/* Return 1 if the value is a String, otherwise 0 */
+int isStr(Value str) {
+	return isEnc(str, StrEnc);
 }
 
 /* Retrieve string's hash, calculating it if not done already */
@@ -61,34 +66,19 @@ AHash str_hash(Value th, Value val) {
 	return str->hash;
 }
 
-/* Resize string to a specified length, truncating as needed.
- * Allocated space will not shrink, but may expand if required.
- */
-void strResize(Value th, Value val, Auint32 len) {
+/* Ensure string has room for len Values, allocating memory as needed.
+ * Allocated space will not shrink. Changes nothing about string's contents. */
+void strMakeRoom(Value th, Value val, Auint32 len) {
 	StrInfo *str = str_info(val);
 
-	/* If new length is between string size and buffer size, then change nothing */
-	if (len >= str->size && len <= str->avail)
-		return;
-
-	/* Truncate, if string must be smaller. */
-	if (len < str->size) {
-		str->size = len;
-	}
-
 	/* Expand available space, if needed */
-	else {
-		assert(len > str->avail);
+	if (len > str->avail) {
 		str->str = (char*) mem_gcrealloc(vm(th), str->str, str->avail+1, len+1);
 		str->avail = len;
+		str->str[len] = '\0';
 	}
-
-	/* Place 0-terminator as needed, and reset hash to uncalculated */
-	str->str[len] = '\0';
-	str->flags1 = 0;
 }
 
-#include <stdio.h>
 /*	Replace part of a string with the c-string contents starting at pos.
  *	If sz==0, it becomes an insert. If str==NULL or len==0, it becomes a deletion.
  *	The Acorn string will be resized automatically to accommodate excess characters.
@@ -108,8 +98,8 @@ void strSub(Value th, Value val, Auint32 pos, Auint32 sz, const char *repstr, Au
 		return;
 
 	/* Expand available space, if needed */
-	if (str->size < len)
-		strResize(th, val, len);
+	if (len > str->avail)
+		strMakeRoom(th, val, len);
 
 	/* Move part of string above replacement zone to its new position */
 	if (str->size > pos+sz)

@@ -21,13 +21,31 @@ extern "C" {
 	{Auint anint = (Auint) val; \
 	memcpy(seedstr + i*sizeof(Auint), &anint, sizeof(Auint));}
 
-/** Create and initialize new Virtual Machine */
+/** Create and initialize new Virtual Machine 
+ * When a VM is started:
+ * - Iit dynamically allocates the VmInfo
+ *   which holds all universal information about the VM instance.
+ * - Memory management and garbage collection (avm_memory.h) is managed at this level.
+ *   The GC root value (the main thread) determines what allocated values to keep
+ *   and which to discard.
+ * - All value encodings are initialized next, including the single symbol table
+ *   used across the VM.
+ * - The main thread is started up, initializing its global namespace.
+ * - All core types are progressively loaded, establishing the default types for 
+ *   each encoding. This includes the resource types and Acorn compiler. */
 AVM_API Value newVM(void) {
 
 	// Create VM info block
 	VmInfo *vm = (struct VmInfo*) mem_frealloc(NULL, sizeof(VmInfo));
 	mem_init(vm); /* Initialize memory & garbage collection */
 	sym_init(vm); /* Initialize symbol table */
+
+	// Initialize safe default types for all value encodings (including Immediate)
+	// These will be overridden when the core Types are loaded.
+	Value* p = vm->defEncTypes = (Value*) mem_frealloc(NULL, NbrEnc*sizeof(Value));
+	int i = NbrEnc;
+	while (i--)
+		*p++ = aNull;
 
 	// Compute a randomized seed, using address space layout to increaase randomness
 	char seedstr[4 * sizeof(Auint)];

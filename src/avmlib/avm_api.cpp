@@ -13,16 +13,6 @@ namespace avm {
 extern "C" {
 #endif
 
-/* Return 1 if the value is a Symbol, otherwise 0 */
-int isSym(Value sym) {
-	return isEnc(sym, SymEnc);
-}
-
-/* Return 1 if the value is a String, otherwise 0 */
-int isStr(Value str) {
-	return isEnc(str, StrEnc);
-}
-
 /* Return a read-only pointer into a C-string encoded by a symbol or string-oriented Value. 
  * It is guaranteed to have a 0-terminating character just after its full length. 
  * Anything other value type returns NULL.
@@ -44,13 +34,42 @@ int strEq(Value val, const char* str) {
 	return 0;
 }
 
-/* Return the byte size of a symbol or string. Any other value type returns 0 */
-Auint strSz(Value val) {
-	if (isSym(val))
-		return sym_size(val);
-	if (isStr(val))
-		return str_size(val);
+/* Return the size of a symbol, string, array, hash or other collection. Any other value type returns 0 */
+Auint getSize(Value val) {
+	if (isPtr(val))
+		return ((MemInfo*)val)->size;
 	return 0;
+}
+
+/* Set the type used by a value (if encoding allows it to change) */
+void setType(Value val, Value type) {
+	// Do nothing if value's encoding does not support typing
+	if (!isPtr(val) || ((MemInfo*)val)->enctyp < TypedEnc)
+		return;
+
+	((MemInfoT*)val)->type = type;
+}
+
+/* Return the value's type (works for all values) */
+Value getType(Value th, Value val) {
+	// Decode the encoded Value
+	switch ((Auint)val & ValMask) {
+	case ValPtr:
+		// For fixed type encodings, use its default type
+		if (((MemInfo*)val)->enctyp < TypedEnc)
+			return vm(th)->defEncTypes[((MemInfo*)val)->enctyp];
+
+		// Otherwise, get type from the value
+		return ((MemInfoT*)val)->type;
+
+	case ValInt:
+		return vm(th)->defEncTypes[IntEnc];
+	case ValFloat:
+		return vm(th)->defEncTypes[FloatEnc];
+	case ValCons:
+		return vm(th)->defEncTypes[val==aNull? NullEnc : BoolEnc];
+	}
+	return aNull; // Should not ever get here
 }
 
 

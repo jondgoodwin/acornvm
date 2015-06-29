@@ -1,4 +1,15 @@
-/** Manage the Virtual Machine instance
+/** Manage the Virtual Machine instance.
+ *
+ * This is the heart of the Acorn Virtual Machine. It manages:
+ * - All memory and garbage collection (avm_memory.h), working with the 
+ *   different encoding types.
+ * - The symbol table, which is shared across everywhere
+ * - The main thread, which is the recursive root for garbage collection.
+ *   The thread manages the global namespace, including all registered 
+ *   core types (including the Acorn compiler and resource types).
+ * 
+ * See newVm() for more detailed information on VM initialization.
+ *
  * @file
  *
  * This source file is part of avm - Acorn Virtual Machine.
@@ -21,6 +32,8 @@ extern "C" {
 		Value main_thread;			/**< VM's main thread */
 		struct SymTable* sym_table;	/**< global symbol table */
 		AHash hashseed;				/**< randomized seed for hashing strings */
+
+		Value *defEncTypes;    /**< array of default types for each encoding */
 
 		// Global state for all collectable objects
 		MemInfo *objlist;  //!< linked list of all collectable objects
