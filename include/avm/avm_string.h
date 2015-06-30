@@ -35,12 +35,8 @@ extern "C" {
 typedef struct StrInfo {
 	MemCommonInfoT;
 	char *str;		//!< Pointer to allocated buffer for bytes
-	Auint32 avail;	//!< Allocated size of character buffer
-	AHash hash;		//!< Calculated hash (only populated if needed)
+	AuintIdx avail;	//!< Allocated size of character buffer
 } StrInfo;
-
-/** Flag in flags1 showing whether string hash value has been calculated */
-#define StrHashed 0x80
 
 /** Point to string information, by recasting a Value pointer */
 #define str_info(val) (assert_exp(isEnc(val,StrEnc), (StrInfo*) val))
@@ -55,7 +51,7 @@ typedef struct StrInfo {
 // Non-API String functions
 // ***********
 
-AHash str_hash(Value th, Value val);
+AuintIdx str_hash(Value th, Value val);
 
 #ifdef __cplusplus
 } // end "C"

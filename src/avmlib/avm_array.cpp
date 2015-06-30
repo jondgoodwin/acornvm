@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 /* Return a new Array, allocating len slots for Values. */
-Value newArr(Value th, Auint32 len) {
+Value newArr(Value th, AuintIdx len) {
 	ArrInfo *val;
 
 	// Create an array object
@@ -32,14 +32,14 @@ Value newArr(Value th, Auint32 len) {
 	return (Value) val;
 }
 
-/* Return 1 if the value is a Array, otherwise 0 */
+/* Return 1 if the value is an Array, otherwise 0 */
 int isArr(Value val) {
 	return isEnc(val, ArrEnc);
 }
 
 /* Ensure array has room for len Values, allocating memory as needed.
  * Allocated space will not shrink. Changes nothing about array's contents. */
-void arrMakeRoom(Value th, Value arr, Auint32 len) {
+void arrMakeRoom(Value th, Value arr, AuintIdx len) {
 	ArrInfo *a = arr_info(arr);
 
 	if (len>a->avail) {
@@ -50,9 +50,10 @@ void arrMakeRoom(Value th, Value arr, Auint32 len) {
 
 /* Force allocated and used array to a specified size, truncating 
  * or expanding as needed. Growth space is initialized to aNull. */
-void arrForceSize(Value th, Value val, Auint32 len) {
+void arrForceSize(Value th, Value val, AuintIdx len) {
 	ArrInfo *arr = arr_info(val);
-	Auint32 i;
+	AuintIdx i;
+	assert(isArr(val));
 
 	// Expand or contract allocation, as needed
 	if (len != arr->avail) {
@@ -68,11 +69,13 @@ void arrForceSize(Value th, Value val, Auint32 len) {
 
 /* Get the array's "tuple" status: on (aTrue) or off (aFalse). */
 Value getTuple(Value arr) {
+	assert(isArr(arr));
 	return (arr_info(arr)->flags1 & ArrTuple)? aTrue : aFalse;
 }
 
 /* Set the array's "tuple" status on (aTrue) or off (aFalse). */
 void setTuple(Value arr, Value flag) {
+	assert(isArr(arr));
 	if (isFalse(flag))
 		arr_info(arr)->flags1 &= ~ArrTuple;
 	else
@@ -80,16 +83,18 @@ void setTuple(Value arr, Value flag) {
 }
 
 /* Retrieve the value in array at specified position. */
-Value arrGet(Value th, Value arr, Auint32 pos) {
+Value arrGet(Value th, Value arr, AuintIdx pos) {
 	ArrInfo *a = arr_info(arr);
+	assert(isArr(arr));
 	return (pos > a->size)? aNull : a->arr[pos];
 }
 
 /* Propagate n copies of val into the array starting at pos.
  * This can expand the size of the array.*/
-void arrSet(Value th, Value arr, Auint32 pos, Auint32 n, Value val) {
+void arrSet(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val) {
 	ArrInfo *a = arr_info(arr);
-	Auint32 i;
+	AuintIdx i;
+	assert(isArr(arr));
 
 	// Prevent unlikely overflow
 	if (pos+n<n)
@@ -111,8 +116,9 @@ void arrSet(Value th, Value arr, Auint32 pos, Auint32 n, Value val) {
 
 /* Delete n values out of the array starting at pos. 
  * All values after these are preserved, essentially shrinking the array. */
-void arrDel(Value th, Value arr, Auint32 pos, Auint32 n) {
+void arrDel(Value th, Value arr, AuintIdx pos, AuintIdx n) {
 	ArrInfo *a = arr_info(arr);
+	assert(isArr(arr));
 
 	// Nothing to delete (or overflow)
 	if (pos>=a->size || pos+n<n)
@@ -127,8 +133,9 @@ void arrDel(Value th, Value arr, Auint32 pos, Auint32 n) {
 }
 
 /* Insert n copies of val into the array starting at pos, expanding the array's size. */
-void arrIns(Value th, Value arr, Auint32 pos, Auint32 n, Value val) {
+void arrIns(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val) {
 	ArrInfo *a = arr_info(arr);
+	assert(isArr(arr));
 
 	// Prevent unlikely overflow
 	if (a->size+n<n)
@@ -149,9 +156,10 @@ void arrIns(Value th, Value arr, Auint32 pos, Auint32 n, Value val) {
 
 /* Copy n2 values from arr2 starting at pos2 into array, replacing the n values in first array starting at pos.
  * This can increase or decrease the size of the array. arr and arr2 may be the same array. */
-void arrSub(Value th, Value arr, Auint32 pos, Auint32 n, Value arr2, Auint32 pos2, Auint32 n2) {
+void arrSub(Value th, Value arr, AuintIdx pos, AuintIdx n, Value arr2, AuintIdx pos2, AuintIdx n2) {
 	ArrInfo *a = arr_info(arr);
-	Auint32 i;
+	AuintIdx i;
+	assert(isArr(arr));
 
 	// Prevent unlikely overflow
 	if (a->size-n+n2 < n2)

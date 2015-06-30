@@ -31,7 +31,7 @@ extern "C" {
 	typedef struct VmInfo {
 		Value main_thread;			/**< VM's main thread */
 		struct SymTable* sym_table;	/**< global symbol table */
-		AHash hashseed;				/**< randomized seed for hashing strings */
+		AuintIdx hashseed;				/**< randomized seed for hashing strings */
 
 		Value *defEncTypes;    /**< array of default types for each encoding */
 

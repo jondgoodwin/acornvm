@@ -115,6 +115,40 @@ void testRecent(Value th) {
 	arrSub(th, array1, 1, 2, array2, 2, 4);
 	t(getSize(array1)==6, "getSize(array1)==6");
 	t(getSize(arrGet(th, array1, 4))==21, "getSize(arrGet(th, array1, 5))==21");
+
+	// Hash API tests
+	Value tbl1 = newTbl(th, 0);
+	t(!isTbl(string1), "!isTbl('a string')");
+	t(isTbl(tbl1), "isTbl(hash1)");
+	t(getSize(tbl1)==0, "getSize(tbl1)==0");
+	tblSet(th, tbl1, aSym(th, "name"),  aSym(th,"George")); // This will trigger table index growth
+	t(getSize(tbl1)==1, "getSize(tbl1)==1");
+	t(tblGet(th, tbl1, aSym(th, "name"))==aSym(th, "George"), "tblGet(th, tbl1, aSym(th, 'name'))==aSym(th, 'George')");
+	Value name = newStr(th, "name");
+	tblSet(th, tbl1, name, aSym(th, "Peter")); // Should replace George with Peter, despite being a string
+	t(getSize(tbl1)==1, "getSize(tbl1)==1");
+	t(tblGet(th, tbl1, aSym(th, "name"))==aSym(th, "Peter"), "tblGet(th, tbl1, aSym(th, 'name'))==aSym(th, 'Peter')");
+	Value iter=aNull;
+	iter = tblNext(tbl1, iter); // Find first entry
+	t(iter==aSym(th, "name"), "iter==aSym(th, 'name')");
+	iter = tblNext(tbl1, iter); // End of entries
+	t(iter==aNull, "iter==aNull");
+	t(tblGet(th, tbl1, aSym(th, "weight"))==aNull, "tblGet(th, tbl1, aSym(th, 'weight'))==aNull"); // not found
+	t(tblNext(tbl1, aSym(th, "weight"))==aNull, "tblNext(tbl1, aSym(th, 'weight'))==aNull"); // not found
+	tblSet(th, tbl1, aTrue, aFalse); // Bool as key
+	t(aFalse == tblGet(th, tbl1, aTrue), "aFalse == tblGet(th, tbl1, aTrue)");
+	tblSet(th, tbl1, anInt(23), anInt(24)); // Integer as key
+	t(isInt(tblGet(th, tbl1, anInt(23))), "isInt(tblGet(th, tbl1, anInt(23)))");
+	tblSet(th, tbl1, aFloat(258.f), aFloat(-0.f)); // Float as key
+	t(isFloat(tblGet(th, tbl1, aFloat(258.f))), "isFloat(tblGet(th, tbl1, aFloat(258.f)))");
+	tblSet(th, tbl1, array1, string3); // Array as key
+	arrSet(th, array1, 6, 0, aTrue); // Modify array, should still work as table key
+	t(isStr(tblGet(th, tbl1, array1)), "isStr(tblGet(th, tbl1, array1))");
+	t(getSize(tbl1)==5, "getSize(tbl1)==5"); // table has doubled 4 times: 0->1->2->4->8
+	tblSet(th, tbl1, aSym(th, "name"), aNull); // Delete 'name' entry
+	t(tblGet(th, tbl1, aSym(th, "name"))==aNull, "tblGet(th, tbl1, aSym(th, 'name'))==aNull"); // not found
+	t(getSize(tbl1)==4, "getSize(tbl1)==4"); 
+	
 }
 
 void testAll(Value th) {

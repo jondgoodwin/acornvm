@@ -54,7 +54,7 @@ AVM_API Value newVM(void) {
 	memcpy_Aunit(1, timehash)	// current time in seconds
 	memcpy_Aunit(2, &timehash)	// local variable pointer
 	memcpy_Aunit(3, &newVM)		// public function
-	vm->hashseed = hash_bytes(seedstr, sizeof(seedstr), (AHash) timehash);
+	vm->hashseed = tblCalcStrHash(seedstr, sizeof(seedstr), (AuintIdx) timehash);
 
 	// Create main thread
 	vm->main_thread = mem_gcrealloc(vm, NULL, 0, sizeof(ThreadInfo));

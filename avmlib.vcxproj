@@ -15,7 +15,7 @@
     <ClInclude Include="include\avmlib.h" />
     <ClInclude Include="include\avm\avm_api.h" />
     <ClInclude Include="include\avm\avm_array.h" />
-    <ClInclude Include="include\avm\avm_hash.h" />
+    <ClInclude Include="include\avm\avm_table.h" />
     <ClInclude Include="include\avm\avm_memory.h" />
     <ClInclude Include="include\avm\avm_string.h" />
     <ClInclude Include="include\avm\avm_symbol.h" />
@@ -28,7 +28,7 @@
   <ItemGroup>
     <ClCompile Include="src\avmlib\avm_api.cpp" />
     <ClCompile Include="src\avmlib\avm_array.cpp" />
-    <ClCompile Include="src\avmlib\avm_hash.cpp" />
+    <ClCompile Include="src\avmlib\avm_table.cpp" />
     <ClCompile Include="src\avmlib\avm_memory.cpp" />
     <ClCompile Include="src\avmlib\avm_string.cpp" />
     <ClCompile Include="src\avmlib\avm_symbol.cpp" />

@@ -33,7 +33,7 @@ extern "C" {
 typedef struct ArrInfo {
 	MemCommonInfoT;
 	Value *arr;		//!< Pointer to allocated array buffer
-	Auint32 avail;	//!< Allocated size of buffer
+	AuintIdx avail;	//!< Allocated size of buffer
 } ArrInfo;
 
 /** Flags in flags1 */
@@ -41,9 +41,6 @@ typedef struct ArrInfo {
 
 /** Point to array information, by recasting a Value pointer */
 #define arr_info(val) (assert_exp(isEnc(val,ArrEnc), (ArrInfo*) val))
-
-/** Point to the array's buffer */
-#define arr_cstr(val) ((char*) (arr_info(val)->arr))
 
 /** Return the number of Values stored in the array */
 #define arr_size(val) (str_info(val)->size)

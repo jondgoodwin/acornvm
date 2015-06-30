@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 /* Return a string value containing the byte sequence. */
-Value newStrl(Value th, const char *str, Auint32 len) {
+Value newStrl(Value th, const char *str, AuintIdx len) {
 	StrInfo *val;
 
 	// Create a string object
@@ -23,10 +23,6 @@ Value newStrl(Value th, const char *str, Auint32 len) {
 	val = (StrInfo *) mem_new(vm(th), StrEnc, sizeof(StrInfo), linkp, 0);
 	val->avail = len;
 	val->str = (char*) mem_gcrealloc(vm(th), NULL, 0, len+1); // an extra byte for 0-terminator
-
-	// Flags1 holds StrHashed flag - default is to not hash string unless needed
-	// by avm_hash structure. Then it uses str_calchash() to hash the string.
-	// Any time string is changed, hash flag should be cleared.
 	val->flags1 = 0;
 
 	// Copy string's contents over, if provided.
@@ -54,21 +50,9 @@ int isStr(Value str) {
 	return isEnc(str, StrEnc);
 }
 
-/* Retrieve string's hash, calculating it if not done already */
-AHash str_hash(Value th, Value val) {
-	StrInfo *str = str_info(val);
-	/* Has hash been calculated? */
-	if (!(str->flags1 & StrHashed)) {
-		/* Calculate hash and indicate it has been calculated */
-		str->hash = hash_bytes(str->str, str->size, th(th)->vm->hashseed);
-		str->flags1 |= StrHashed;
-	}
-	return str->hash;
-}
-
 /* Ensure string has room for len Values, allocating memory as needed.
  * Allocated space will not shrink. Changes nothing about string's contents. */
-void strMakeRoom(Value th, Value val, Auint32 len) {
+void strMakeRoom(Value th, Value val, AuintIdx len) {
 	StrInfo *str = str_info(val);
 
 	/* Expand available space, if needed */
@@ -83,7 +67,7 @@ void strMakeRoom(Value th, Value val, Auint32 len) {
  *	If sz==0, it becomes an insert. If str==NULL or len==0, it becomes a deletion.
  *	The Acorn string will be resized automatically to accommodate excess characters.
  *	The operation will not be performed if resizing is not possible. */
-void strSub(Value th, Value val, Auint32 pos, Auint32 sz, const char *repstr, Auint32 replen) {
+void strSub(Value th, Value val, AuintIdx pos, AuintIdx sz, const char *repstr, AuintIdx replen) {
 	StrInfo* str = str_info(val);
 
 	/* Protect from bad parms */
@@ -91,7 +75,7 @@ void strSub(Value th, Value val, Auint32 pos, Auint32 sz, const char *repstr, Au
 	if (pos > str->size) pos = str->size; /* clamp to end of old string */
 	if (pos + sz > str->size) sz = str->size - pos; /* clamp to end */
 
-	Auint32 len = str->size - sz + replen; /* Calculate new length */
+	AuintIdx len = str->size - sz + replen; /* Calculate new length */
 
 	/* Return if nothing to do or new length overflows past 32-bits */
 	if ((sz==0 && replen==0) || len < replen)
@@ -112,7 +96,6 @@ void strSub(Value th, Value val, Auint32 pos, Auint32 sz, const char *repstr, Au
 	/* Place 0-terminator as needed, and reset hash to uncalculated */
 	str->size = len;
 	str->str[len] = '\0';
-	str->flags1 = 0;
 }
 
 } // extern "C"

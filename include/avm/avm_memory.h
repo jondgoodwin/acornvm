@@ -21,14 +21,13 @@ namespace avm {
 extern "C" {
 #endif
 
-/** A 32-bit signed integer */
-typedef int32_t Aint32;
+/** An unsigned index into an object, whether integer or hash 
+ * We save some object space, at the not unreasonable cost that
+ * indexing into an object is capped at a few billion. */
+typedef uint32_t AuintIdx;
 
-/** A 32-bit unsigned integer */
-typedef uint32_t Auint32;
-
-/** The type for a hash value */
-typedef uint32_t AHash;
+/** A signed index into an object, whether integer or hash */
+typedef int32_t AintIdx;
 
 /** The type for a byte */
 typedef unsigned char AByte;
@@ -49,7 +48,7 @@ typedef unsigned char AByte;
 	AByte marked;    /**< Garbage collection flags */ \
 	AByte flags1;	/**< Encoding-specific flags */ \
 	AByte flags2;	/**< Encoding-specific flags */ \
-	Auint32 size	/**< Encoding-specific sizing info */
+	AuintIdx size	/**< Encoding-specific sizing info */
 
 /** The common header fields for any Typed variable-sized pointer Value (see MemCommonInfo). */
 #define MemCommonInfoT \
@@ -73,7 +72,7 @@ enum EncType {
 	/* after this, all encodings use typed info header */
 	StrEnc,
 	ArrEnc,
-	HashEnc,
+	TblEnc,
 
 	/* Immediate value encodings */
 	NullEnc,

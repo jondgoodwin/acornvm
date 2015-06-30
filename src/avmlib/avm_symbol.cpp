@@ -31,7 +31,7 @@ struct SymTable {
 
 /** modulo operation for hashing (size is always a power of 2) */
 #define hash_binmod(s,size) \
-	(assert_exp((size&(size-1))==0, (AHash) ((s) & ((size)-1)) ))
+	(assert_exp((size&(size-1))==0, (AuintIdx) ((s) & ((size)-1)) ))
 
 /** Resize the symbol table */
 void sym_resize_tbl(VmInfo *vm, Auint newsize) {
@@ -51,7 +51,7 @@ void sym_resize_tbl(VmInfo *vm, Auint newsize) {
 		sym_tbl->symArray[i] = NULL;
 		while (p) {  // for each node in the list
 			SymInfo *next = (SymInfo*) p->next;  // save next
-			AHash h = hash_binmod(p->hash, newsize);  // new position
+			AuintIdx h = hash_binmod(p->hash, newsize);  // new position
 			p->next = (MemInfo*) sym_tbl->symArray[h];  // chain it
 			sym_tbl->symArray[h] = (SymInfo*) p;
 			resetoldbit(p);  // see MOVE OLD rule
@@ -78,10 +78,10 @@ void sym_init(VmInfo* vm) {
 }
 
 /* If symbol exists in symbol table, reuse it. Otherwise, add it. Return symbol value. */
-Value aSyml(Value th, const char *str, Auint32 len) {
+Value aSyml(Value th, const char *str, AuintIdx len) {
 	SymInfo *sym;
 	SymTable* sym_tbl = th(th)->vm->sym_table;
-	unsigned int hash = hash_bytes(str, len, th(th)->vm->hashseed);
+	unsigned int hash = tblCalcStrHash(str, len, th(th)->vm->hashseed);
 
 	// Look for symbol in symbol table. Return it, if found.
 	for (sym = sym_tbl->symArray[hash_binmod(hash, sym_tbl->nbrAvail)]; sym != NULL; sym = (SymInfo*) sym->next) {
@@ -142,7 +142,7 @@ Value sym_next(Value th, Value key) {
 		return aNull;
 
 	// Look for the symbol in table, then return next one
-	AHash hash = ((SymInfo*)key)->hash;
+	AuintIdx hash = ((SymInfo*)key)->hash;
 	Auint len = ((SymInfo*)key)->size;
 	Auint i = hash_binmod(hash, sym_tbl->nbrAvail);
 	for (sym = sym_tbl->symArray[i]; sym != NULL; sym = (SymInfo*) sym->next) {
