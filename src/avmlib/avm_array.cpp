@@ -89,9 +89,30 @@ Value arrGet(Value th, Value arr, AuintIdx pos) {
 	return (pos > a->size)? aNull : a->arr[pos];
 }
 
+/* Put val into the array starting at pos.
+ * This can expand the size of the array.*/
+void arrSet(Value th, Value arr, AuintIdx pos, Value val) {
+	ArrInfo *a = arr_info(arr);
+	AuintIdx i;
+	assert(isArr(arr));
+
+	// Grow, if needed
+	if (pos+1>a->avail)
+		arrMakeRoom(th, arr, pos+1);
+	// Fill with nulls if pos starts after end of array
+	if (pos > a->size)
+		for (i=a->size; i<pos; i++)
+			a->arr[i]=aNull;
+	// Perform copy
+	a->arr[pos]=val;
+	// If final fill is past array size, reset size higher
+	if (pos+1 > a->size)
+		a->size = pos+1;
+}
+
 /* Propagate n copies of val into the array starting at pos.
  * This can expand the size of the array.*/
-void arrSet(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val) {
+void arrRpt(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val) {
 	ArrInfo *a = arr_info(arr);
 	AuintIdx i;
 	assert(isArr(arr));
@@ -151,7 +172,7 @@ void arrIns(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val) {
 	a->size += n;
 
 	// Do any needed null fill plus the repeat copy
-	arrSet(th, arr, pos, n, val);
+	arrRpt(th, arr, pos, n, val);
 }
 
 /* Copy n2 values from arr2 starting at pos2 into array, replacing the n values in first array starting at pos.

@@ -28,10 +28,13 @@
   <ItemGroup>
     <ClCompile Include="src\avmlib\avm_api.cpp" />
     <ClCompile Include="src\avmlib\avm_array.cpp" />
+    <ClCompile Include="src\avmlib\avm_global.cpp" />
+    <ClCompile Include="src\avmlib\avm_stack.cpp" />
     <ClCompile Include="src\avmlib\avm_table.cpp" />
     <ClCompile Include="src\avmlib\avm_memory.cpp" />
     <ClCompile Include="src\avmlib\avm_string.cpp" />
     <ClCompile Include="src\avmlib\avm_symbol.cpp" />
+    <ClCompile Include="src\avmlib\avm_thread.cpp" />
     <ClCompile Include="src\avmlib\avm_value.cpp" />
     <ClCompile Include="src\avmlib\avm_vm.cpp" />
   </ItemGroup>

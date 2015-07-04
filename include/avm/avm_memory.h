@@ -68,6 +68,7 @@ typedef struct MemInfoT {
 enum EncType {
 	SymEnc,
 	ThrEnc,
+	VmEnc,
 
 	/* after this, all encodings use typed info header */
 	StrEnc,

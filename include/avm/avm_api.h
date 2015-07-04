@@ -62,9 +62,12 @@ AVM_API Value getTuple(Value arr);
 AVM_API void setTuple(Value arr, Value flag);
 /** Retrieve the value in array at specified position. */
 AVM_API Value arrGet(Value th, Value arr, AuintIdx pos);
+/** Put val into the array starting at pos.
+ * This can expand the size of the array.*/
+AVM_API void arrSet(Value th, Value arr, AuintIdx pos, Value val);
 /** Propagate n copies of val into the array starting at pos.
  * This can expand the size of the array.*/
-AVM_API void arrSet(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val);
+AVM_API void arrRpt(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val);
 /** Delete n values out of the array starting at pos. 
  * All values after these are preserved, essentially shrinking the array. */
 AVM_API void arrDel(Value th, Value arr, AuintIdx pos, AuintIdx n);
@@ -104,6 +107,56 @@ AVM_API void setType(Value val, Value type);
 /** Return the value's type (works for all values) */
 AVM_API Value getType(Value th, Value val);
 
+/** Return a new Thread with a starter namespace and stack. */
+AVM_API Value newThread(Value th, Value ns, AuintIdx stksz);
+/** Return 1 if a Thread, else return 0 */
+AVM_API int isThread(Value th);
+
+/** Create a new global namespace (typically for main thread) */
+AVM_API Value newGlobal(Value th, AuintIdx size);
+/** Creates a new global namespace, extending thread's current global to an Array */
+AVM_API Value growGlobal(Value th, AuintIdx size);
+/** Retrieve a value from global namespace */
+AVM_API Value gloGet(Value th, Value var);
+/** Retrieve a value from global namespace */
+#define gloGetc(th, var) (gloGet(th, aSym(th, var)))
+/** Add or change a global variable */
+AVM_API void gloSet(Value th, Value var, Value val);
+/** Add or change a global variable */
+#define gloSetc(th, var, val) (gloSet(th, aSym(th, var), val))
+
+/** Retrieve the stack value at the index. Be sure 0<= idx < top.
+ * Good for getting method's parameters: 0=self, 1=parm 1, etc. */
+AVM_API Value stkGet(Value th, AintIdx idx);
+/** Put the value on the stack at the designated position. Be sure 0<= idx < top. */
+AVM_API void stkSet(Value th, AintIdx idx, Value val);
+/** Copy the stack value at fromidx into toidx */
+AVM_API void stkCopy(Value th, AintIdx toidx, AintIdx fromidx);
+/** Remove the value at index (shifting down all values above it to top) */
+AVM_API void stkRemove(Value th, AintIdx idx);
+/** Insert the value at index (shifting up all values above it) */
+AVM_API void stkInsert(Value th, AintIdx idx, Value val);
+/** Push a value on the stack's top */
+AVM_API void stkPush(Value th, Value val);
+/** Push a copy of a stack's value at index onto the stack's top */
+AVM_API void  stkPushCopy(Value th, AintIdx idx);
+/** Pop a value off the top of the stack */
+AVM_API Value stkPop(Value th);
+/** Pops the top value and writes it at idx. Often used to set return value */
+AVM_API void stkPopTo(Value th, AintIdx idx);
+/** Convert a "from top" index into a bottom-based index, where 0=top, 1 is next */
+AVM_API AintIdx stkFromTop(Value th, AintIdx fromtop);
+/** Return number of values on the current function's stack */
+AVM_API AuintIdx stkSize(Value th);
+/** Reset the top of the current function's stack to a new index position (padding with 'null's)
+ * A negative index removes values off the top (-1 is no change, -2 pops one). */
+AVM_API void stkSetTop(Value th, AintIdx idx);
+/** Ensure stack has room for 'size' values. Returns 0 on failure. 
+ * This may grow the stack, but never shrinks it.
+ */
+AVM_API int stkNeeds(Value th, AuintIdx size);
+
+
 /** Start a new Virtual Machine. Return the main thread */
 AVM_API Value newVM(void);
 
@@ -120,62 +173,6 @@ AVM_API Value newVM(void);
 	<li><b>Value whatType(Value)</b> -
 	Return the values Type value.</li>
 	</ul>
-	
-	<h3>Cast a Value to C datatype</h3>
-	<p>None of these do any type-checking. They assume the value is of the correct type.</p>
-	<ul>
-	<li><b>char* toStr(Value)</b> -
-	Return a read-only pointer into a C-string encoded by a symbol or byte-oriented Value.</li>
-	</ul>
-	
-	<h3>Value creation</h3>
-	<p>In addition to the pre-defined value aNull, aFalse, and aTrue, 
-	these functions create values:</p>
-	<ul>
-	<li><b>Value aSym(char*)</b> -
-	Return the corresponding Acorn Symbol value.</li>
-	<li><b>Value newProp(Value, Value)</b> -
-	Return a new Property value whose key and value are specified.</li>
-	<li><b>Value newPropC(char*, char*)</b> -
-	Return a new Property value whose key and value are specified.</li>
-	<li><b>Value newRangeC(aInt, aInt)</b> -
-	Return a new Range value whose from and to are specified.</li>
-	<li><b>Value newTuple(Value, Value, ...)</b> -
-	Return a new Tuple value comprised of all parameter values.</li>
-	<li><b>Value aNewP(Value, Value)</b> -
-	Return a new value where first value is the Type and second is the Tupled parameters.</li>
-	</ul>
-
-	<h3>Collections</h3>
-	<ul>
-	<li><b>Value aNew(char*)</b> -
-	Return a new (empty) value where string is the global Type.</li>
-	<li><b>Value newCStr(char*, char*)</b> -
-	Return a new value, where first string is the type and second is its bytes value.</li>
-	<li><b>int append(Value, Value)</b> -
-	Equivalent to "+=". Appends the second value to the first value's collection. 
-	Return the second value if appended, otherwise null.</li>
-	<li><b>int isCollection(Value)</b> -
-	Return 1 if the value is a collection. Otherwise, return 0.</li>
-	<li><b>int isEmpty(Value)</b> -
-	Return 1 if the value is empty or not a collection. Otherwise, return 0.</li>
-	<li><b>Aint sizeOf(Value)</b> -
-	Equivalent to '.size'. Return the size of the collection. Otherwise, return 0.</li>
-	<li><b>Value getVal(Value, Value, ...)</b> -
-	Equivalent to '()'. Get from a collection (first value), passing subsequent values as parameters.
-	Return what that gives you (or null).</li>
-	<li><b>Value setVal(Value, Value, Value)</b> -
-	Equivalent to '()='. Place the third value into the second value's index into the first value's collection.
-	Return third value, or null if not placed.</li>
-	<li><b>Value forEach(Value, Afunc)</b> -
-	Retrieve each value from the first value's collection, and pass as a parameter to the callable C-function.</li>
-	<li><b>Value anIter(Value)</b> -
-	Get an iterator into the value's collection, or else null.</li>
-	<li><b>Value getNext(Value)</b> -
-	Get the collection value pointed at in the value's iterator.
-	The iterator will be altered to the next element of the collection, or null if there is not one.</li>
-	</ul>
-	
 	
 	<h3>Functions, Methods, and Types</h3>
 	<p>Generally, use Global APIs (below) to get and put Types.</p>

@@ -29,6 +29,7 @@ extern "C" {
 	/** Virtual Machine instance information 
 	 *  Is never garbage collected, but is the root for garbage collection. */
 	typedef struct VmInfo {
+		MemCommonInfo;
 		Value main_thread;			/**< VM's main thread */
 		struct SymTable* sym_table;	/**< global symbol table */
 		AuintIdx hashseed;				/**< randomized seed for hashing strings */
@@ -59,8 +60,15 @@ extern "C" {
 		int sweepstrgc;  //!< position of sweep in `strt'
 	} VmInfo;
 
-	/** Called when VM cannot allocate a new object */
+	/** Lock the Vm */
+	void vm_lock(Value th);
+	/** Unlock the Vm */
+	void vm_unlock(Value th);
+
+	/** Call when VM cannot allocate a new object */
 	void vm_outofmemory(void);
+	/** Call when we want to overflow max stack size */
+	void vm_outofstack(void);
 
 #ifdef __cplusplus
 } // end "C"

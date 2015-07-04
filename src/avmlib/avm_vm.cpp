@@ -17,7 +17,8 @@ namespace avm {
 extern "C" {
 #endif
 
-#define memcpy_Aunit(i,val) \
+/** Used by vm_init to build random seed */
+#define memcpy_Auint(i,val) \
 	{Auint anint = (Auint) val; \
 	memcpy(seedstr + i*sizeof(Auint), &anint, sizeof(Auint));}
 
@@ -35,10 +36,10 @@ extern "C" {
  *   each encoding. This includes the resource types and Acorn compiler. */
 AVM_API Value newVM(void) {
 
-	// Create VM info block
+	// Create VM info block and start up memory management
 	VmInfo *vm = (struct VmInfo*) mem_frealloc(NULL, sizeof(VmInfo));
+	vm->enctyp = VmEnc;
 	mem_init(vm); /* Initialize memory & garbage collection */
-	sym_init(vm); /* Initialize symbol table */
 
 	// Initialize safe default types for all value encodings (including Immediate)
 	// These will be overridden when the core Types are loaded.
@@ -48,26 +49,41 @@ AVM_API Value newVM(void) {
 		*p++ = aNull;
 
 	// Compute a randomized seed, using address space layout to increaase randomness
+	// Seed is used to help hash symbols
 	char seedstr[4 * sizeof(Auint)];
 	time_t timehash = time(NULL);
-	memcpy_Aunit(0, vm)			// heap pointer
-	memcpy_Aunit(1, timehash)	// current time in seconds
-	memcpy_Aunit(2, &timehash)	// local variable pointer
-	memcpy_Aunit(3, &newVM)		// public function
+	memcpy_Auint(0, vm)			// heap pointer
+	memcpy_Auint(1, timehash)	// current time in seconds
+	memcpy_Auint(2, &timehash)	// local variable pointer
+	memcpy_Auint(3, &newVM)		// public function
 	vm->hashseed = tblCalcStrHash(seedstr, sizeof(seedstr), (AuintIdx) timehash);
 
-	// Create main thread
-	vm->main_thread = mem_gcrealloc(vm, NULL, 0, sizeof(ThreadInfo));
-	struct ThreadInfo* th = th(vm->main_thread);
-	th->enctyp = ThrEnc;
-	th->vm = vm;
+	// Initialize vm-wide symbol table
+	sym_init(vm);
 
-	return (Value) th;
+	// Create main thread. It will create its own global namespace
+	vm->main_thread = newThread(vm, aNull, STACK_NEWSIZE);
+
+	return vm->main_thread;
 }
 
-/** Handle when memory manager says we have no more memory to offer */
+/* Lock the Vm */
+void vm_lock(Value th) {
+}
+
+/* Unlock the Vm */
+void vm_unlock(Value th) {
+}
+
+/* Handle when memory manager says we have no more memory to offer */
 void vm_outofmemory(void) {
 	puts("Acorn VM ran out of memory");
+	exit(1);
+}
+
+/* Call when we want to overflow max stack size */
+void vm_outofstack(void) {
+	puts("Acorn VM wants to overflow max stack size. Runaway recursive function?");
 	exit(1);
 }
 

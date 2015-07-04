@@ -91,7 +91,7 @@ void testRecent(Value th) {
 	t(!isArr(string1), "!isArr('a string')");
 	t(isArr(array1), "isArr(array1)");
 	t(getSize(array1)==0, "getSize(array1)==0");
-	arrSet(th, array1, 4, 2, aTrue); // Test Set: early elements will be aNull
+	arrRpt(th, array1, 4, 2, aTrue); // Test Set: early elements will be aNull
 	t(arrGet(th, array1, 0)==aNull, "arrGet(th, array1, 0)==aNull");
 	t(arrGet(th, array1, 5)==aTrue, "arrGet(th, array1, 5)==aTrue");
 	t(getSize(array1)==6, "getSize(array1)==6");
@@ -110,7 +110,7 @@ void testRecent(Value th) {
 	t(getSize(array1)==4, "getSize(array1)==4");
 	t(arrGet(th, array1, 3)==aTrue, "arrGet(th, array1, 3)==aTrue");
 	Value array2 = newArr(th,4);
-	arrSet(th, array2, 4, 5, string1);
+	arrRpt(th, array2, 4, 5, string1);
 	t(getSize(array2)==9, "getSize(array2)==9");
 	arrSub(th, array1, 1, 2, array2, 2, 4);
 	t(getSize(array1)==6, "getSize(array1)==6");
@@ -142,13 +142,52 @@ void testRecent(Value th) {
 	tblSet(th, tbl1, aFloat(258.f), aFloat(-0.f)); // Float as key
 	t(isFloat(tblGet(th, tbl1, aFloat(258.f))), "isFloat(tblGet(th, tbl1, aFloat(258.f)))");
 	tblSet(th, tbl1, array1, string3); // Array as key
-	arrSet(th, array1, 6, 0, aTrue); // Modify array, should still work as table key
+	arrSet(th, array1, 6, aTrue); // Modify array, should still work as table key
 	t(isStr(tblGet(th, tbl1, array1)), "isStr(tblGet(th, tbl1, array1))");
 	t(getSize(tbl1)==5, "getSize(tbl1)==5"); // table has doubled 4 times: 0->1->2->4->8
 	tblSet(th, tbl1, aSym(th, "name"), aNull); // Delete 'name' entry
 	t(tblGet(th, tbl1, aSym(th, "name"))==aNull, "tblGet(th, tbl1, aSym(th, 'name'))==aNull"); // not found
-	t(getSize(tbl1)==4, "getSize(tbl1)==4"); 
-	
+	t(getSize(tbl1)==4, "getSize(tbl1)==4");
+
+	// Thread tests - global namespace
+	gloSetc(th, "$v", array1);
+	t(isArr(gloGetc(th, "$v")), "isArr(gloGetc(th, '$v'))");
+	t(gloGetc(th, "$p")==aNull, "gloGetc(th, '$p')==aNull"); // unknown variable
+	Value newth = newThread(th, growGlobal(th, 512), 20);
+	t(isArr(gloGetc(newth, "$v")), "isArr(gloGetc(newth, '$v'))"); // Does it shine through?
+	gloSetc(newth, "$v", string1);
+	t(isStr(gloGetc(newth, "$v")), "isStr(gloGetc(newth, '$v'))"); // Can we change it?
+	t(isArr(gloGetc(th, "$v")), "isArr(gloGetc(th, '$v'))"); // Still same in original thread?
+	gloSetc(newth, "$p", aTrue);
+	t(gloGetc(newth, "$p")==aTrue, "gloGetc(newth, '$p')==aTrue"); // Create in new thread
+	t(gloGetc(th, "$p")==aNull, "gloGetc(th, '$p')==aNull"); // But not visible in original
+
+	// Thread tests - Data stack
+	AuintIdx i = stkSize(th);
+	stkNeeds(th, 40);
+	t(stkSize(th)==i, "stkSize(th)==0");
+	stkPush(th, aTrue);
+	stkPushCopy(th, i);
+	t(stkSize(th)==i+2, "stkSize(th)==2");
+	t(stkGet(th,i)==aTrue, "stkGet(th,0)==aTrue");
+	t(stkGet(th,i+1)==aTrue, "stkGet(th,1)==aTrue");
+	stkSet(th, i+1, aFalse);
+	t(stkGet(th,i+1)==aFalse, "stkGet(th,1)==aFalse");
+	stkInsert(th, i, aSym(th, "self"));
+	t(stkSize(th)==i+3, "stkSize(th)==3");
+	t(stkGet(th,i+1)==aTrue, "stkGet(th,1)==aTrue");
+	t(isSym(stkGet(th,i)), "isSym(stkGet(th,0))");
+	stkRemove(th, i+1);
+	t(stkSize(th)==i+2, "stkSize(th)==2");
+	t(stkGet(th,i+1)==aFalse, "stkGet(th,1)==aFalse");
+	t(isFalse(stkGet(th, stkFromTop(th, 0))), "isFalse(stkGet(th, stkFromTop(th, 0)))");
+	t(isFalse(stkPop(th)), "isFalse(stkPop(th))");
+	stkPopTo(th, 0);
+	t(isSym(stkGet(th, 0)), "isSym(stkGet(th, 0))");
+	t(stkSize(th)==i, "stkSize(th)==0");
+	stkSetTop(th, 4);
+	t(stkSize(th)==5, "stkSize(th)==5");
+	t(isNull(stkPop(th)), "isNull(stkPop(th))");
 }
 
 void testAll(Value th) {
