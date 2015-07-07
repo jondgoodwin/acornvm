@@ -66,20 +66,21 @@ typedef struct MemInfoT {
 } MemInfoT;
 
 enum EncType {
-	SymEnc,
-	ThrEnc,
-	VmEnc,
+	SymEnc,		//< Symbol
+	ThrEnc,		//< Thread
+	VmEnc,		//< Virtual Machine
+	FuncEnc,	//< C or Bytecode function
 
 	/* after this, all encodings use typed info header */
-	StrEnc,
-	ArrEnc,
-	TblEnc,
+	StrEnc,		//< String (bytes)
+	ArrEnc,		//< Array
+	TblEnc,		//< Table
 
 	/* Immediate value encodings */
-	NullEnc,
-	BoolEnc,
-	IntEnc,
-	FloatEnc,
+	NullEnc,	//< Null
+	BoolEnc,	//< Boolean: true or false
+	IntEnc,		//< Integer
+	FloatEnc,	//< Floating point
 
 	NbrEnc  /**< The number of encodings */
 };
@@ -93,6 +94,12 @@ enum EncType {
 #define TypedInfo 0x80
 /** Does the value provide its type information? */
 #define isTyped(val) (((Meminfo*)val)->enctyp & TypedInfo)
+
+
+
+/* ************************************
+   Garbage Collection
+   ********************************* */
 
 // Bit arithmetic macros
 #define resetbits(x,m)		((x) &= ((char) ~(m))) //!< Turn off the m bits in x

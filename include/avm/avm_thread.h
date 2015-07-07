@@ -25,16 +25,33 @@ extern "C" {
 
 /** A single entry on the thread's call stack */
 typedef struct CallInfo {
-	Value *stk_base;					//< function index in the stack
-	Value *top;							//< highest indexable positive stack value 
 	struct CallInfo *previous, *next;	//< call stack chain links
+
+	// Data stack pointers
+	Value *funcbase;					//< Points to function value on stack
+	Value *begin;						//< Points to function's parameters and local vars 
+	Value *end;							//< Points to highest allocated area for function
+
 	short nresults;						//< expected number of results from this function
 	char callstatus;
 
-	// Acorn code only
-	Value *base;						//< Start of function's parameters and local vars 
-//	Instruction *ip;					//< Pointer to current instruction
+	// Bytecode only
+	Instruction *ip;					//< Pointer to current instruction
 } CallInfo;
+
+/*
+ * CallInfo callstatus flags 
+ */
+#define CIST_BYTECODE	(1<<0)	/* call is running a Bytecode function */
+#define CIST_HOOKED	(1<<1)	/* call is running a debug hook */
+#define CIST_REENTRY	(1<<2)	/* call is running on same invocation of
+                                   execute of previous call */
+#define CIST_YIELDED	(1<<3)	/* call reentered after suspension */
+#define CIST_YPCALL	(1<<4)	/* call is a yieldable protected call */
+#define CIST_STAT	(1<<5)	/* call has an error status (pcall) */
+#define CIST_TAIL	(1<<6)	/* call was tail called */
+#define CIST_HOOKYIELD	(1<<7)	/* last hook called yielded */
+
 
 /** Information about a Thread */
 typedef struct ThreadInfo {
@@ -44,11 +61,11 @@ typedef struct ThreadInfo {
 	VmInfo *vm;			//< Virtual machine that thread is part of
 	Value global;		//< thread's global namespace
 
-	// Data stack
-	// Note that "size" is the data stack's allocated size
+	// Data stack pointers
+	// Note: "size" is the data stack's allocated size
 	Value *stack;		//< Points to the lowest value on the stack
-	Value *stk_last;	//< Points to EXTRA slots below the highest stack value
 	Value *stk_top;		//< Points to the next available value on the stack
+	Value *stk_last;	//< Points to EXTRA slots below the highest stack value
 
 	// Call stack
 	CallInfo *curfn;	//< Call info for current function
@@ -61,7 +78,12 @@ typedef struct ThreadInfo {
 /** Point to thread's vm info */
 #define vm(th) (((ThreadInfo*)th)->vm)
 
+/** Internal function to re-allocate stack's size */
 void stkRealloc(Value th, int newsize);
+
+/** Restore call and data stack after call, copying return values down 
+ * nreturned is how many values the called function actually returned */
+void thrReturn(Value th, int nreturned);
 
 #ifdef __cplusplus
 } // end "C"

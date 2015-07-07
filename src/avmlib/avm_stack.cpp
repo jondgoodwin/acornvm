@@ -6,9 +6,9 @@
  * validity (except when running in debug mode, where invalid indices generate exceptions).
  *
  * A current method's area of the data stack is bounded by pointers:
- * - th(th)->curfn->stk_base points to the bottom (at 0 index)
+ * - th(th)->curfn->begin points to the bottom (at 0 index)
  * - th(th)->stk_top points just above the last (top) value
- * - th(th)->curfn->top points just above last allocated value on stack for method
+ * - th(th)->curfn->end points just above last allocated value on stack for method
  *
  * @file
  *
@@ -30,15 +30,15 @@ extern "C" {
    ***************************************/
 
 /** Size of the function's stack area: base to top */
-#define stkSz(th) (th(th)->stk_top - th(th)->curfn->stk_base)
+#define stkSz(th) (th(th)->stk_top - th(th)->curfn->begin)
 
 /** Is there room to increment stack top up by 1 */
-#define stkCanIncTop(th) assert((th(th)->stk_top+1 <= th(th)->curfn->top) && "stack top overflow")
+#define stkCanIncTop(th) assert((th(th)->stk_top+1 <= th(th)->curfn->end) && "stack top overflow")
 
 /** Point to current function's stack value at position i.
  * For a method: i=0 is self, i=1 is first parameter, etc. */
 #define stkAt(th,i) (assert_exp((i)>=0 && (i)<stkSz(th) && "invalid stack index", \
-	&th(th)->curfn->stk_base[i]))
+	&th(th)->curfn->begin[i]))
 
 
 /* ****************************************
@@ -117,22 +117,23 @@ AuintIdx stkSize(Value th) {
 	return (AuintIdx) (stkSz(th));
 }
 
-/* Reset the top of the current function's stack to a new index position (padding with 'null's)
- * A negative index removes values off the top (-1 is no change, -2 pops one). */
-void stkSetTop(Value th, AintIdx idx) {
-	Value *base = th(th)->curfn->stk_base;
+/* When index is positive, this indicates how many Values are on the function's stack.
+ * This can shrink the stack or grow it (padding with 'null's).
+ * A negative index removes that number of values off the top. */
+void stkSetSize(Value th, AintIdx idx) {
+	Value *base = th(th)->curfn->begin;
 
 	// If positive, idx is the index of top value on stack
 	if (idx >= 0) {
-		assert((base + idx + 1 <= th(th)->stk_last) && "stack top overflow"); // Cannot grow past established limit
-		while (th(th)->stk_top < base + idx + 1)
+		assert((base + idx <= th(th)->stk_last) && "stack top overflow"); // Cannot grow past established limit
+		while (th(th)->stk_top < base + idx)
 			*th(th)->stk_top++ = aNull; // If growing, fill with nulls
-		th(th)->stk_top = base + idx + 1;
+		th(th)->stk_top = base + idx;
 	}
 	// If negative, idx is which Value from old top is new top (-1 means no change, -2 pops one)
 	else {
-		assert((-(idx+1) <= th(th)->stk_top - (base + 1)) && "invalid new top");
-		th(th)->stk_top += idx+1;  // Adjust top using negative index
+		assert((-(idx) <= th(th)->stk_top - (base + 1)) && "invalid new top");
+		th(th)->stk_top += idx;  // Adjust top using negative index
 	}
 }
 
@@ -157,6 +158,18 @@ void stkRealloc(Value th, int newsize) {
 	// Correct stack values for new size
 	th(th)->size = newsize;
 	th(th)->stk_last = th(th)->stack + newsize - STACK_EXTRA;
+
+	// Correct all data stack pointers, given that data stack may have moved in memory
+	if (oldstack) {
+		CallInfo *ci;
+		AintIdx shift = th(th)->stack - oldstack;
+		th(th)->stk_top = th(th)->stk_top + shift;
+		for (ci = th(th)->curfn; ci != NULL; ci = ci->previous) {
+			ci->end += shift;
+			ci->funcbase += shift;
+			ci->begin += shift;
+		}
+	}
 }
 
 /** Internal function to grow current method's stack area by at least n past stk_top.
@@ -207,15 +220,15 @@ int stkNeeds(Value th, AuintIdx extra) {
 	}
 
 	// adjust function's last allowed value upwards, as needed
-	if (success && ci->top < th(th)->stk_top + extra)
-		ci->top = th(th)->stk_top + extra;
+	if (success && ci->end < th(th)->stk_top + extra)
+		ci->end = th(th)->stk_top + extra;
 
 	vm_unlock(th);
 	return success;
 }
 
-
+#ifdef __cplusplus
 } // extern "C"
 } // namespace avm
-
+#endif
 

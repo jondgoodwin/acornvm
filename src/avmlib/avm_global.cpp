@@ -70,7 +70,8 @@ void gloSet(Value th, Value var, Value val) {
 	tblSet(th, glo, var, val);
 }
 
+#ifdef __cplusplus
 } // extern "C"
 } // namespace avm
-
+#endif
 

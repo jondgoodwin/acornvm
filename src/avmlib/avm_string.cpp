@@ -98,7 +98,8 @@ void strSub(Value th, Value val, AuintIdx pos, AuintIdx sz, const char *repstr, 
 	str->str[len] = '\0';
 }
 
+#ifdef __cplusplus
 } // extern "C"
 } // namespace avm
-
+#endif
 

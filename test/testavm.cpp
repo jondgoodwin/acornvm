@@ -22,6 +22,15 @@ void t(int test, const char *text) {
 	}
 }
 
+int test_cfunc(Value th) {
+	t(stkSize(th)==1, "stkSize(th)==1");
+	t(stkGet(th, 0)==aTrue, "stkGet(th, 0)==aTrue");
+
+	// Test return of a value
+	stkPush(th, aFalse);
+	return 1;
+}
+
 void testRecent(Value th) {
 	// Integer value primitive tests
 	t(isInt(anInt(-1000)), "isInt(anInt(-1000))");
@@ -185,9 +194,39 @@ void testRecent(Value th) {
 	stkPopTo(th, 0);
 	t(isSym(stkGet(th, 0)), "isSym(stkGet(th, 0))");
 	t(stkSize(th)==i, "stkSize(th)==0");
-	stkSetTop(th, 4);
-	t(stkSize(th)==5, "stkSize(th)==5");
+	stkSetSize(th, 4);
+	t(stkSize(th)==4, "stkSize(th)==4");
 	t(isNull(stkPop(th)), "isNull(stkPop(th))");
+	stkSetSize(th, 0);
+	t(stkSize(th)==0, "stkSize(th)==0");
+
+	// C-function and Thread call stack tests
+	Value testcfn = aCFunc(th, test_cfunc, "test_cfunc", __FILE__);
+	stkPush(th, testcfn);
+	stkPush(th, aTrue); // Pass parameter
+	thrCall(th, 1, 1);
+	t(stkPop(th)==aFalse, "c-function return success: stkPop(th)==aFalse");
+	t(stkSize(th)==0, "stkSize(th)==0");
+
+	// Bytecode-function and Thread call stack tests
+	Value testbfn = aBFunc(th, 2, "test_bytefunc", "NOWHERE");
+	stkPush(th, testbfn);
+	thrCall(th, 0, 1); // Call with no parameters, will return puffed null
+	t(stkPop(th)==aNull, "b-function return success: stkPop(th)==aNull");
+	t(stkSize(th)==0, "stkSize(th)==0");
+	stkPush(th, testbfn);
+	stkPush(th, aTrue);
+	stkPush(th, array1);
+	thrCall(th, 2, 1); // Call with parameters, will return array
+	t(isArr(stkPop(th)), "b-function return success: isArr(stkPop(th)");
+	t(stkSize(th)==0, "stkSize(th)==0");
+	Value testbfnv = aBFunc(th, -2, "test_bytefunc", "NOWHERE");
+	stkPush(th, testbfnv);
+	stkPush(th, aTrue);
+	stkPush(th, true1);
+	thrCall(th, 2, 1); // Call with parameters, will return symbol
+	t(isSym(stkPop(th)), "b-function return success: isSym(stkPop(th)");
+	t(stkSize(th)==0, "stkSize(th)==0");
 }
 
 void testAll(Value th) {

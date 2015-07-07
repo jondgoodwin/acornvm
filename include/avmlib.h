@@ -22,6 +22,7 @@
 #include "avm/avm_array.h"
 #include "avm/avm_table.h"
 #include "avm/avm_vm.h"
+#include "avm/avm_func.h"
 #include "avm/avm_thread.h"
 
 #endif

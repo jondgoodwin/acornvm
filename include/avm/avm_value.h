@@ -45,6 +45,11 @@ typedef ptrdiff_float Afloat;
  */
 typedef void *Value;
 
+/** Prototype for a C function callable by the VM.
+	It is passed the thread, through which it obtains parameters via the data stack. 
+	When done, it returns how many return values it has placed on the stack. */
+typedef int (*AcFuncp)(Value th);
+
 /** Quick, exact equivalence check between two values ('===')
  * Great for null, false, true, integers and symbols.
  * Less suitable for floats (no epsilon) and comparing contents of containers (e.g., strings).

@@ -206,7 +206,8 @@ void arrSub(Value th, Value arr, AuintIdx pos, AuintIdx n, Value arr2, AuintIdx 
 	a->size += n2-n;
 }
 
+#ifdef __cplusplus
 } // extern "C"
 } // namespace avm
-
+#endif
 

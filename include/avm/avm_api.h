@@ -148,13 +148,27 @@ AVM_API void stkPopTo(Value th, AintIdx idx);
 AVM_API AintIdx stkFromTop(Value th, AintIdx fromtop);
 /** Return number of values on the current function's stack */
 AVM_API AuintIdx stkSize(Value th);
-/** Reset the top of the current function's stack to a new index position (padding with 'null's)
- * A negative index removes values off the top (-1 is no change, -2 pops one). */
-AVM_API void stkSetTop(Value th, AintIdx idx);
+/** When index is positive, this indicates how many Values are on the function's stack.
+ *	This can shrink the stack or grow it (padding with 'null's).
+ *	A negative index removes that number of values off the top. */
+AVM_API void stkSetSize(Value th, AintIdx idx);
 /** Ensure stack has room for 'size' values. Returns 0 on failure. 
  * This may grow the stack, but never shrinks it.
  */
 AVM_API int stkNeeds(Value th, AuintIdx size);
+
+/** Build a new c-function value, pointing to a function written in C */
+AVM_API Value aCFunc(Value th, AcFuncp func, const char* name, const char* src);
+/** Build a new c-method value, pointing to a function written in C */
+AVM_API Value aCMeth(Value th, AcFuncp func, const char* name, const char* src);
+/** Build a new function value, written in bytecode. Negative nparms allows variable number of parameters. */
+AVM_API Value aBFunc(Value th, int nparms, const char* name, const char* src);
+/** Build a new method value, written in bytecode. Negative nparms allows variable number of parameters. */
+AVM_API Value aBMethod(Value th, int nparms, const char* name, const char* src);
+
+/** Call a function value placed on stack (with nparms above it). 
+ * Indicate how many return values to expect to find on stack. */
+AVM_API void thrCall(Value th, int nparms, int nexpected);
 
 
 /** Start a new Virtual Machine. Return the main thread */
