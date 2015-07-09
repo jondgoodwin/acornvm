@@ -64,6 +64,9 @@ AVM_API Value newVM(void) {
 	// Create main thread. It will create its own global namespace
 	vm->main_thread = newThread(vm, aNull, STACK_NEWSIZE);
 
+	// Initialize all core types
+	atyp_init(vm->main_thread);
+
 	return vm->main_thread;
 }
 

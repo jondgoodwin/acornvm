@@ -65,22 +65,29 @@ typedef struct MemInfoT {
 	MemCommonInfoT;
 } MemInfoT;
 
+/** Various types of Value encodings, some stored in pointer Values and
+ * all used as an index into the VM's default encodings-to-types map */
 enum EncType {
-	SymEnc,		//< Symbol
-	ThrEnc,		//< Thread
-	VmEnc,		//< Virtual Machine
-	FuncEnc,	//< C or Bytecode function
+	SymEnc,		//!< Symbol
+	ThrEnc,		//!< Thread
+	VmEnc,		//!< Virtual Machine
+	FuncEnc,	//!< C or Bytecode function
 
 	/* after this, all encodings use typed info header */
-	StrEnc,		//< String (bytes)
-	ArrEnc,		//< Array
-	TblEnc,		//< Table
+	StrEnc,		//1< String (bytes)
+	ArrEnc,		//!< Array
+	TblEnc,		//!< Table
+	PartEnc,	//1< Part
 
-	/* Immediate value encodings */
-	NullEnc,	//< Null
-	BoolEnc,	//< Boolean: true or false
-	IntEnc,		//< Integer
-	FloatEnc,	//< Floating point
+	/* Immediate value encoding types (not Value Pointers) */
+	NullEnc,	//!< Null
+	BoolEnc,	//!< Boolean: true or false
+	IntEnc,		//!< Integer
+	FloatEnc,	//!< Floating point
+
+	// These are not encodings, but types we need access to
+	TypeEnc,	//!< Type (really is a Part)
+	AllEnc,     //!< All type
 
 	NbrEnc  /**< The number of encodings */
 };

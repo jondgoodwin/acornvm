@@ -169,18 +169,13 @@ void thrCall(Value th, int nparms, int nexpected) {
 	thrCalli(th, th(th)->stk_top - nparms - 1, nexpected);
 }
 
-/* Fake function for now ... */
-Value findMethod(Value th, Value self, Value methnm) {
-	return aNull;
-}
-
-/** Replace self+method on stack with function+self, then call */
+/* Replace self+method on stack with function+self, then call */
 bool thrCallMethod(Value th, int nparms, int nexpected) {
 	Value *self = th(th)->stk_top-nparms-1;
 	Value *methnm = self+1;
 
 	// Look up method's function, then do swap
-	Value methodfn = findMethod(th, self, methnm);
+	Value methodfn = findMethod(th, *self, *methnm);
 	*methnm = *self;
 	*self = methodfn;
 

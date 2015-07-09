@@ -21,8 +21,22 @@
 #include "avm/avm_string.h"
 #include "avm/avm_array.h"
 #include "avm/avm_table.h"
+#include "avm/avm_part.h"
 #include "avm/avm_vm.h"
 #include "avm/avm_func.h"
 #include "avm/avm_thread.h"
+
+#ifdef __cplusplus
+namespace avm {
+extern "C" {
+#endif
+
+/** Initializes all core types */
+void atyp_init(Value th);
+
+#ifdef __cplusplus
+} // end "C"
+} // end namespace
+#endif
 
 #endif

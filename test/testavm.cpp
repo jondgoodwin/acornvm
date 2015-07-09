@@ -94,9 +94,6 @@ void testRecent(Value th) {
 
 	// Array API tests
 	Value array1 = newArr(th, 10);
-	t(getTuple(array1)==aFalse, "getTuple(array1)==aFalse");
-	setTuple(array1, aTrue);
-	t(getTuple(array1)==aTrue, "getTuple(array1)==aTrue");
 	t(!isArr(string1), "!isArr('a string')");
 	t(isArr(array1), "isArr(array1)");
 	t(getSize(array1)==0, "getSize(array1)==0");
@@ -125,7 +122,7 @@ void testRecent(Value th) {
 	t(getSize(array1)==6, "getSize(array1)==6");
 	t(getSize(arrGet(th, array1, 4))==21, "getSize(arrGet(th, array1, 5))==21");
 
-	// Hash API tests
+	// Table API tests
 	Value tbl1 = newTbl(th, 0);
 	t(!isTbl(string1), "!isTbl('a string')");
 	t(isTbl(tbl1), "isTbl(hash1)");
@@ -227,6 +224,16 @@ void testRecent(Value th) {
 	thrCall(th, 2, 1); // Call with parameters, will return symbol
 	t(isSym(stkPop(th)), "b-function return success: isSym(stkPop(th)");
 	t(stkSize(th)==0, "stkSize(th)==0");
+
+	// Type API tests - makes use of built-in types, which use the API to create types and its methods
+	stkPush(th, anInt(50));
+	stkPush(th, aSym(th, "+"));
+	stkPush(th, anInt(40));
+	thrCallMethod(th, 2, 1);
+	t(stkPop(th)==anInt(90), "stkPop(th)==anInt(90)"); // Yay - first successful O-O request!
+	t(isType(gloGetc(th, "Integer")), "isType(gloGetc(th, 'Integer'))");
+	t(getType(th, gloGetc(th, "Integer"))==gloGetc(th, "Type"), "isType(getType(th, gloGetc(th, 'Integer'))==gloGetc(th, 'Type'))");
+
 }
 
 void testAll(Value th) {

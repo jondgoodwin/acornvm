@@ -2,7 +2,7 @@
  *
  * Arrays are like strings; however strings collect only bytes, whereas arrays
  * can collect values of any type. Arrays are the foundation for many Acorn types,
- * most notably List and Tuple, but also Array and all the compound types
+ * most notably List, but also Array and all the compound types
  * (e.g., Range, Property).
  *
  * Array values are mutable; their content and size can be changed as needed.
@@ -35,9 +35,6 @@ typedef struct ArrInfo {
 	Value *arr;		//!< Pointer to allocated array buffer
 	AuintIdx avail;	//!< Allocated size of buffer
 } ArrInfo;
-
-/** Flags in flags1 */
-#define ArrTuple 0x80	//!< Array is a tuple (meaningful to Acorn)
 
 /** Point to array information, by recasting a Value pointer */
 #define arr_info(val) (assert_exp(isEnc(val,ArrEnc), (ArrInfo*) val))

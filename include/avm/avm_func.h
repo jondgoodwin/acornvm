@@ -42,9 +42,9 @@ typedef struct FuncInfo {
 /* Flags1 is for a function's flags - can use as lval or rval */
 #define funcFlags(val) (((FuncInfo*)val)->flags1)
 
-#define FUNC_FLG_C			0x80 //< The function is coded in C (vs. Bytecode)
-#define FUNC_FLG_METHOD		0x40 //< The function is a method (vs. method)
-#define FUNC_FLG_VARPARM	0x20 //< The function accepts a variable number of parameters
+#define FUNC_FLG_C			0x80 //!< The function is coded in C (vs. Bytecode)
+#define FUNC_FLG_METHOD		0x40 //!< The function is a method (vs. method)
+#define FUNC_FLG_VARPARM	0x20 //!< The function accepts a variable number of parameters
 
 /** Is the value a function? */
 #define isFunc(val) (isEnc(val, FuncEnc))
@@ -78,8 +78,10 @@ typedef struct CFuncInfo {
    Bytecode functions
    ********************************* */
 
-typedef unsigned int Instruction;
+/** A bytecode instruction */
+typedef uint32_t Instruction;
 
+/** Information about a bytecode function */
 typedef struct BFuncInfo {
 	MemCommonInfoF;
 	Instruction *code;

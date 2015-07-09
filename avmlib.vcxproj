@@ -16,6 +16,7 @@
     <ClInclude Include="include\avm\avm_api.h" />
     <ClInclude Include="include\avm\avm_array.h" />
     <ClInclude Include="include\avm\avm_func.h" />
+    <ClInclude Include="include\avm\avm_part.h" />
     <ClInclude Include="include\avm\avm_table.h" />
     <ClInclude Include="include\avm\avm_memory.h" />
     <ClInclude Include="include\avm\avm_string.h" />
@@ -27,10 +28,10 @@
     <ClInclude Include="include\avm_env.h" />
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\avmlib\avm_api.cpp" />
     <ClCompile Include="src\avmlib\avm_array.cpp" />
     <ClCompile Include="src\avmlib\avm_func.cpp" />
     <ClCompile Include="src\avmlib\avm_global.cpp" />
+    <ClCompile Include="src\avmlib\avm_part.cpp" />
     <ClCompile Include="src\avmlib\avm_stack.cpp" />
     <ClCompile Include="src\avmlib\avm_table.cpp" />
     <ClCompile Include="src\avmlib\avm_memory.cpp" />
@@ -39,6 +40,7 @@
     <ClCompile Include="src\avmlib\avm_thread.cpp" />
     <ClCompile Include="src\avmlib\avm_value.cpp" />
     <ClCompile Include="src\avmlib\avm_vm.cpp" />
+    <ClCompile Include="src\coretypes\atyp_init.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8B302A7E-1179-481B-8EBB-C599161470F1}</ProjectGuid>

@@ -67,21 +67,6 @@ void arrForceSize(Value th, Value val, AuintIdx len) {
 	arr->size = len;
 }
 
-/* Get the array's "tuple" status: on (aTrue) or off (aFalse). */
-Value getTuple(Value arr) {
-	assert(isArr(arr));
-	return (arr_info(arr)->flags1 & ArrTuple)? aTrue : aFalse;
-}
-
-/* Set the array's "tuple" status on (aTrue) or off (aFalse). */
-void setTuple(Value arr, Value flag) {
-	assert(isArr(arr));
-	if (isFalse(flag))
-		arr_info(arr)->flags1 &= ~ArrTuple;
-	else
-		arr_info(arr)->flags1 |= ArrTuple;
-}
-
 /* Retrieve the value in array at specified position. */
 Value arrGet(Value th, Value arr, AuintIdx pos) {
 	ArrInfo *a = arr_info(arr);
@@ -108,6 +93,21 @@ void arrSet(Value th, Value arr, AuintIdx pos, Value val) {
 	// If final fill is past array size, reset size higher
 	if (pos+1 > a->size)
 		a->size = pos+1;
+}
+
+/* Append val to the end of the array (increasing array's size). */
+void arrAdd(Value th, Value arr, Value val) {
+	ArrInfo *a = arr_info(arr);
+	AuintIdx sz = arr_size(arr);
+	assert(isArr(arr));
+
+	// Grow, if needed
+	if (sz>a->avail)
+		arrMakeRoom(th, arr, sz);
+	// Perform copy
+	a->arr[sz-1]=val;
+	// If final fill is past array size, reset size higher
+	a->size = sz;
 }
 
 /* Propagate n copies of val into the array starting at pos.

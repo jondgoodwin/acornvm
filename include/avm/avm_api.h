@@ -1,4 +1,12 @@
 /** Defines API accessible functions, beyond those in avm_value.h
+ *
+ * This defines all API functions that can be used by any C/C++ program that embeds
+ * and runs the Acorn Virtual Machine, or by any C/C++ library that extends
+ * the global environment, built-in types, methods or functions.
+ *
+ * The C-code implementation of these API function is scattered across
+ * various .cpp files, as indicated.
+ *
  * @file
  *
  * This source file is part of avm - Acorn Virtual Machine.
@@ -13,6 +21,17 @@ namespace avm {
 extern "C" {
 #endif
 
+// Implemented in avm_value.cpp
+/** Set the type used by a value (if encoding allows it to change) */
+AVM_API void setType(Value val, Value type);
+/** Return the value's type (works for all values) */
+AVM_API Value getType(Value th, Value val);
+/** Find method in self or its type. Return aNull if not found */
+AVM_API Value findMethod(Value th, Value self, Value methsym);
+/** Return the size of a symbol, array, hash, or other collection. Any other value type returns 0 */
+AVM_API Auint getSize(Value val);
+
+// Implemented in avm_string.cpp and avm_symbol.cpp
 /** Return symbol for a c-string. */
 AVM_API Value aSym(Value th, const char *str);
 /** Return symbol for a byte-sequence. */
@@ -46,6 +65,7 @@ AVM_API void strMakeRoom(Value th, Value val, AuintIdx len);
  *	The operation will not be performed if resizing is not possible. */
 AVM_API void strSub(Value th, Value val, AuintIdx pos, AuintIdx sz, const char *str, AuintIdx len);
 
+// Implemented in avm_array.cpp
 /** Return new array with allocated space for len Values. */
 AVM_API Value newArr(Value th, AuintIdx len);
 /** Return 1 if the value is an Array, otherwise 0 */
@@ -56,15 +76,13 @@ AVM_API void arrMakeRoom(Value th, Value val, AuintIdx len);
 /** Force allocated and used array to a specified size, truncating 
  * or expanding as needed. Growth space is initialized to aNull. */
 AVM_API void arrForceSize(Value th, Value val, AuintIdx len);
-/** Get the array's "tuple" status: on (aTrue) or off (aFalse). */
-AVM_API Value getTuple(Value arr);
-/** Set the array's "tuple" status on (aTrue) or off (aFalse). */
-AVM_API void setTuple(Value arr, Value flag);
 /** Retrieve the value in array at specified position. */
 AVM_API Value arrGet(Value th, Value arr, AuintIdx pos);
 /** Put val into the array starting at pos.
  * This can expand the size of the array.*/
 AVM_API void arrSet(Value th, Value arr, AuintIdx pos, Value val);
+/** Append val to the end of the array (increasing array's size). */
+AVM_API void arrAdd(Value th, Value arr, Value val);
 /** Propagate n copies of val into the array starting at pos.
  * This can expand the size of the array.*/
 AVM_API void arrRpt(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val);
@@ -77,6 +95,7 @@ AVM_API void arrIns(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val);
  * This can increase or decrease the size of the array. arr and arr2 may be the same array. */
 AVM_API void arrSub(Value th, Value arr, AuintIdx pos, AuintIdx n, Value arr2, AuintIdx pos2, AuintIdx n2);
 
+// Implemented in avm_table.cpp
 /** Create and initialize a new empty hash value */
 AVM_API Value newTbl(Value th, AuintIdx len);
 /** Return 1 if the value is a Hash, otherwise 0 */
@@ -98,20 +117,50 @@ AVM_API void tblSet(Value th, Value tbl, Value key, Value val);
 */
 AVM_API Value tblNext(Value tbl, Value key);
 
+// Implemented in avm_part.cpp
+/** Return a new Part. */
+AVM_API Value newPart(Value th, Value type);
+/** Return 1 if the value is an Part, otherwise 0 */
+AVM_API int isPart(Value val);
+/** Return a new Type. */
+AVM_API Value newType(Value th, const char* typnm);
+/** Return 1 if the value is an Type, otherwise 0 */
+AVM_API int isType(Value val);
+/** Get the Items array (use array API functions to manipulate). 
+ * This allocates the array, if it does not exist yet. */
+AVM_API Value partGetItems(Value th, Value part);
+/** Add an item to the Part's array */
+AVM_API void partAddItem(Value th, Value part, Value item);
+/** Get the Properties table (use table API functions to manipulate). 
+ * This allocates the table, if it does not exist yet. */
+AVM_API Value partGetProps(Value th, Value part);
+/** Add a Property to the Part's properties */
+AVM_API void partAddProp(Value th, Value part, Value key, Value val);
+/** Get the Methods table (use table API functions to manipulate). 
+ * This allocates the table, if it does not exist yet. */
+AVM_API Value partGetMethods(Value th, Value part);
+/** Add a Property to the Part's properties */
+AVM_API void partAddMethod(Value th, Value part, Value methnm, Value meth);
+/** Get the Mixins array (use array API functions to manipulate). 
+ * This allocates the array, if it does not exist yet. */
+AVM_API Value partGetMixins(Value th, Value part);
+/** Add a type to the Part's mixins */
+AVM_API void partAddType(Value th, Value part, Value type);
+/** Copy a type's methods to the Part */
+AVM_API void partCopyMethods(Value th, Value part, Value type);
 
-/** Return the size of a symbol, array, hash, or other collection. Any other value type returns 0 */
-AVM_API Auint getSize(Value val);
-
-/** Set the type used by a value (if encoding allows it to change) */
-AVM_API void setType(Value val, Value type);
-/** Return the value's type (works for all values) */
-AVM_API Value getType(Value th, Value val);
-
+// Implemented in avm_thread.cpp
 /** Return a new Thread with a starter namespace and stack. */
 AVM_API Value newThread(Value th, Value ns, AuintIdx stksz);
 /** Return 1 if a Thread, else return 0 */
 AVM_API int isThread(Value th);
+/** Call a function value placed on stack (with nparms above it). 
+ * Indicate how many return values to expect to find on stack. */
+AVM_API void thrCall(Value th, int nparms, int nexpected);
+/** Replace self+method on stack with function+self, then call */
+AVM_API bool thrCallMethod(Value th, int nparms, int nexpected);
 
+// Implemented in avm_global.cpp
 /** Create a new global namespace (typically for main thread) */
 AVM_API Value newGlobal(Value th, AuintIdx size);
 /** Creates a new global namespace, extending thread's current global to an Array */
@@ -125,6 +174,7 @@ AVM_API void gloSet(Value th, Value var, Value val);
 /** Add or change a global variable */
 #define gloSetc(th, var, val) (gloSet(th, aSym(th, var), val))
 
+// Implemented in avm_stack.cpp
 /** Retrieve the stack value at the index. Be sure 0<= idx < top.
  * Good for getting method's parameters: 0=self, 1=parm 1, etc. */
 AVM_API Value stkGet(Value th, AintIdx idx);
@@ -153,82 +203,22 @@ AVM_API AuintIdx stkSize(Value th);
  *	A negative index removes that number of values off the top. */
 AVM_API void stkSetSize(Value th, AintIdx idx);
 /** Ensure stack has room for 'size' values. Returns 0 on failure. 
- * This may grow the stack, but never shrinks it.
- */
+ * This may grow the stack, but never shrinks it. */
 AVM_API int stkNeeds(Value th, AuintIdx size);
 
+// Implemented in avm_func.cpp
 /** Build a new c-function value, pointing to a function written in C */
 AVM_API Value aCFunc(Value th, AcFuncp func, const char* name, const char* src);
 /** Build a new c-method value, pointing to a function written in C */
-AVM_API Value aCMeth(Value th, AcFuncp func, const char* name, const char* src);
+AVM_API Value aCMethod(Value th, AcFuncp func, const char* name, const char* src);
 /** Build a new function value, written in bytecode. Negative nparms allows variable number of parameters. */
 AVM_API Value aBFunc(Value th, int nparms, const char* name, const char* src);
 /** Build a new method value, written in bytecode. Negative nparms allows variable number of parameters. */
 AVM_API Value aBMethod(Value th, int nparms, const char* name, const char* src);
 
-/** Call a function value placed on stack (with nparms above it). 
- * Indicate how many return values to expect to find on stack. */
-AVM_API void thrCall(Value th, int nparms, int nexpected);
-
-
+// Implemented in avm_vm.cpp
 /** Start a new Virtual Machine. Return the main thread */
 AVM_API Value newVM(void);
-
-	/* TO DO:
-	<h3>Type checking</h3>
-	<p>In many cases, use getGlosym("type") to retrieve the value for a specific type.</p>
-	<ul>
-	<li><b>int ofType(Value, Value)</b> -
-	Return 1 if the first value's type is what is specified by second value, otherwise 0.</li>
-	<li><b>int hasType(Value, Value)</b> -
-	Return 1 if the first value uses the type specified by the second value (mixin or parents), otherwise 0.</li>
-	<li><b>int hasMethod(Value, Value)</b> -
-	Return 1 if the first value implements the method specified by the second value's symbol, otherwise 0.</li>
-	<li><b>Value whatType(Value)</b> -
-	Return the values Type value.</li>
-	</ul>
-	
-	<h3>Functions, Methods, and Types</h3>
-	<p>Generally, use Global APIs (below) to get and put Types.</p>
-	<ul>
-	<li><b>Value newTypeC(char*)</b> -
-	Return a new Type and save it in global with symbol name of string.</li>
-	<li><b>int isType(Value)</b> -
-	Return 1 if the first value is a Type value, otherwise 0.</li>
-	<li><b>Value newCFunc(Afunc, int)</b> -
-	Return a callable anonymous c-function value with a certain number of parameters.</li>
-	<li><b>int isFunc(Value)</b> -
-	Return 1 if the value is an Acorn function, 2 if a C-function, otherwise 0.</li>
-	<li><b>Value newCMethodC(char*, Afunc, int)</b> -
-	Return a named callable method value with a certain number of parameters (including one for self).</li>
-	<li><b>Value newCMethodC(Value, Afunc, int)</b> -
-	Return a named callable method value with a certain number of parameters (including one for self).</li>
-	<li><b>int isMethod(Value)</b> -
-	Return 1 if the value is an Acorn method, 2 if a C-method, otherwise 0.</li>
-	<li><b>Value doFunc(Value, Value)</b> -
-	Equivalent to '()'. Call function (first value), passing second Tuple as parameters.
-	Return what that gives you (or null).</li>
-	<li><b>Value doMethodC(char*, Value, Value, Value)</b> -
-	Invoke the string's method symbol on second value (self), passing third Tuple value as parameters.
-	Return what that gives you (or null).</li>
-	<li><b>Value doMethod(Value, Value, Value)</b> -
-	Invoke the first value's method symbol on second value (self), passing third Tuple value as parameters.
-	Return what that gives you (or null).</li>
-	</ul>
-
-	<h3>Global</h3>
-	<p>Useful for environmental variables and most types.</p>
-	<ul>
-	<li><b>Value getGlobal(Value)</b> -
-	Get the global value, using the value as a key.</li>
-	<li><b>Value getGloSym(char*)</b> -
-	Get the global value, using the string as a symbol key.</li>
-	<li><b>Value setGlobal(Value, Value)</b> -
-	Set the global value whose key is the first value with the second value.</li>
-	<li><b>Value setGlosym(char*, Value)</b> -
-	Set the global value whose symbol key is the string with the value.</li>
-	</ul>
-	*/
 
 #ifdef __cplusplus
 } // end "C"

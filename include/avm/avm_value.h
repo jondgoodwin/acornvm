@@ -80,7 +80,7 @@ const int ValShift = 2;
 /** Cast c-integer n into an Integer value
  * This loses top two-bits of integer precision.
  * If integer is too large, this could result in an unexpected value and change of sign. */
-#define anInt(n) ((Value) ((n << ValShift)+ValInt))
+#define anInt(n) ((Value) (((n) << ValShift)+ValInt))
 
 /** Cast an Integer value into a c-integer 
  * Note: It assumes (and won't verify) that v is an Integer */
