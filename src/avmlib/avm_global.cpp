@@ -1,4 +1,4 @@
-/* Implements the global namespace that belongs to a thread.
+/** Implements the global namespace that belongs to a thread.
  * This inheritance implementation allows us to keep a thread's global namespace
  * From being polluted by another, but still share variables, if desired.
  *
@@ -32,9 +32,10 @@ Value growGlobal(Value th, AuintIdx size) {
 	}
 	// Otherwise create an Array, with new table at top and old one beneath
 	else {
-		newglo = newArr(th, 2);
-		arrSet(th, newglo, 0, newTbl(th, size));
-		arrSet(th, newglo, 1, oldglo);
+		stkPush(th, newArr(th, 2)); // Keep it from being GC captured
+		arrSet(th, stkGet(th, stkFromTop(th, 0)), 0, newTbl(th, size));
+		arrSet(th, stkGet(th, stkFromTop(th, 0)), 1, oldglo);
+		newglo=stkPop(th);
 	}
 	return newglo;
 }
@@ -68,6 +69,19 @@ void gloSet(Value th, Value var, Value val) {
 	// Insert or alter the global variable
 	assert(isTbl(glo));
 	tblSet(th, glo, var, val);
+}
+
+/* Add or change a global variable */
+void gloSetc(Value th, const char* var, Value val) {
+	Value glo = th(th)->global;
+
+	// With Array, all changes are made only to first table
+	if (isArr(glo))
+		glo = arrGet(th, glo, 0);
+
+	// Insert or alter the global variable
+	assert(isTbl(glo));
+	tblSetc(th, glo, var, val);
 }
 
 #ifdef __cplusplus

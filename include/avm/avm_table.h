@@ -45,6 +45,13 @@ extern "C" {
 // Table info declaration and access macros
 // ***********
 
+/** Structure of a table index node The index has an array of many such nodes. */
+typedef struct Node {
+	Value val;
+	Value key;
+	struct Node *next;  // for chaining
+} Node;
+
 /** Information about an table information block. (uses MemCommonInfoT) 
  * Note that flags2 is used to indicate the log2 of size of 'nodes' buffer */
 typedef struct TblInfo {
@@ -52,6 +59,26 @@ typedef struct TblInfo {
 	struct Node *nodes;			//!< Pointer to allocated table index
 	struct Node *lastfree;		//!< any free node in index is before this position
 } TblInfo;
+
+/** flags2 holds log2 of available number of nodes in 'node' buffer */
+#define lAvailNodes flags2
+
+/** Mark all in-use table values for garbage collection 
+ * Increments how much allocated memory the table uses. */
+#define tblMark(th, t) \
+	{mem_markobj(th, (t)->type); \
+	for (Node *n = &(t)->nodes[(1<<(t)->lAvailNodes)-1]; n >= (t)->nodes; n--) \
+		if (n->key != aNull) { \
+			assert(n->val != aNull); \
+			mem_markobj(th, n->key); \
+			mem_markobj(th, n->val); \
+		} vm(th)->gcmemtrav += sizeof(TblInfo) + sizeof(Node) * (1<<(t)->lAvailNodes);}
+
+/** Free all of an array's allocated memory */
+#define tblFree(th, t) \
+	{if ((t)->lAvailNodes>0) \
+		mem_freearray(th, (t)->nodes, 1<<(t)->lAvailNodes); \
+	mem_free(th, (t));}
 
 /** Point to table information, by recasting a Value pointer */
 #define tbl_info(val) (assert_exp(isEnc(val,TblEnc), (TblInfo*) val))

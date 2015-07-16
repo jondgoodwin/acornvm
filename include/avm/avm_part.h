@@ -29,7 +29,7 @@ extern "C" {
 // Part info declaration and access macros
 // ***********
 
-/** Information about an part. (uses MemCommonInfoT) */
+/** Information about a part. (uses MemCommonInfoT) */
 typedef struct PartInfo {
 	MemCommonInfoT;
 	Value items;	//< An array of the part's parts
@@ -38,31 +38,44 @@ typedef struct PartInfo {
 	Value mixins;	//< An array of mixin Types
 } PartInfo;
 
+/** Mark all Part values for garbage collection 
+ * Increments how much allocated memory the Part uses. */
+#define partMark(th, p) \
+	{mem_markobj(th, (p)->type); \
+	mem_markobj(th, (p)->items); \
+	mem_markobj(th, (p)->props); \
+	mem_markobj(th, (p)->methods); \
+	mem_markobj(th, (p)->mixins); \
+	vm(th)->gcmemtrav += sizeof(PartInfo);}
+
+/** Free all of an part's allocated memory */
+#define partFree(th, p) \
+	{mem_free(th, (p));}
+
 /** Flags in flags1 */
 #define PartType 0x80	//!< Flag to indicate whether Part is a Type
 
 /** Point to part information, by recasting a Value pointer */
 #define part_info(val) (assert_exp(isEnc(val,PartEnc), (PartInfo*) val))
 
+/** Place a new table or Array collection into a part's Value member */
+Value partSetColl(Value th, Value part, Value* mbr, Value coll);
+
 /** Retrieves item array (creating if null) */
 #define part_items(val) ((((PartInfo*) val)->items!=aNull)? (((PartInfo*) val)->items) : \
-	(((PartInfo*) val)->items = newArr(th, 0)))
+	partSetColl(th, val, &((PartInfo*) val)->items, newArr(th, 0)))
 
 /** Retrieves properties table (creating if null) */
 #define part_props(val) ((((PartInfo*) val)->props!=aNull)? (((PartInfo*) val)->props) : \
-	(((PartInfo*) val)->props = newTbl(th, 0)))
+	partSetColl(th, val, &((PartInfo*) val)->props, newTbl(th, 0)))
 
 /** Retrieves methods table (creating if null) */
 #define part_methods(val) ((((PartInfo*) val)->methods!=aNull)? (((PartInfo*) val)->methods) : \
-	(((PartInfo*) val)->methods = newTbl(th, 0)))
-
-/** Add a method to a part (easy C macro) */
-#define addMethod(th, part, methsym, meth, methnm) \
-	partAddMethod(th, part, aSym(th, methsym), aCMethod(th, meth, methnm, __FILE__));
+	partSetColl(th, val, &((PartInfo*) val)->methods, newTbl(th, 0)))
 
 /** Retrieves mixins array (creating if null) */
 #define part_mixins(val) ((((PartInfo*) val)->mixins!=aNull)? (((PartInfo*) val)->mixins) : \
-	(((PartInfo*) val)->mixins = newArr(th, 0)))
+	partSetColl(th, val, &((PartInfo*) val)->mixins, newArr(th, 0)))
 
 #ifdef __cplusplus
 } // end "C"

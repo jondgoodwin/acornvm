@@ -1,4 +1,4 @@
-/* Immediate and generic Value functions, not specific to a particular momory encoding.
+/** Immediate and generic Value functions, not specific to a particular momory encoding.
  * @file
  *
  * This source file is part of avm - Acorn Virtual Machine.
@@ -36,12 +36,13 @@ Afloat toAfloat(Value v) {
 }
 
 /* Set the type used by a value (if encoding allows it to change) */
-void setType(Value val, Value type) {
+void setType(Value th, Value val, Value type) {
 	// Do nothing if value's encoding does not support typing
 	if (!isPtr(val) || ((MemInfo*)val)->enctyp < TypedEnc)
 		return;
 
 	((MemInfoT*)val)->type = type;
+	mem_markChk(th, val, type);
 }
 
 /* Return the value's type (works for all values) */

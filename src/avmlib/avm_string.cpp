@@ -17,12 +17,13 @@ extern "C" {
 /* Return a string value containing the byte sequence. */
 Value newStrl(Value th, const char *str, AuintIdx len) {
 	StrInfo *val;
+	mem_gccheck(th);	// Incremental GC before memory allocation events
 
 	// Create a string object
 	MemInfo **linkp = NULL;
-	val = (StrInfo *) mem_new(vm(th), StrEnc, sizeof(StrInfo), linkp, 0);
+	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo), linkp, 0);
 	val->avail = len;
-	val->str = (char*) mem_gcrealloc(vm(th), NULL, 0, len+1); // an extra byte for 0-terminator
+	val->str = (char*) mem_gcrealloc(th, NULL, 0, len+1); // an extra byte for 0-terminator
 	val->flags1 = 0;
 
 	// Copy string's contents over, if provided.
@@ -57,7 +58,8 @@ void strMakeRoom(Value th, Value val, AuintIdx len) {
 
 	/* Expand available space, if needed */
 	if (len > str->avail) {
-		str->str = (char*) mem_gcrealloc(vm(th), str->str, str->avail+1, len+1);
+		mem_gccheck(th);	// Incremental GC before memory allocation events
+		str->str = (char*) mem_gcrealloc(th, str->str, str->avail+1, len+1);
 		str->avail = len;
 		str->str[len] = '\0';
 	}

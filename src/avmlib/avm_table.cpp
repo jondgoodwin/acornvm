@@ -1,4 +1,4 @@
-/* Implements hashed tables: variable-sized, indexed collections of Values (see avm_table.h)
+/** Implements hashed tables: variable-sized, indexed collections of Values (see avm_table.h)
  *
  * The table's look-up index grows and shrinks automatically based on how full it is.
  * Changes to index size are always doubling or halving, so that size is a power of 2.
@@ -24,22 +24,12 @@ namespace avm {
 extern "C" {
 #endif
 
-/** Structure of a table index node The index has an array of many such nodes. */
-typedef struct Node {
-	Value val;
-	Value key;
-	struct Node *next;  // for chaining
-} Node;
-
 /** An empty Nodes structure, when a table's index has no entries (size of 0) */
 const struct Node emptyNode = {
 	aNull,
 	aNull,
 	NULL
 };
-
-/** flags2 holds log2 of available number of nodes in 'node' buffer */
-#define lAvailNodes flags2
 
 /** Returns next highest integer value of log2(x) */
 unsigned char ceillog2(AuintIdx x) {
@@ -84,7 +74,7 @@ AuintIdx tblCalcStrHash(const char *str, Auint len, AuintIdx seed) {
 Node *tblKey2Node(Value tbl, Value key) {
 
 	// Ensure parms comply
-	assert(isTbl(tbl) && key!=aNull && !isStr(key));
+	assert(isTbl(tbl) && key!=aNull);
 
 	TblInfo *t = tbl_info(tbl);
 	AuintIdx size = 1 << t->lAvailNodes;
@@ -102,7 +92,7 @@ Node *tblKey2Node(Value tbl, Value key) {
 
 	// Handle ValPtr allocated values
 	default:
-		// Symbols (and converted strings) use the pre-calculated hash
+		// Symbols use the pre-calculated hash
 		if (isSym(key))
 			return &t->nodes[hash2NodeMod2(sym_info(key)->hash, size)];
 		// Other pointers, the value is the hash
@@ -279,7 +269,7 @@ void tblAllocnodes(Value th, TblInfo *t, AuintIdx size) {
 		size = 1 << logsize;  // 2^logsize
 
 		// Allocate new nodes buffer and initialize with empty nodes
-		t->nodes = (Node*) mem_gcreallocv(vm(th), NULL, 0, size, sizeof(Node));
+		t->nodes = (Node*) mem_gcreallocv(th, NULL, 0, size, sizeof(Node));
 		for (i=0; i<size; i++) {
 			memcpy((char *) &t->nodes[i], (char*) &emptyNode, sizeof(Node));
 		}
@@ -296,6 +286,7 @@ void tblResize(Value th, Value tbl, AuintIdx newsize) {
 	Node *nodep;
 	TblInfo *t = tbl_info(tbl);
 	assert(isTbl(tbl));
+	mem_gccheck(th);	// Incremental GC before memory allocation events
 
 	// Preserve pointer to old index, then allocate a new one
 	AuintIdx oldsize = 1 << t->lAvailNodes; // 2^
@@ -314,12 +305,13 @@ void tblResize(Value th, Value tbl, AuintIdx newsize) {
 
 	// free old index
 	if (oldnodes != &emptyNode)
-		mem_gcrealloc(vm(th), oldnodes, oldsize*sizeof(Node), 0); 
+		mem_gcrealloc(th, oldnodes, oldsize*sizeof(Node), 0); 
 }
 
 /* Create and initialize a new Table */
 Value newTbl(Value th, AuintIdx size) {
-	TblInfo *t = (TblInfo*) mem_new(vm(th), TblEnc, sizeof(TblInfo), NULL, 0);
+	mem_gccheck(th);	// Incremental GC before memory allocation events
+	TblInfo *t = (TblInfo*) mem_new(th, TblEnc, sizeof(TblInfo), NULL, 0);
 	t->size = 0;
 	tblAllocnodes(th, t, size);
 	t->type = vm(th)->defEncTypes[TblEnc]; // Assume default type
@@ -338,9 +330,6 @@ Value tblGet(Value th, Value tbl, Value key) {
 	// Null is never a key
 	if (key==aNull)
 		return aNull;
-	// Strings are not keys either: convert to a symbol
-	if (isStr(key))
-		key = aSyml(th, str_cstr(key), str_size(key));
 
 	// Find key, and return what we find (or not)
 	Node *n = tblFind(tbl, key);
@@ -357,9 +346,6 @@ void tblSet(Value th, Value tbl, Value key, Value val) {
 	// Null is never a key
 	if (key==aNull)
 		return;
-	// Strings are not keys either: convert to a symbol
-	if (isStr(key))
-		key = aSyml(th, str_cstr(key), str_size(key));
 
 	// When val is Null, key is deleted
 	if (val==aNull) {
@@ -369,10 +355,29 @@ void tblSet(Value th, Value tbl, Value key, Value val) {
 
 	// Look for key. If found, replace value. Otherwise, insert key/value pair
 	Node *n = tblFind(tbl, key);
-	if (n)
+	if (n) {
 		n->val = val;
-	else
+		mem_markChk(th, tbl, val);
+	}
+	else {
 		tblAdd(th, tbl, key, val);
+		mem_markChk(th, tbl, key);
+		mem_markChk(th, tbl, val);
+	}
+
+}
+
+/* Inserts, alters or deletes the table's 'key' entry with value. 
+ * - Deletes 'key' when value is null.
+ * - Inserts 'key' if key is not already there
+ * - Otherwise, it changes 'key' value 
+ * This C API version is safer than tblSet from accidental garbage 
+ * collection when key and val are both new values. */
+void tblSetc(Value th, Value tbl, const char* key, Value val) {
+	stkPush(th, val); // To ensure val is not collected when creating key symbol
+	Value k = aSym(th, key);
+	tblSet(th, tbl, k, stkGet(th, stkFromTop(th, 0)));
+	stkSetSize(th, -1);
 }
 
 #ifdef __cplusplus

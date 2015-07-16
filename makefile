@@ -13,14 +13,14 @@ INCLUDE   =-Iinclude
 
 # Important file names
 LIBNAME   =avmlib
-OBJECTS1   = avm_part.o avm_table.o avm_memory.o avm_array.o avm_string.o avm_symbol.o avm_value.o avm_thread.o avm_stack.o avm_func.o avm_global.o avm_vm.o
+OBJECTS1   = avm_part.o avm_table.o avm_memory.o avm_gc.o avm_array.o avm_string.o avm_symbol.o avm_value.o avm_thread.o avm_stack.o avm_func.o avm_global.o avm_vm.o
 OBJECTS2   = atyp_init.o
 TESTOBJS  = testavm.o
 TESTEXE   =testavm
 
 # Transformation options
 CC        =gcc
-CFLAGS    =-c -Wall
+CFLAGS    =-c -Wall -g -O0
 LDFLAGS   =-L$(LIBDIR)
 
 # File pathnames derived from above

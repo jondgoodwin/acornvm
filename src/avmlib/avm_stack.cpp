@@ -1,4 +1,4 @@
-/* Implements the data stack that belongs to a thread.
+/** Implements the data stack that belongs to a thread.
  * A thread has one data stack which is an allocated array of Values, initialized to 'null'.
  *
  * The stack implementation is optimized for lean performance first, as its functions 
@@ -54,6 +54,7 @@ Value stkGet(Value th, AintIdx idx) {
 /* Put the value on the stack at the designated position. Be sure 0<= idx < top. */
 void stkSet(Value th, AintIdx idx, Value val) {
 	*stkAt(th, idx) = val;
+	mem_markChk(th, th, val);
 }
 
 /* Copy the stack value at fromidx into toidx */
@@ -76,6 +77,7 @@ void stkInsert(Value th, AintIdx idx, Value val) {
 	memmove(p+1, p, sizeof(Value)*(stkSz(th)-idx));
 	th(th)->stk_top++;
 	*p = val;
+	mem_markChk(th, th, val);
 }
 
 
@@ -87,10 +89,11 @@ void stkInsert(Value th, AintIdx idx, Value val) {
 void stkPush(Value th, Value val) {
 	stkCanIncTop(th); /* Check if there is room */
 	*th(th)->stk_top++ = val;
+	mem_markChk(th, th, val);
 }
 
 /* Push a copy of a stack's value at index onto the stack's top */
-void  stkPushCopy(Value th, AintIdx idx) {
+void stkPushCopy(Value th, AintIdx idx) {
 	stkCanIncTop(th); /* Check if there is room */
 	*th(th)->stk_top++ = stkGet(th, idx);
 }
@@ -103,7 +106,7 @@ Value stkPop(Value th) {
 
 /* Pops the top value and writes it at idx. Often used to set return value */
 void stkPopTo(Value th, AintIdx idx) {
-	assert(stkSz(th)>0); // Must be at least one value to remove!
+	assert(idx < stkSz(th)-1 && "idx not lower than top"); // Must be at least one value to remove!
 	stkSet(th, idx, *(--th(th)->stk_top));
 }
 
@@ -132,7 +135,7 @@ void stkSetSize(Value th, AintIdx idx) {
 	}
 	// If negative, idx is which Value from old top is new top (-1 means no change, -2 pops one)
 	else {
-		assert((-(idx) <= th(th)->stk_top - (base + 1)) && "invalid new top");
+		assert((-(idx) <= th(th)->stk_top - base) && "invalid new top");
 		th(th)->stk_top += idx;  // Adjust top using negative index
 	}
 }
@@ -143,6 +146,7 @@ void stkSetSize(Value th, AintIdx idx) {
 
 /** Internal function to re-allocate stack's size */
 void stkRealloc(Value th, int newsize) {
+	mem_gccheck(th);	// Incremental GC before memory allocation events
 	Value *oldstack = th(th)->stack;
 	int osize = th(th)->size; // size of old stack
 
@@ -151,7 +155,7 @@ void stkRealloc(Value th, int newsize) {
 	assert(osize==0 || th(th)->stk_last - th(th)->stack == th(th)->size - STACK_EXTRA);
 
 	// Allocate new stack (assume success) and fill any growth with nulls
-	mem_reallocvector(vm(th), th(th)->stack, th(th)->size, newsize, Value);
+	mem_reallocvector(th, th(th)->stack, th(th)->size, newsize, Value);
 	for (; osize < newsize; osize++)
 		th(th)->stack[osize] = aNull;
 

@@ -30,6 +30,7 @@
   <ItemGroup>
     <ClCompile Include="src\avmlib\avm_array.cpp" />
     <ClCompile Include="src\avmlib\avm_func.cpp" />
+    <ClCompile Include="src\avmlib\avm_gc.cpp" />
     <ClCompile Include="src\avmlib\avm_global.cpp" />
     <ClCompile Include="src\avmlib\avm_part.cpp" />
     <ClCompile Include="src\avmlib\avm_stack.cpp" />

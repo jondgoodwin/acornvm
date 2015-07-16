@@ -1,4 +1,4 @@
-/* Implements parts and types: hybrid collections of items, properties, and methods.
+/** Implements parts and types: hybrid collections of items, properties, and methods.
  *
  * @file
  *
@@ -16,9 +16,10 @@ extern "C" {
 /* Return a new Part. */
 Value newPart(Value th, Value type) {
 	PartInfo *part;
+	mem_gccheck(th);	// Incremental GC before memory allocation events
 
 	// Create an part object
-	part = (PartInfo *) mem_new(vm(th), PartEnc, sizeof(PartInfo), NULL, 0);
+	part = (PartInfo *) mem_new(th, PartEnc, sizeof(PartInfo), NULL, 0);
 	part->flags1 = 0;
 	part->type = type;
 	part->items = aNull;
@@ -50,6 +51,12 @@ int isType(Value val) {
 	return isEnc(val, PartEnc) && part_info(val)->flags1 & PartType;
 }
 
+/* Places a new table or Array collection into a part's Value member */
+Value partSetColl(Value th, Value part, Value* mbr, Value coll) {
+	*mbr = coll;
+	mem_markChk(th, part, coll);
+	return coll;
+}
 
 /* Get the Items array (use array API functions to manipulate). 
  * This allocates the array, if it does not exist yet. */
@@ -77,6 +84,12 @@ void partAddProp(Value th, Value part, Value key, Value val) {
 	tblSet(th, part_props(part), key, val);
 }
 
+/** Add a Property to the Part's properties */
+void partAddPropc(Value th, Value part, const char* key, Value val) {
+	assert(isPart(part));
+	tblSetc(th, part_props(part), key, val);
+}
+
 /* Get the Methods table (use table API functions to manipulate). 
  * This allocates the table, if it does not exist yet. */
 Value partGetMethods(Value th, Value part) {
@@ -88,6 +101,16 @@ Value partGetMethods(Value th, Value part) {
 void partAddMethod(Value th, Value part, Value methnm, Value meth) {
 	assert(isPart(part));
 	tblSet(th, part_methods(part), methnm, meth);
+}
+
+/** Add a C method to a part */
+void partAddMethodc(Value th, Value part, const char* methsym, Value meth) {
+	assert(isPart(part));
+	// Use stack to ensure GC does not collect either value
+	stkPush(th, meth);
+	stkPush(th, aSym(th, methsym));
+	tblSet(th, part_methods(part), stkGet(th, stkFromTop(th,0)), stkGet(th, stkFromTop(th,1)));
+	stkSetSize(th, -2);
 }
 
 /* Get the Mixins array (use array API functions to manipulate). 

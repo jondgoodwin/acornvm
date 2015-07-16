@@ -1,4 +1,4 @@
-/* Initializer for all the core types
+/** Initializer for all the core types
  *
  * @file
  *
@@ -24,14 +24,14 @@ int atyp_int_add(Value th) {
 /** Initialize the Integer type */
 Value atyp_int_init(Value th) {
 	Value typ = newType(th, "Integer");
-	addMethod(th, typ, "+", atyp_int_add, "Integer::+");
+	addCMethod(th, typ, "+", atyp_int_add, "Integer::+");
 	return typ;
 }
 
 /** Initialize the Type type, used to create other types */
 Value atyp_type_init(Value th) {
 	Value typ = newType(th, "Type");
-	setType(typ, typ); // Needed because default encoding not in place until this finishes
+	setType(th, typ, typ); // Needed because default encoding not in place until this finishes
 	return typ;
 }
 

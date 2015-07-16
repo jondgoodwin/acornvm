@@ -14,33 +14,19 @@ namespace avm {
 extern "C" {
 #endif
 
-/** Symbol table structure. 
- * There is only one symbol table used to index all symbols. Its array will double in size
- * when empty space gets tight. The symbol table is simply a collection of symbol Values,
- * indexed by the symbol's hash value. Since different symbols can hash to the same index, 
- * one may need to follow the Value forward-link chain to find the desired symbol.
- */
-struct SymTable {
-  SymInfo **symArray; /**< Array of symbol pointers */
-  Auint nbrAvail; /**< Number of allocated table entries */
-  Auint nbrUsed;  /**< Number of table entries in use */
-};
-
-/** Memory size of the symbol's header and 0-terminated c-string value */
-#define sym_memsize(strlen) (sizeof(struct SymInfo) + sizeof(char)*(1+strlen))
-
 /** modulo operation for hashing (size is always a power of 2) */
 #define hash_binmod(s,size) \
 	(assert_exp((size&(size-1))==0, (AuintIdx) ((s) & ((size)-1)) ))
 
 /** Resize the symbol table */
-void sym_resize_tbl(VmInfo *vm, Auint newsize) {
-	SymTable* sym_tbl = vm->sym_table;
+void sym_resize_tbl(Value th, Auint newsize) {
+	SymTable* sym_tbl = &vm(th)->sym_table;
 	Auint i;
 
 	// If we need to grow, allocate more cleared space for array
 	if (newsize > sym_tbl->nbrAvail) {
-		mem_reallocvector(vm, sym_tbl->symArray, sym_tbl->nbrAvail, newsize, SymInfo *);
+		mem_gccheck(th);	// Incremental GC before memory allocation events
+		mem_reallocvector(th, sym_tbl->symArray, sym_tbl->nbrAvail, newsize, SymInfo *);
 		for (i = sym_tbl->nbrAvail; i < newsize; i++) 
 			sym_tbl->symArray[i] = NULL;
 	}
@@ -63,24 +49,29 @@ void sym_resize_tbl(VmInfo *vm, Auint newsize) {
 	if (newsize < sym_tbl->nbrAvail) {
 		// shrinking slice must be empty
 		assert(sym_tbl->symArray[newsize] == NULL && sym_tbl->symArray[sym_tbl->nbrAvail - 1] == NULL);
-		mem_reallocvector(vm, sym_tbl->symArray, sym_tbl->nbrAvail, newsize, SymInfo *);
+		mem_reallocvector(th, sym_tbl->symArray, sym_tbl->nbrAvail, newsize, SymInfo *);
 	}
 	sym_tbl->nbrAvail = newsize;
 }
 
 /** Initialize the symbol table that hash indexes all symbols */
-void sym_init(VmInfo* vm) {
-	struct SymTable* sym_tbl = vm->sym_table = (struct SymTable*) mem_frealloc(NULL, sizeof(SymTable));
+void sym_init(Value th) {
+	struct SymTable* sym_tbl = &vm(th)->sym_table;
 	sym_tbl->nbrAvail = 0;
 	sym_tbl->nbrUsed = 0;
 	sym_tbl->symArray = NULL;
-	sym_resize_tbl(vm, AVM_SYMTBLMINSIZE);
+	sym_resize_tbl(th, AVM_SYMTBLMINSIZE);
+}
+
+/* Free the symbol table */
+void sym_free(Value th) {
+	mem_freearray(th, vm(th)->sym_table.symArray, vm(th)->sym_table.nbrAvail);
 }
 
 /* If symbol exists in symbol table, reuse it. Otherwise, add it. Return symbol value. */
 Value aSyml(Value th, const char *str, AuintIdx len) {
 	SymInfo *sym;
-	SymTable* sym_tbl = th(th)->vm->sym_table;
+	SymTable* sym_tbl = &vm(th)->sym_table;
 	unsigned int hash = tblCalcStrHash(str, len, th(th)->vm->hashseed);
 
 	// Look for symbol in symbol table. Return it, if found.
@@ -99,7 +90,7 @@ Value aSyml(Value th, const char *str, AuintIdx len) {
 
 	// Create a symbol object, adding to symbol table at hash entry
 	MemInfo **linkp = (MemInfo**) &sym_tbl->symArray[hash_binmod(hash, sym_tbl->nbrAvail)];
-	sym = (SymInfo *) mem_new(vm(th), SymEnc, sym_memsize(len), linkp, 0);
+	sym = (SymInfo *) mem_new(th, SymEnc, sym_memsize(len), linkp, 0);
 	sym->size = len;
 	sym->hash = hash;
 	memcpy(sym_cstr(sym), str, len);
@@ -123,7 +114,7 @@ int isSym(Value sym) {
  * Results may be inaccurate if the symbol table is changed during iteration.
  */
 Value sym_next(Value th, Value key) {
-	SymTable *sym_tbl = th(th)->vm->sym_table;
+	SymTable *sym_tbl = &th(th)->vm->sym_table;
 	SymInfo *sym;
 
 	// If table empty, return null

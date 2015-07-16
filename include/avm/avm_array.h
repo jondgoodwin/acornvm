@@ -36,6 +36,20 @@ typedef struct ArrInfo {
 	AuintIdx avail;	//!< Allocated size of buffer
 } ArrInfo;
 
+/** Mark all in-use array values for garbage collection 
+ * Increments how much allocated memory the array uses. */
+#define arrMark(th, a) \
+	{mem_markobj(th, (a)->type); \
+	if ((a)->size > 0) \
+		for (Value *arrp = &(a)->arr[(a)->size-1]; arrp >= (a)->arr; arrp--) \
+			mem_markobj(th, *arrp); \
+	vm(th)->gcmemtrav += sizeof(ArrInfo) + sizeof(Value) * (a)->avail;}
+
+/** Free all of an array's allocated memory */
+#define arrFree(th, a) \
+	{mem_freearray(th, (a)->arr, (a)->avail); \
+	mem_free(th, (a));}
+
 /** Point to array information, by recasting a Value pointer */
 #define arr_info(val) (assert_exp(isEnc(val,ArrEnc), (ArrInfo*) val))
 
@@ -45,7 +59,6 @@ typedef struct ArrInfo {
 // ***********
 // Non-API Array functions
 // ***********
-
 
 #ifdef __cplusplus
 } // end "C"

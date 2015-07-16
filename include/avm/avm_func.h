@@ -11,8 +11,8 @@
  * See Copyright Notice in avm.h
 */
 
-#ifndef avm_cfunc_h
-#define avm_cfunc_h
+#ifndef avm_func_h
+#define avm_func_h
 
 #include "avm/avm_memory.h"
 
@@ -27,7 +27,7 @@ extern "C" {
 
 /** The common header fields for a function. */
 #define MemCommonInfoF \
-	MemCommonInfo; \
+	MemCommonInfoGray; \
 	Value name;		/**< Function's name (a string) */ \
 	Value source   /**< Function's source (Filename or Url) & anchor */
 
@@ -87,6 +87,18 @@ typedef struct BFuncInfo {
 	Instruction *code;
 	AuintIdx maxstacksize;
 } BFuncInfo;
+
+
+/** Mark all Func values for garbage collection 
+ * Increments how much allocated memory the func uses. */
+#define funcMark(th, f) \
+	{mem_markobj(th, (f)->name); \
+	mem_markobj(th, (f)->source); \
+	vm(th)->gcmemtrav += isCFunc(f)? sizeof(CFuncInfo) : sizeof(BFuncInfo);}
+
+/** Free all of an part's allocated memory */
+#define funcFree(th, f) \
+	{if (isCFunc(f)) mem_free(th, (CFuncInfo*)(f)); else mem_free(th, (BFuncInfo*)(f));}
 
 // ***********
 // Non-API C-Function functions

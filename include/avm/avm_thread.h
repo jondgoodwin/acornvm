@@ -39,6 +39,7 @@ typedef struct CallInfo {
 	Instruction *ip;					//< Pointer to current instruction
 } CallInfo;
 
+
 /*
  * CallInfo callstatus flags 
  */
@@ -55,7 +56,7 @@ typedef struct CallInfo {
 
 /** Information about a Thread */
 typedef struct ThreadInfo {
-	MemCommonInfo;
+	MemCommonInfoGray;
 
 	// VM and global namespace
 	VmInfo *vm;			//< Virtual machine that thread is part of
@@ -72,6 +73,19 @@ typedef struct ThreadInfo {
 	CallInfo entryfn;	//< Call info for C-function that started this thread
 } ThreadInfo;
 
+/** Mark all in-use thread values for garbage collection 
+ * Increments how much allocated memory the thread uses. */
+#define thrMark(th, t) \
+	{for (Value *stkp = (t)->stk_top - 1; stkp >= (t)->stack; stkp--) \
+		mem_markobj(th, *stkp); \
+	mem_markobj(th, (t)->global); \
+	vm(th)->gcmemtrav += sizeof(ThreadInfo) + sizeof(Value) * (t)->size;}
+
+/** Free all of an array's allocated memory */
+#define thrFree(th, t) \
+	{thrFreeStacks(t); \
+	mem_free(th, (t));}
+
 /** Turn the thread value into a pointer */
 #define th(th) ((ThreadInfo*) th)
 
@@ -80,6 +94,12 @@ typedef struct ThreadInfo {
 
 /** Internal function to re-allocate stack's size */
 void stkRealloc(Value th, int newsize);
+
+/** Initialize a thread */
+void thrInit(ThreadInfo* thr, VmInfo* vm, Value glo, AuintIdx stksz);
+
+/** Free everything allocated for thread */
+void thrFreeStacks(Value th);
 
 /** Restore call and data stack after call, copying return values down 
  * nreturned is how many values the called function actually returned */

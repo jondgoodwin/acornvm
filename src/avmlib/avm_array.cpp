@@ -1,4 +1,4 @@
-/* Implements arrays: variable-sized, ordered collections of Values (see avm_array.h)
+/** Implements arrays: variable-sized, ordered collections of Values (see avm_array.h)
  *
  * @file
  *
@@ -18,15 +18,16 @@ extern "C" {
 /* Return a new Array, allocating len slots for Values. */
 Value newArr(Value th, AuintIdx len) {
 	ArrInfo *val;
+	mem_gccheck(th);	// Incremental GC before memory allocation events
 
 	// Create an array object
 	MemInfo **linkp = NULL;
-	val = (ArrInfo *) mem_new(vm(th), ArrEnc, sizeof(ArrInfo), linkp, 0);
+	val = (ArrInfo *) mem_new(th, ArrEnc, sizeof(ArrInfo), linkp, 0);
 	val->avail = len;
 	val->size = 0;
 	val->arr = NULL;
 	if (len>0)
-		mem_reallocvector(vm(th), val->arr, 0, len, Value);
+		mem_reallocvector(th, val->arr, 0, len, Value);
 	val->flags1 = 0;	// Initialize Flags1 flags
 	val->type = vm(th)->defEncTypes[ArrEnc]; // Assume default type
 	return (Value) val;
@@ -43,7 +44,8 @@ void arrMakeRoom(Value th, Value arr, AuintIdx len) {
 	ArrInfo *a = arr_info(arr);
 
 	if (len>a->avail) {
-		mem_reallocvector(vm(th), a->arr, a->avail, len, Value);
+		mem_gccheck(th);	// Incremental GC before memory allocation events
+		mem_reallocvector(th, a->arr, a->avail, len, Value);
 		a->avail = len;
 	}
 }
@@ -57,7 +59,8 @@ void arrForceSize(Value th, Value val, AuintIdx len) {
 
 	// Expand or contract allocation, as needed
 	if (len != arr->avail) {
-		mem_reallocvector(vm(th), arr->arr, 0, len, Value);
+		mem_gccheck(th);	// Incremental GC before memory allocation events
+		mem_reallocvector(th, arr->arr, 0, len, Value);
 		arr->avail = len;
 	}
 
@@ -90,6 +93,7 @@ void arrSet(Value th, Value arr, AuintIdx pos, Value val) {
 			a->arr[i]=aNull;
 	// Perform copy
 	a->arr[pos]=val;
+	mem_markChk(th, arr, val);
 	// If final fill is past array size, reset size higher
 	if (pos+1 > a->size)
 		a->size = pos+1;
@@ -106,6 +110,7 @@ void arrAdd(Value th, Value arr, Value val) {
 		arrMakeRoom(th, arr, sz);
 	// Perform copy
 	a->arr[sz-1]=val;
+	mem_markChk(th, arr, val);
 	// If final fill is past array size, reset size higher
 	a->size = sz;
 }
@@ -130,6 +135,7 @@ void arrRpt(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val) {
 	// Perform repeat copy
 	for (i=pos; i<pos+n; i++)
 		a->arr[i]=val;
+	mem_markChk(th, arr, val); // only need to check once
 	// If final fill is past array size, reset size higher
 	if (pos+n > a->size)
 		a->size = pos+n;
@@ -202,6 +208,9 @@ void arrSub(Value th, Value arr, AuintIdx pos, AuintIdx n, Value arr2, AuintIdx 
 	// Perform copy
 	if (arr2 && isPtr(arr2))
 		memmove(&a->arr[pos], &arr_info(arr2)->arr[pos2], n2*sizeof(Value));
+	for (AintIdx i=n2-1; i>=0; i--) {
+		mem_markChk(th, arr, a->arr[pos+i]);
+	}
 
 	a->size += n2-n;
 }

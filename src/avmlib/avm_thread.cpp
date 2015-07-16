@@ -1,4 +1,4 @@
-/* Implements threads, which manage execution, the stack state, and global namespace
+/** Implements threads, which manage execution, the stack state, and global namespace
  * Look to avm_stack.cpp for stack code and avm_global.cpp for the namespace code.
  *
  * @file
@@ -16,17 +16,23 @@ extern "C" {
 
 /* Return a new Thread with a starter namespace and stack. */
 Value newThread(Value th, Value glo, AuintIdx stksz) {
-	ThreadInfo *thr;
-	VmInfo *vm = isThread(th)? vm(th) : (VmInfo*) th; // For main thread, we get VM instead of Thread
+	ThreadInfo *nthr;
+	mem_gccheck(th);	// Incremental GC before memory allocation events
 
 	// Create and initialize a thread
 	MemInfo **linkp = NULL;
-	thr = (ThreadInfo *) mem_new(vm, ThrEnc, sizeof(ThreadInfo), linkp, 0);
-	thr->size = 0;
-	thr->flags1 = 0;	// Initialize Flags1 flags
+	nthr = (ThreadInfo *) mem_new(th, ThrEnc, sizeof(ThreadInfo), linkp, 0);
+	thrInit(nthr, vm(th), glo, stksz);
+	return (Value)nthr;
+}
+
+/* Initialize a thread.
+ * We do this separately, as Vm allocates main thread as part of VmInfo */
+void thrInit(ThreadInfo* thr, VmInfo* vm, Value glo, AuintIdx stksz) {
 
 	thr->vm = vm;
-	thr->global = (glo==aNull)? newGlobal(thr, GLOBAL_NEWSIZE) : glo;
+	thr->size = 0;
+	thr->flags1 = 0;	// Initialize Flags1 flags
 
 	// Allocate and initialize thread's stack
 	thr->stack = NULL;
@@ -40,12 +46,12 @@ Value newThread(Value th, Value glo, AuintIdx stksz) {
 	ci->callstatus = 0;
 	ci->nresults = 0;
 	ci->funcbase = thr->stk_top;
+	*thr->stk_top++ = aNull;  // Place for non-existent function
 	ci->begin = thr->stk_top;
-	*thr->stk_top++ = aNull;  // default return value for this function
 	ci->end = thr->stk_top + STACK_MINSIZE;
 	thr->curfn = ci;
 
-	return (Value) thr;
+	thr->global = (glo==aNull)? newGlobal(thr, GLOBAL_NEWSIZE) : glo;
 }
 
 /** Return 1 if it is a Thread, else return 0 */
@@ -55,12 +61,34 @@ int isThread(Value th) {
 
 /** Internal routine to allocate and append a new CallInfo structure to end of call stack */
 CallInfo *thrGrowCI(Value th) {
-	CallInfo *ci = (CallInfo *) mem_frealloc(NULL, sizeof(CallInfo));
+	CallInfo *ci = (CallInfo *) mem_gcrealloc(th, NULL, 0, sizeof(CallInfo));
 	assert(th(th)->curfn->next == NULL);
 	th(th)->curfn->next = ci;
 	ci->previous = th(th)->curfn;
 	ci->next = NULL;
 	return ci;
+}
+
+/** Free all allocated CallInfo blocks in thread */
+void thrFreeCI(Value th) {
+	CallInfo *ci = th(th)->curfn;
+	CallInfo *next = ci->next;
+	ci->next = NULL;
+	while ((ci = next) != NULL) {
+		next = ci->next;
+		mem_free(th, ci);
+	}
+}
+
+/* Free everything allocated for thread */
+void thrFreeStacks(Value th) {
+	if (th(th)->stack == NULL)
+		return;  /* stack not completely built yet */
+	// Free call stack
+	th(th)->curfn = &th(th)->entryfn;
+	thrFreeCI(th);
+	// Free data stack
+	mem_freearray(th, th(th)->stack, th(th)->size);  /* free stack array */
 }
 
 /** Restore call and data stack after call, copying return values down 
@@ -105,6 +133,7 @@ bool thrCalli(Value th, Value *funcval, int nexpected) {
 	ci->nresults = nexpected;
 	ci->funcbase = funcval;  // Address of function value (also helpful for return) 
 	ci->begin = funcval + 1; // Parameter values are right after function value
+	ci->end = funcval + 1; // Will be fixed by stkNeeds
 
 	// C-function call - Does the whole thing: setup, call and stack clean up after return
 	if (isCFunc(*funcval)) {

@@ -1,4 +1,4 @@
-/* Virtual Machine management
+/** Virtual Machine management
  * @file
  *
  * This source file is part of avm - Acorn Virtual Machine.
@@ -40,6 +40,7 @@ AVM_API Value newVM(void) {
 	VmInfo *vm = (struct VmInfo*) mem_frealloc(NULL, sizeof(VmInfo));
 	vm->enctyp = VmEnc;
 	mem_init(vm); /* Initialize memory & garbage collection */
+	vm->marked = vm->currentwhite & WHITEBITS;
 
 	// Initialize safe default types for all value encodings (including Immediate)
 	// These will be overridden when the core Types are loaded.
@@ -47,6 +48,13 @@ AVM_API Value newVM(void) {
 	int i = NbrEnc;
 	while (i--)
 		*p++ = aNull;
+
+	// Initialize main thread (allocated as part of VmInfo)
+	Value th = (Value) (vm->main_thread = &vm->main_thr);
+	((ThreadInfo*) th)->marked = vm->currentwhite & WHITEBITS;
+	((ThreadInfo*) th)->enctyp = ThrEnc;
+	((ThreadInfo*) th)->next = NULL;
+	thrInit(&vm->main_thr, vm, aNull, STACK_NEWSIZE);
 
 	// Compute a randomized seed, using address space layout to increaase randomness
 	// Seed is used to help hash symbols
@@ -59,15 +67,26 @@ AVM_API Value newVM(void) {
 	vm->hashseed = tblCalcStrHash(seedstr, sizeof(seedstr), (AuintIdx) timehash);
 
 	// Initialize vm-wide symbol table
-	sym_init(vm);
-
-	// Create main thread. It will create its own global namespace
-	vm->main_thread = newThread(vm, aNull, STACK_NEWSIZE);
+	sym_init(th);
 
 	// Initialize all core types
-	atyp_init(vm->main_thread);
+	atyp_init(th);
 
-	return vm->main_thread;
+	// Start garbage collection
+	mem_gcstart(th);
+
+	return th;
+}
+
+/* Close down the virtual machine, freeing all allocated memory */
+void vm_close(Value th) {
+	th = vm(th)->main_thread;
+	mem_freeAll(th);  /* collect all objects */
+	sym_free(th);
+	thrFreeStacks(th);
+	mem_frealloc(vm(th)->defEncTypes, 0);
+	assert(vm(th)->totalbytes + vm(th)->gcdebt == sizeof(VmInfo));
+	mem_frealloc(vm(th), 0);  /* free main block */
 }
 
 /* Lock the Vm */

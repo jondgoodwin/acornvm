@@ -32,6 +32,14 @@ typedef struct SymInfo {
 	// The symbol characters follow here: char sym[len+1];
 } SymInfo;
 
+/** Memory size of the symbol's header and 0-terminated c-string value */
+#define sym_memsize(strlen) (sizeof(struct SymInfo) + sizeof(char)*(1+strlen))
+
+/** Free the memory allocated for the symbol */
+#define symFree(th, s) \
+		vm(th)->sym_table.nbrUsed--; \
+		mem_freemem(th, s, sym_memsize((s)->size));
+
 /** Point to symbol information, by recasting a Value pointer */
 #define sym_info(val) (assert_exp(isEnc(val,SymEnc), (SymInfo*) val))
 
@@ -41,11 +49,38 @@ typedef struct SymInfo {
 /** Return the length of the symbol's string (without 0-terminator) */
 #define sym_size(val) (sym_info(val)->size)
 
+/** Symbol table structure. 
+ * There is only one symbol table used to index all symbols. Its array will double in size
+ * when empty space gets tight. The symbol table is simply a collection of symbol Values,
+ * indexed by the symbol's hash value. Since different symbols can hash to the same index, 
+ * one may need to follow the Value forward-link chain to find the desired symbol. */
+struct SymTable {
+	SymInfo **symArray; /**< Array of symbol pointers */
+	Auint nbrAvail; /**< Number of allocated table entries */
+	Auint nbrUsed;  /**< Number of table entries in use */
+};
+
+/* Memory size of symbol table - used by garbage collector */
+#define sym_tblsz(th) \
+	(sizeof(SymTable) + vm(th)->sym_table.nbrAvail * sizeof(SymInfo*))
+
+// After deleting unused symbols, shrink symbol table by half, if using less than half of it
+#define sym_tblshrinkcheck(th) \
+	{Auint hs = vm(th)->sym_table.nbrAvail >> 1; \
+	if (vm(th)->sym_table.nbrUsed < hs) \
+		sym_resize_tbl(th, hs);}
+
+
 // ***********
 // Non-API Symbol functions
 // ***********
 
-void sym_init(VmInfo* vm);
+/** Initialize vm's symbol table */
+void sym_init(Value th);
+/* Free the symbol table */
+void sym_free(Value th);
+/** Resize the symbol table */
+void sym_resize_tbl(Value th, Auint newsize);
 
 #ifdef __cplusplus
 } // end "C"

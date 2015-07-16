@@ -23,7 +23,7 @@ extern "C" {
 
 // Implemented in avm_value.cpp
 /** Set the type used by a value (if encoding allows it to change) */
-AVM_API void setType(Value val, Value type);
+AVM_API void setType(Value th, Value val, Value type);
 /** Return the value's type (works for all values) */
 AVM_API Value getType(Value th, Value val);
 /** Find method in self or its type. Return aNull if not found */
@@ -109,6 +109,13 @@ AVM_API Value tblGet(Value th, Value tbl, Value key);
  * - Inserts 'key' if key is not already there
  * - Otherwise, it changes 'key' value */
 AVM_API void tblSet(Value th, Value tbl, Value key, Value val);
+/** Inserts, alters or deletes the table's 'key' entry with value. 
+ * - Deletes 'key' when value is null.
+ * - Inserts 'key' if key is not already there
+ * - Otherwise, it changes 'key' value 
+ * This C API version is safer than tblSet from accidental garbage 
+ * collection when key and val are both new values. */
+AVM_API void tblSetc(Value th, Value tbl, const char* key, Value val);
 /** Get the next sequential key/value pair in table after 'key'.
  * To sequentially traverse the table, start with 'key' of 'null'.
  * Each time called, the next key/value pair is returned.
@@ -136,11 +143,15 @@ AVM_API void partAddItem(Value th, Value part, Value item);
 AVM_API Value partGetProps(Value th, Value part);
 /** Add a Property to the Part's properties */
 AVM_API void partAddProp(Value th, Value part, Value key, Value val);
+/** Add a Property to the Part's properties */
+AVM_API void partAddPropc(Value th, Value part, const char* key, Value val);
 /** Get the Methods table (use table API functions to manipulate). 
  * This allocates the table, if it does not exist yet. */
 AVM_API Value partGetMethods(Value th, Value part);
 /** Add a Property to the Part's properties */
 AVM_API void partAddMethod(Value th, Value part, Value methnm, Value meth);
+/** Add a Method to the Part */
+AVM_API void partAddMethodc(Value th, Value part, const char* methnm, Value meth);
 /** Get the Mixins array (use array API functions to manipulate). 
  * This allocates the array, if it does not exist yet. */
 AVM_API Value partGetMixins(Value th, Value part);
@@ -148,6 +159,18 @@ AVM_API Value partGetMixins(Value th, Value part);
 AVM_API void partAddType(Value th, Value part, Value type);
 /** Copy a type's methods to the Part */
 AVM_API void partCopyMethods(Value th, Value part, Value type);
+#define addCMethod(th,part,methsym,meth,methnm) \
+	partAddMethodc(th, part, methsym, aCMethod(th, meth, methnm, __FILE__));
+
+// Implemented in avm_func.cpp
+/** Build a new c-function value, pointing to a function written in C */
+AVM_API Value aCFunc(Value th, AcFuncp func, const char* name, const char* src);
+/** Build a new c-method value, pointing to a function written in C */
+AVM_API Value aCMethod(Value th, AcFuncp func, const char* name, const char* src);
+/** Build a new function value, written in bytecode. Negative nparms allows variable number of parameters. */
+AVM_API Value aBFunc(Value th, int nparms, Value name, Value src);
+/** Build a new method value, written in bytecode. Negative nparms allows variable number of parameters. */
+AVM_API Value aBMethod(Value th, int nparms, Value name, Value src);
 
 // Implemented in avm_thread.cpp
 /** Return a new Thread with a starter namespace and stack. */
@@ -172,7 +195,7 @@ AVM_API Value gloGet(Value th, Value var);
 /** Add or change a global variable */
 AVM_API void gloSet(Value th, Value var, Value val);
 /** Add or change a global variable */
-#define gloSetc(th, var, val) (gloSet(th, aSym(th, var), val))
+AVM_API void gloSetc(Value th, const char* var, Value val);
 
 // Implemented in avm_stack.cpp
 /** Retrieve the stack value at the index. Be sure 0<= idx < top.
@@ -206,19 +229,16 @@ AVM_API void stkSetSize(Value th, AintIdx idx);
  * This may grow the stack, but never shrinks it. */
 AVM_API int stkNeeds(Value th, AuintIdx size);
 
-// Implemented in avm_func.cpp
-/** Build a new c-function value, pointing to a function written in C */
-AVM_API Value aCFunc(Value th, AcFuncp func, const char* name, const char* src);
-/** Build a new c-method value, pointing to a function written in C */
-AVM_API Value aCMethod(Value th, AcFuncp func, const char* name, const char* src);
-/** Build a new function value, written in bytecode. Negative nparms allows variable number of parameters. */
-AVM_API Value aBFunc(Value th, int nparms, const char* name, const char* src);
-/** Build a new method value, written in bytecode. Negative nparms allows variable number of parameters. */
-AVM_API Value aBMethod(Value th, int nparms, const char* name, const char* src);
-
 // Implemented in avm_vm.cpp
 /** Start a new Virtual Machine. Return the main thread */
 AVM_API Value newVM(void);
+/** Close down the virtual machine, freeing all allocated memory */
+AVM_API void vm_close(Value th);
+
+/** Start garbage collection */
+AVM_API void mem_gcstart(Value th);
+/** Stop garbage collection */
+AVM_API void mem_gcstop(Value th);
 
 #ifdef __cplusplus
 } // end "C"

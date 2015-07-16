@@ -15,6 +15,21 @@
 /** Symbol table minimum size - starting size, in number of entries */
 #define AVM_SYMTBLMINSIZE	4096
 
+// Garbage Collection tuning
+/** Controls how long the collector waits before starting a new cycle. 
+ * Larger values make the collector less aggressive. 
+ * Values smaller than 100 mean the collector will not wait to start a new cycle. 
+ * A value of 200 means that the collector waits for the total memory in use to double 
+ * before starting a new cycle. */
+#define AVM_GCPAUSE	200  /* 200% */
+#define AVM_GCMAJOR	200  /* 200% */
+/** Controls the relative speed of the collector relative to memory allocation. 
+ * Larger values make the collector more aggressive but also increase the size of each incremental step. 
+ * Values smaller than 100 make the collector too slow and can result 
+ * in the collector never finishing a cycle. 
+ * The default is 200, which means that the collector runs at "twice" the speed of memory allocation. */
+#define AVM_GCMUL	200 /* GC runs 'twice the speed' of memory allocation */
+
 /** Minimum expected room on data stack c-functions */
 #define STACK_MINSIZE 20
 /** Extra just-in-case room on stack, to provide safety in case a function goes too far */
@@ -28,13 +43,6 @@
 
 /** 2^AVM_STRHASHLIMIT is roughly max number of bytes used to compute string hash */
 #define AVM_STRHASHLIMIT	5
-
-/** Percent for garbage collection pause */
-#define AVM_GCPAUSE	200
-/** Percent for garbage collection major sweep */
-#define AVM_GCMAJOR	200
-/** Percentage GC runs of memory allocation (200=twice the speed) */
-#define AVM_GCMUL	200
 
 /** Only define this if you are testing garbage collection. It forces full garbage collect before asking for more memory */
 // #define AVM_GCHARDMEMTEST

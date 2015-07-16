@@ -29,19 +29,19 @@ extern "C" {
 	/** Virtual Machine instance information 
 	 *  Is never garbage collected, but is the root for garbage collection. */
 	typedef struct VmInfo {
-		MemCommonInfo;
+		MemCommonInfoGray;
+
 		Value main_thread;			/**< VM's main thread */
-		struct SymTable* sym_table;	/**< global symbol table */
+		struct SymTable sym_table;	/**< global symbol table */
 		AuintIdx hashseed;				/**< randomized seed for hashing strings */
 
 		Value *defEncTypes;    /**< array of default types for each encoding */
 
 		// Global state for all collectable objects
 		MemInfo *objlist;  //!< linked list of all collectable objects
-		MemInfo *rootobj; //!< All descendents of this object won't be collected
 		MemInfo **sweepgc;  //!< current position of sweep in list 'objlist'
-		MemInfo *gray;  //!< list of gray objects
-		MemInfo *grayagain;  //!< list of objects to be traversed atomically
+		MemInfoGray *gray;  //!< list of gray objects
+		MemInfoGray *grayagain;  //!< list of objects to be traversed atomically
 
 		Auint totalbytes;  //!< number of bytes currently allocated - GCdebt
 		Aint gcdebt;		//!< bytes allocated, not yet compensated by the collector
@@ -57,8 +57,16 @@ extern "C" {
 		int gcmajorinc;  //!< pause between major collections (only in gen. mode)
 		int gcstepmul;  //!< GC `granularity' 
 
-		int sweepstrgc;  //!< position of sweep in `strt'
+		Auint sweepstrgc;  //!< position of sweep in symbol table
+
+		struct ThreadInfo main_thr;
 	} VmInfo;
+
+/** Mark all in-use thread values for garbage collection 
+ * Increments how much allocated memory the thread uses. */
+#define vmMark(th, v) \
+	{mem_markobj(th, (v)->main_thread); \
+	vm(th)->gcmemtrav += sizeof(VmInfo);}
 
 	/** Lock the Vm */
 	void vm_lock(Value th);

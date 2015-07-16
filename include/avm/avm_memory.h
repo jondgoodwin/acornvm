@@ -8,8 +8,8 @@
  * See Copyright Notice in avm.h
 */
 
-#ifndef avm_memory_h
-#define avm_memory_h
+#ifndef Aintory_h
+#define Aintory_h
 
 /** C99 include file for 32-bit integer definitions */
 #include <stdint.h>
@@ -50,15 +50,25 @@ typedef unsigned char AByte;
 	AByte flags2;	/**< Encoding-specific flags */ \
 	AuintIdx size	/**< Encoding-specific sizing info */
 
+/** The common header fields for any Value containing other Values (will be marked Gray) */
+#define MemCommonInfoGray \
+	MemCommonInfo; \
+	MemInfoGray* graylink;
+
 /** The common header fields for any Typed variable-sized pointer Value (see MemCommonInfo). */
 #define MemCommonInfoT \
-	MemCommonInfo; \
+	MemCommonInfoGray; \
 	Value type		/**< Specifies data structure's Type (for methods) */
 
 /** The header structure for any variable-sized Value (see MemCommonInfo) */
 typedef struct MemInfo {
   MemCommonInfo;
 } MemInfo;
+
+/** The generic structure for any Value containing other Values (will be marked Gray) */
+typedef struct MemInfoGray {
+	MemCommonInfoGray;
+} MemInfoGray;
 
 /** The generic structure for all typed variable-sized Value */
 typedef struct MemInfoT {
@@ -129,13 +139,10 @@ enum EncType {
 // bit 7 is currently used by tests (checkmemory)
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
 
-#define otherwhite()	(mem_currentwhite ^ WHITEBITS)
-#define isdeadm(ow,m)	(!(((m) ^ WHITEBITS) & (ow)))
-#define isdead(v)	isdeadm(otherwhite(), (v)->marked)
+#define iswhite(x)      testbits((x)->marked, WHITEBITS) //!< Return true if object is white
+#define isblack(x)      testbit((x)->marked, BLACKBIT) //!< Return true if object is black
 
 #define resetoldbit(o)	resetbit((o)->marked, OLDBIT)
-
-void mem_keepalive(Value Thread, MemInfo* blk);
 
 /** Initialize memory and garbage collection for VM */
 void mem_init(struct VmInfo* vm);
@@ -147,18 +154,18 @@ void mem_init(struct VmInfo* vm);
  * \param list forward-link chain to push allocated object onto
  * \param offset how many bytes to allocate before the object itself (used only by states).
  */
-MemInfo *mem_new(VmInfo *vm, int enc, Auint sz, MemInfo **list, int offset);
+MemInfo *mem_new(Value th, int enc, Auint sz, MemInfo **list, int offset);
 
 /** Garbage-collection savvy memory malloc, free and realloc function
  * - If nsize==0, it frees the memory block (if non-NULL)
  * - If ptr==NULL, it allocates a new uninitialized memory block
  * - Otherwise it changes the size of the memory block (and may move its location)
  * It returns the location of the new block or NULL (if freed). */
-Value mem_gcrealloc(struct VmInfo *vm, void *block, Auint osize, Auint nsize);
+Value mem_gcrealloc(Value th, void *block, Auint osize, Auint nsize);
 
 /** Allocate or resize array memory */
-#define mem_reallocvector(vm,v,oldn,n,t) \
-   ((v)=(t *) mem_gcreallocv(vm, v, oldn, n, sizeof(t)))
+#define mem_reallocvector(th,v,oldn,n,t) \
+   ((v)=(t *) mem_gcreallocv(th, v, oldn, n, sizeof(t)))
 
 /** Garbage-collection savvy vector memory malloc, free and realloc function
  * - esize is the size of each entry in the vector
@@ -166,7 +173,7 @@ Value mem_gcrealloc(struct VmInfo *vm, void *block, Auint osize, Auint nsize);
  * - If ptr==NULL, it allocates a new uninitialized memory block
  * - Otherwise it changes the size of the memory block (and may move its location)
  * It returns the location of the new block or NULL (if freed). */
-void* mem_gcreallocv(VmInfo* vm, void *block, Auint osize, Auint nsize, Auint esize);
+void* mem_gcreallocv(Value th, void *block, Auint osize, Auint nsize, Auint esize);
 
 /** General-purpose memory malloc, free and realloc function.
  * - If size==0, it frees the memory block (if non-NULL)
@@ -174,6 +181,55 @@ void* mem_gcreallocv(VmInfo* vm, void *block, Auint osize, Auint nsize, Auint es
  * - Otherwise it changes the size of the memory block (and may move its location)
  * It returns the location of the new block or NULL (if freed). */
 void *mem_frealloc(void *block, Auint size);
+
+/** Free allocated memory block based on a structure */
+#define mem_free(th, b)		mem_gcrealloc(th, (b), sizeof(*(b)), 0)
+
+/** Free allocated memory block, given its old size */
+#define mem_freemem(th, b, s)	mem_gcrealloc(th, (b), (s), 0)
+
+/** Free allocated memory block based on array structure */
+#define mem_freearray(th, b, n)   mem_gcreallocv(th, (b), n, 0, sizeof((b)[0]))
+
+
+/** Confirm it is a white object, then mark it black/gray */
+#define mem_markobj(th, obj) \
+	if (isPtr(obj) && iswhite((MemInfo*)obj)) \
+		mem_markobjraw(th, (MemInfo*)obj);
+
+/** Fix a value's color mark when placing it within another value.
+ * During incremental GC marking, if we add a white object to an object
+ * already marked black, then add the white object to the gray list. */
+#define mem_markChk(th, parent, val) \
+	if (isPtr(val) && iswhite((MemInfo*)val) && isblack((MemInfo*)parent) /* && !isdead(th, (MemInfo*)parent)*/) \
+		mem_markobjraw(th, (MemInfo*)val);
+
+/** Mark a current white object to black or gray (use mem_markobj if unsure whether obj is white).
+ * Black is chosen for simple objects without embedded Values, updating gcmemtrav.
+ * Gray is chosen for collections with embedded Values, and added to a gray chain for later marking
+ * by mem_marktopgray. */
+void mem_markobjraw(Value th, MemInfo *mem);
+
+/** Keep value (symbol) alive, if dead but not yet collected */
+void mem_keepalive(Value Thread, MemInfo* blk);
+
+/** Before allocating more memory, do a GC step if done with pause */
+#define mem_gccheck(th) \
+	{if (vm(th)->gcdebt >= 0) \
+	mem_gcstep(th);}
+
+/** Free all allocated objects, ahead of VM shut-down */
+void mem_freeAll(Value th);
+
+/** Perform a step's worth of garbage collection. */
+void mem_gcstep(Value th);
+
+/** Perform a full garbage collection cycle.
+ * It will be automatically called in emergency mode if memory fills up.
+ * If emergency, do not call finalizers, which could change stack positions
+ */
+void mem_gcfull(Value th, int isemergency);
+
 
 #ifdef __cplusplus
 } // end "C"
