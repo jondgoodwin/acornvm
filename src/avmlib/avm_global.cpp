@@ -33,8 +33,8 @@ Value growGlobal(Value th, AuintIdx size) {
 	// Otherwise create an Array, with new table at top and old one beneath
 	else {
 		stkPush(th, newArr(th, 2)); // Keep it from being GC captured
-		arrSet(th, stkGet(th, stkFromTop(th, 0)), 0, newTbl(th, size));
-		arrSet(th, stkGet(th, stkFromTop(th, 0)), 1, oldglo);
+		arrSet(th, stkFromTop(th, 0), 0, newTbl(th, size));
+		arrSet(th, stkFromTop(th, 0), 1, oldglo);
 		newglo=stkPop(th);
 	}
 	return newglo;

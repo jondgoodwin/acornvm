@@ -376,7 +376,7 @@ void tblSet(Value th, Value tbl, Value key, Value val) {
 void tblSetc(Value th, Value tbl, const char* key, Value val) {
 	stkPush(th, val); // To ensure val is not collected when creating key symbol
 	Value k = aSym(th, key);
-	tblSet(th, tbl, k, stkGet(th, stkFromTop(th, 0)));
+	tblSet(th, tbl, k, stkFromTop(th, 0));
 	stkSetSize(th, -1);
 }
 

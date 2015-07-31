@@ -167,10 +167,6 @@ AVM_API void partCopyMethods(Value th, Value part, Value type);
 AVM_API Value aCFunc(Value th, AcFuncp func, const char* name, const char* src);
 /** Build a new c-method value, pointing to a function written in C */
 AVM_API Value aCMethod(Value th, AcFuncp func, const char* name, const char* src);
-/** Build a new function value, written in bytecode. Negative nparms allows variable number of parameters. */
-AVM_API Value aBFunc(Value th, int nparms, Value name, Value src);
-/** Build a new method value, written in bytecode. Negative nparms allows variable number of parameters. */
-AVM_API Value aBMethod(Value th, int nparms, Value name, Value src);
 
 // Implemented in avm_thread.cpp
 /** Return a new Thread with a starter namespace and stack. */
@@ -217,8 +213,8 @@ AVM_API void  stkPushCopy(Value th, AintIdx idx);
 AVM_API Value stkPop(Value th);
 /** Pops the top value and writes it at idx. Often used to set return value */
 AVM_API void stkPopTo(Value th, AintIdx idx);
-/** Convert a "from top" index into a bottom-based index, where 0=top, 1 is next */
-AVM_API AintIdx stkFromTop(Value th, AintIdx fromtop);
+/** Obtain value "from top" index , where 0=top, 1 is next */
+AVM_API Value stkFromTop(Value th, AintIdx fromtop);
 /** Return number of values on the current function's stack */
 AVM_API AuintIdx stkSize(Value th);
 /** When index is positive, this indicates how many Values are on the function's stack.

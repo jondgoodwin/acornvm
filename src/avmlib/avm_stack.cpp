@@ -110,9 +110,9 @@ void stkPopTo(Value th, AintIdx idx) {
 	stkSet(th, idx, *(--th(th)->stk_top));
 }
 
-/* Convert a "from top" index into a bottom-based index, where 0=top, 1 is next */
-AintIdx stkFromTop(Value th, AintIdx fromtop) {
-	return stkSz(th)-fromtop-1;
+/* Retrieve the stack value at the index from top. Be sure 0<= idx < top. */
+Value stkFromTop(Value th, AintIdx idx) {
+	return *stkAt(th, stkSz(th) - idx - 1);
 }
 
 /* Return number of values on the current function's stack */
@@ -171,6 +171,7 @@ void stkRealloc(Value th, int newsize) {
 		for (ci = th(th)->curfn; ci != NULL; ci = ci->previous) {
 			ci->end += shift;
 			ci->funcbase += shift;
+			ci->retTo += shift;
 			ci->begin += shift;
 		}
 	}
@@ -202,7 +203,7 @@ void stkGrow(Value th, AuintIdx extra) {
 		stkRealloc(th, newsize);
 }
 
-/* Ensure method's stack has room for 'extra' more values above top. Return 0 on failure. 
+/* Ensure method's stack has room for 'extra' values above begin. Return 0 on failure. 
  * This may grow the stack, but never shrinks it.
  */
 int stkNeeds(Value th, AuintIdx extra) {
@@ -211,11 +212,11 @@ int stkNeeds(Value th, AuintIdx extra) {
 	vm_lock(th);
 
 	// Check if we already have enough allocated room on stack for more values
-	if ((AuintIdx)(th(th)->stk_last - th(th)->stk_top) > extra)
+	if ((AuintIdx)(th(th)->stk_last - ci->begin) > extra)
 		success = 1;  // Sucess! Stack is already big enough
 	else {
 		// Will this overflow max stack size?
-		if ((AuintIdx)(th(th)->stk_top - th(th)->stack) + extra + STACK_EXTRA > STACK_MAXSIZE)
+		if ((AuintIdx)(ci->begin - th(th)->stack) + extra + STACK_EXTRA > STACK_MAXSIZE)
 			success = 0;  // Fail! - don't grow
 		else {
 			stkGrow(th, extra);
@@ -224,8 +225,8 @@ int stkNeeds(Value th, AuintIdx extra) {
 	}
 
 	// adjust function's last allowed value upwards, as needed
-	if (success && ci->end < th(th)->stk_top + extra)
-		ci->end = th(th)->stk_top + extra;
+	if (success && ci->end < ci->begin + extra)
+		ci->end = ci->begin + extra;
 
 	vm_unlock(th);
 	return success;

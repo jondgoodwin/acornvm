@@ -89,6 +89,26 @@ MemInfo *mem_new(Value th, int enc, Auint sz, MemInfo **list, int offset) {
 	return o;
 }
 
+/* double size of vector array, up to limits */
+void *mem_growaux_(Value th, void *block, AuintIdx *size, AuintIdx size_elems,
+                     AuintIdx limit) {
+	void *newblock;
+	AuintIdx newsize;
+	if (*size >= limit/2) {  /* cannot double it? */
+		if (*size >= limit)  /* cannot grow even a little? */
+			vm_outofmemory();
+		newsize = limit;  /* still have at least one free place */
+	}
+	else {
+		newsize = (*size)*2;
+		if (newsize < MINSIZEARRAY)
+			newsize = MINSIZEARRAY;  /* minimum size */
+	}
+	newblock = mem_gcreallocv(th, block, *size, newsize, size_elems);
+	*size = newsize;  /* update only when everything else is OK */
+	return newblock;
+}
+
 #ifdef __cplusplus
 } // extern "C"
 } // namespace avm

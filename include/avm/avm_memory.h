@@ -62,7 +62,7 @@ typedef unsigned char AByte;
 
 /** The header structure for any variable-sized Value (see MemCommonInfo) */
 typedef struct MemInfo {
-  MemCommonInfo;
+	MemCommonInfo;
 } MemInfo;
 
 /** The generic structure for any Value containing other Values (will be marked Gray) */
@@ -174,6 +174,15 @@ Value mem_gcrealloc(Value th, void *block, Auint osize, Auint nsize);
  * - Otherwise it changes the size of the memory block (and may move its location)
  * It returns the location of the new block or NULL (if freed). */
 void* mem_gcreallocv(Value th, void *block, Auint osize, Auint nsize, Auint esize);
+
+/** Grow allocated area by at least one more */
+#define mem_growvector(th,area,nelems,size,t,limit) \
+          if ((nelems)+1 > (size)) \
+            ((area)=(t*) (mem_growaux_(th,area,&(size),sizeof(t),limit)))
+
+/** Double size of vector area, up to limits */
+void *mem_growaux_(Value th, void *block, AuintIdx *size, AuintIdx size_elems,
+                     AuintIdx limit);
 
 /** General-purpose memory malloc, free and realloc function.
  * - If size==0, it frees the memory block (if non-NULL)

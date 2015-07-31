@@ -45,7 +45,7 @@ void thrInit(ThreadInfo* thr, VmInfo* vm, Value glo, AuintIdx stksz) {
 	ci->next = ci->previous = NULL;
 	ci->callstatus = 0;
 	ci->nresults = 0;
-	ci->funcbase = thr->stk_top;
+	ci->funcbase = ci->retTo = thr->stk_top;
 	*thr->stk_top++ = aNull;  // Place for non-existent function
 	ci->begin = thr->stk_top;
 	ci->end = thr->stk_top + STACK_MINSIZE;
@@ -98,7 +98,7 @@ void thrReturn(Value th, int nreturned) {
 
 	// Copy down returned results (capped no higher than expected)
 	Value *from = th(th)->stk_top-nreturned;
-	Value *to = ci->funcbase;
+	Value *to = ci->retTo;
 	for (int n = ci->nresults < nreturned ? ci->nresults : nreturned; n; n--)
 		*to++ = *from++;
 	th(th)->stk_top = to;
@@ -131,7 +131,7 @@ bool thrCalli(Value th, Value *funcval, int nexpected) {
 	// Start and initialize a new CallInfo block
 	CallInfo * ci = th(th)->curfn = th(th)->curfn->next ? th(th)->curfn->next : thrGrowCI(th);
 	ci->nresults = nexpected;
-	ci->funcbase = funcval;  // Address of function value (also helpful for return) 
+	ci->funcbase = ci->retTo = funcval;  // Address of function value, varargs and return values
 	ci->begin = funcval + 1; // Parameter values are right after function value
 	ci->end = funcval + 1; // Will be fixed by stkNeeds
 
@@ -200,13 +200,10 @@ void thrCall(Value th, int nparms, int nexpected) {
 
 /* Replace self+method on stack with function+self, then call */
 bool thrCallMethod(Value th, int nparms, int nexpected) {
-	Value *self = th(th)->stk_top-nparms-1;
-	Value *methnm = self+1;
+	Value *methnm = th(th)->stk_top-nparms-1;
 
 	// Look up method's function, then do swap
-	Value methodfn = findMethod(th, *self, *methnm);
-	*methnm = *self;
-	*self = methodfn;
+	*methnm = findMethod(th, *(methnm+1), *methnm);
 
 	return thrCalli(th, th(th)->stk_top - nparms - 1, nexpected);
 }

@@ -21,10 +21,28 @@ int atyp_int_add(Value th) {
 	return 1;
 }
 
+/** Subtract two integers */
+int atyp_int_sub(Value th) {
+	if (!isInt(stkGet(th, 1)))
+		stkSet(th, 1, anInt(0));
+	stkPush(th, anInt(toAint(stkGet(th,0)) - toAint(stkGet(th,1))));
+	return 1;
+}
+
+/** Multiply two integers */
+int atyp_int_mult(Value th) {
+	if (!isInt(stkGet(th, 1)))
+		stkSet(th, 1, anInt(0));
+	stkPush(th, anInt(toAint(stkGet(th,0)) * toAint(stkGet(th,1))));
+	return 1;
+}
+
 /** Initialize the Integer type */
 Value atyp_int_init(Value th) {
 	Value typ = newType(th, "Integer");
 	addCMethod(th, typ, "+", atyp_int_add, "Integer::+");
+	addCMethod(th, typ, "-", atyp_int_sub, "Integer::-");
+	addCMethod(th, typ, "*", atyp_int_mult, "Integer::*");
 	return typ;
 }
 

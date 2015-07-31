@@ -12,6 +12,9 @@
 /** Initial allocated slots for global variables */
 #define GLOBAL_NEWSIZE    256
 
+/** Smallest size for "arrays", like a block of code */
+#define MINSIZEARRAY	4
+
 /** Symbol table minimum size - starting size, in number of entries */
 #define AVM_SYMTBLMINSIZE	4096
 

@@ -25,14 +25,15 @@ extern "C" {
 
 /** A single entry on the thread's call stack */
 typedef struct CallInfo {
-	struct CallInfo *previous, *next;	//< call stack chain links
+	struct CallInfo *previous, *next;	//!< call stack chain links
 
 	// Data stack pointers
-	Value *funcbase;					//< Points to function value on stack
-	Value *begin;						//< Points to function's parameters and local vars 
-	Value *end;							//< Points to highest allocated area for function
+	Value *funcbase;					//!< Points to function value, just below varargs
+	Value *retTo;						//!< Where to place return values
+	Value *begin;						//!< Points to function's parameters and local vars 
+	Value *end;							//!< Points to highest allocated area for function
 
-	short nresults;						//< expected number of results from this function
+	short nresults;						//!< expected number of results from this function
 	char callstatus;
 
 	// Bytecode only
@@ -100,6 +101,8 @@ void thrInit(ThreadInfo* thr, VmInfo* vm, Value glo, AuintIdx stksz);
 
 /** Free everything allocated for thread */
 void thrFreeStacks(Value th);
+
+bool thrCalli(Value th, Value *funcval, int nexpected);
 
 /** Restore call and data stack after call, copying return values down 
  * nreturned is how many values the called function actually returned */

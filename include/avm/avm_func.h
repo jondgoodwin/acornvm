@@ -81,24 +81,122 @@ typedef struct CFuncInfo {
 /** A bytecode instruction */
 typedef uint32_t Instruction;
 
+/* Bytecode instruction format, 32 bit wide, fields of 8 or 16 bit:
+**
+** +----+----+----+----+
+** | B  | C  | A  | OP | Format ABC
+** +----+----+----+----+
+** |    D    | A  | OP | Format AD
+** +--------------------
+** MSB               LSB
+**
+** In-memory instructions are always stored in host byte order.
+*/
+
+typedef unsigned char BCOp; //!< Bytecode operator.
+typedef unsigned char BCIns;
+typedef AuintIdx BCReg;  //!< Bytecode register.
+
+/* Operand ranges and related constants. */
+#define BCMAX_A		0xff
+#define BCMAX_B		0xff
+#define BCMAX_C		0xff
+#define BCMAX_D		0xffff
+#define BCBIAS_J	0x8000
+#define NO_REG		BCMAX_A
+#define NO_JMP		(~(BCPos)0)
+#define BCVARRET    BCMAX_B
+
+/* Macros to get instruction fields. */
+#define bc_op(i)	((BCOp)((i)&0xff))
+#define bc_a(i)		((BCReg)(((i)>>8)&0xff))
+#define bc_ax(i)	((BCReg)(((i)>>8)))
+#define bc_b(i)		((BCReg)((i)>>24))
+#define bc_c(i)		((BCReg)(((i)>>16)&0xff))
+#define bc_d(i)		((uint16_t)((i)>>16))
+#define bc_j(i)		((ptrdiff_t)bc_d(i)-BCBIAS_J)
+
+/** Byte Code Op Code Instructions */
+enum ByteCodeOps {
+	OpLoadReg,
+	OpLoadRegs,
+	OpLoadLit,
+	OpLoadLitx,
+	OpExtraArg,
+	OpLoadPrim,
+	OpLoadNulls,
+	OpLoadVararg,
+	OpGetGlobal,
+	OpSetGlobal,
+	OpJump,
+	OpJNull,
+	OpJNNull,
+	OpJTrue,
+	OpJFalse,
+	OpJEq,
+	OpJNe,
+	OpJLt,
+	OpJLe,
+	OpJGt,
+	OpJGe,
+	OpJSame,
+	OpJDiff,
+	OpLoadStd,
+	OpCall,
+	OpReturn,
+	OpTailcall,
+	OpForPrep,
+	OpForNext,
+	OpRptPrep,
+	OpRptNext
+};
+
 /** Information about a bytecode function */
 typedef struct BFuncInfo {
 	MemCommonInfoF;
-	Instruction *code;
-	AuintIdx maxstacksize;
+	Instruction *code;		//!< Array of bytecode instructions (size is its size)
+	Value *lits;			//!< Array of literals used by this function
+	Value *locals;			//!< Array of local variables (& parms) used by function
+	AuintIdx litsz;			//!< Allocated size of literal list
+	AuintIdx nbrlits;		//!< Number of literals in lits
+	AuintIdx localsz;		//!< Allocated size of local list
+	AuintIdx nbrlocals;		//!< Number of local variables in locals
+	AuintIdx maxstacksize;	//!< Maximum size of stack needed to parms+locals
 } BFuncInfo;
-
 
 /** Mark all Func values for garbage collection 
  * Increments how much allocated memory the func uses. */
 #define funcMark(th, f) \
 	{mem_markobj(th, (f)->name); \
 	mem_markobj(th, (f)->source); \
+	if (!isCFunc(f) && ((BFuncInfo*)f)->nbrlits>0) \
+		for (AuintIdx i=0; i<((BFuncInfo*)f)->nbrlits; i++) \
+			mem_markobj(th, ((BFuncInfo*)f)->lits[i]); \
+	if (!isCFunc(f) && ((BFuncInfo*)f)->nbrlocals>0) \
+		for (AuintIdx i=0; i<((BFuncInfo*)f)->nbrlocals; i++) \
+			mem_markobj(th, ((BFuncInfo*)f)->locals[i]); \
 	vm(th)->gcmemtrav += isCFunc(f)? sizeof(CFuncInfo) : sizeof(BFuncInfo);}
 
 /** Free all of an part's allocated memory */
 #define funcFree(th, f) \
-	{if (isCFunc(f)) mem_free(th, (CFuncInfo*)(f)); else mem_free(th, (BFuncInfo*)(f));}
+	{if (isCFunc(f)) mem_free(th, (CFuncInfo*)(f)); \
+	else {\
+		BFuncInfo* bf = (BFuncInfo*)f; \
+		if (bf->code) mem_freearray(th, bf->code, bf->size); \
+		if (bf->lits) mem_freearray(th, bf->lits, bf->litsz); \
+		if (bf->locals) mem_freearray(th, bf->locals, bf->localsz); \
+		mem_free(th, bf); \
+	}}
+
+/** Acorn compilation state */
+typedef struct Acorn {
+	Acorn* prev;	//!< Previous compile state in chain
+	Acorn* next;	//!< Next compile state in chain
+	Value th;		//!< Current thread
+	BFuncInfo* func; //!< Function being built
+	AuintIdx ip;	//!< Instruction pointer into func->code
+	AuintIdx reg_top; //!< Top of function's data stack
+} Acorn;
 
 // ***********
 // Non-API C-Function functions
@@ -107,6 +205,8 @@ typedef struct BFuncInfo {
 /** Execute byte-code program pointed at by thread's current call frame */
 void bfnRun(Value th);
 
+/** AAAAARGH */
+AVM_API void bfnFake(Value th, Value func);
 
 #ifdef __cplusplus
 } // end "C"

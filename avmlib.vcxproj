@@ -11,6 +11,9 @@
     </ProjectConfiguration>
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\acorn.h" />
+    <ClInclude Include="include\acorn\acn_gen.h" />
+    <ClInclude Include="include\acorn\acn_main.h" />
     <ClInclude Include="include\avm.h" />
     <ClInclude Include="include\avmlib.h" />
     <ClInclude Include="include\avm\avm_api.h" />
@@ -28,6 +31,8 @@
     <ClInclude Include="include\avm_env.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\acorn\acn_gen.cpp" />
+    <ClCompile Include="src\acorn\acn_main.cpp" />
     <ClCompile Include="src\avmlib\avm_array.cpp" />
     <ClCompile Include="src\avmlib\avm_func.cpp" />
     <ClCompile Include="src\avmlib\avm_gc.cpp" />

@@ -109,7 +109,7 @@ void partAddMethodc(Value th, Value part, const char* methsym, Value meth) {
 	// Use stack to ensure GC does not collect either value
 	stkPush(th, meth);
 	stkPush(th, aSym(th, methsym));
-	tblSet(th, part_methods(part), stkGet(th, stkFromTop(th,0)), stkGet(th, stkFromTop(th,1)));
+	tblSet(th, part_methods(part), stkFromTop(th,0), stkFromTop(th,1));
 	stkSetSize(th, -2);
 }
 

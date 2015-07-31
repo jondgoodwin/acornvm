@@ -17,6 +17,9 @@ namespace avm {
 extern "C" {
 #endif
 
+void acn_init(Value th); // Initializer for Acorn compiler
+void vmStdInit(Value th); // Initializer for standard symbols
+
 /** Used by vm_init to build random seed */
 #define memcpy_Auint(i,val) \
 	{Auint anint = (Auint) val; \
@@ -68,9 +71,12 @@ AVM_API Value newVM(void) {
 
 	// Initialize vm-wide symbol table
 	sym_init(th);
+	vmStdInit(th);
 
 	// Initialize all core types
 	atyp_init(th);
+
+	acn_init(th);
 
 	// Start garbage collection
 	mem_gcstart(th);
@@ -81,7 +87,9 @@ AVM_API Value newVM(void) {
 /* Close down the virtual machine, freeing all allocated memory */
 void vm_close(Value th) {
 	th = vm(th)->main_thread;
+	VmInfo* vm = vm(th);
 	mem_freeAll(th);  /* collect all objects */
+	mem_reallocvector(th, vm->stdsym, nStdSyms, 0, Value);
 	sym_free(th);
 	thrFreeStacks(th);
 	mem_frealloc(vm(th)->defEncTypes, 0);
@@ -107,6 +115,35 @@ void vm_outofmemory(void) {
 void vm_outofstack(void) {
 	puts("Acorn VM wants to overflow max stack size. Runaway recursive function?");
 	exit(1);
+}
+
+/** Macro for generating standard symbol mappings both ways */
+#define newstd(idx, str) \
+	tblSet(th, stdidx, sym = aSym(th, (str)), anInt(idx)); \
+	vm->stdsym[idx] = sym;
+
+/** Initialize vm's standard symbols */
+void vmStdInit(Value th) {
+	// Allocate mapping tables
+	Value sym;
+	VmInfo* vm = vm(th);
+	Value stdidx = vm->stdidx = newTbl(th, sizeof(StdSymbols));
+	vm->stdsym = NULL;
+	mem_reallocvector(th, vm->stdsym, 0, nStdSyms, Value);
+	
+	// Add standard symbols
+	newstd(SymGet, "()");
+	newstd(SymPut, "()=");
+	newstd(SymAdd, "+=");
+	newstd(SymNext, "next");
+	newstd(SymPlus, "+");
+	newstd(SymMinus, "-");
+	newstd(SymMult, "*");
+	newstd(SymDiv, "/");
+	newstd(SymNeg, "-@");
+
+	newstd(SymNull, "null");
+	newstd(SymNot, "!");
 }
 
 #ifdef __cplusplus

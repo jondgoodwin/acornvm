@@ -31,42 +31,71 @@ extern "C" {
 	typedef struct VmInfo {
 		MemCommonInfoGray;
 
-		Value main_thread;			/**< VM's main thread */
-		struct SymTable sym_table;	/**< global symbol table */
-		AuintIdx hashseed;				/**< randomized seed for hashing strings */
+		Value main_thread;			//!< VM's main thread
+		struct ThreadInfo main_thr; //!< State space for main thread
 
-		Value *defEncTypes;    /**< array of default types for each encoding */
+		struct SymTable sym_table;	//!< global symbol table
+		AuintIdx hashseed;			//!< randomized seed for hashing strings
+		Value stdidx;				//!< Table to convert std symbol to index
+		Value *stdsym;				//!< c-array to convert index to std symbol
 
-		// Global state for all collectable objects
-		MemInfo *objlist;  //!< linked list of all collectable objects
-		MemInfo **sweepgc;  //!< current position of sweep in list 'objlist'
-		MemInfoGray *gray;  //!< list of gray objects
-		MemInfoGray *grayagain;  //!< list of objects to be traversed atomically
+		Value *defEncTypes;			//!< array of default types for each encoding
 
-		Auint totalbytes;  //!< number of bytes currently allocated - GCdebt
-		Aint gcdebt;		//!< bytes allocated, not yet compensated by the collector
-		Auint gcmemtrav;  //!< cumulative size of all objects marked black
-		Auint gcestimate;  //!< an estimate of the non-garbage memory in use
+		Acorn acornProgram;			//!< Compile state for a program
 
-		char gcmode;  //!< Collection mode: Normal, Emergency, Gen
-		char gcstate;  //!< state of garbage collector
-		char gcrunning;  //!< true if GC is running
-		char currentwhite; //!< Current white color for new objects
+		// Garbage Collection state
+		MemInfo *objlist;			//!< linked list of all collectable objects
+		MemInfo **sweepgc;			//!< current position of sweep in list 'objlist'
+		MemInfoGray *gray;			//!< list of gray objects
+		MemInfoGray *grayagain;		//!< list of objects to be traversed atomically
 
-		int gcpause;  //!< size of pause between successive GCs 
-		int gcmajorinc;  //!< pause between major collections (only in gen. mode)
-		int gcstepmul;  //!< GC `granularity' 
+		Auint totalbytes;			//!< number of bytes currently allocated - GCdebt
+		Aint gcdebt;				//!< bytes allocated, not yet compensated by the collector
+		Auint gcmemtrav;			//!< cumulative size of all objects marked black
+		Auint gcestimate;			//!< an estimate of the non-garbage memory in use
+
+		char gcmode;				//!< Collection mode: Normal, Emergency, Gen
+		char gcstate;				//!< state of garbage collector
+		char gcrunning;				//!< true if GC is running
+		char currentwhite;			//!< Current white color for new objects
+
+		int gcpause;				//!< size of pause between successive GCs 
+		int gcmajorinc;				//!< pause between major collections (only in gen. mode)
+		int gcstepmul;				//!< GC `granularity' 
 
 		Auint sweepstrgc;  //!< position of sweep in symbol table
 
-		struct ThreadInfo main_thr;
 	} VmInfo;
 
-/** Mark all in-use thread values for garbage collection 
- * Increments how much allocated memory the thread uses. */
-#define vmMark(th, v) \
-	{mem_markobj(th, (v)->main_thread); \
-	vm(th)->gcmemtrav += sizeof(VmInfo);}
+	/** Mark all in-use thread values for garbage collection 
+	 * Increments how much allocated memory the thread uses. */
+	#define vmMark(th, v) \
+		{mem_markobj(th, (v)->main_thread); \
+		mem_markobj(th, (v)->stdidx); \
+		vm(th)->gcmemtrav += sizeof(VmInfo);}
+
+	/** Point to standard symbol from index */
+	#define ss(th,idx) (vm(th)->stdsym[idx])
+
+	/** C index values for standard symbols used by bytecode and parser */
+	enum StdSymbols {
+		// Byte-code (and parser) standard methods
+		SymGet,		//!< '()'
+		SymPut,		//!< '()='
+		SymAdd,		//!< '+='
+		SymNext,	//!< 'next'
+		SymPlus,	//!< '+'
+		SymMinus,	//!< '-'
+		SymMult,	//!< '*'
+		SymDiv,		//!< '/'
+		SymNeg,		//!< '-@'
+
+		// Parser-only standard symbols
+		SymNull,	//!< 'null'
+		SymNot,		//!< '!'
+
+		nStdSyms
+	};
 
 	/** Lock the Vm */
 	void vm_lock(Value th);
