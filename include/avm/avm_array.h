@@ -31,7 +31,7 @@ extern "C" {
 
 /** Information about an array information block. (uses MemCommonInfoT) */
 typedef struct ArrInfo {
-	MemCommonInfoT;
+	MemCommonInfoT;	//!< Common typed object header
 	Value *arr;		//!< Pointer to allocated array buffer
 	AuintIdx avail;	//!< Allocated size of buffer
 } ArrInfo;
@@ -54,7 +54,7 @@ typedef struct ArrInfo {
 #define arr_info(val) (assert_exp(isEnc(val,ArrEnc), (ArrInfo*) val))
 
 /** Return the number of Values stored in the array */
-#define arr_size(val) (str_info(val)->size)
+#define arr_size(val) (arr_info(val)->size)
 
 // ***********
 // Non-API Array functions

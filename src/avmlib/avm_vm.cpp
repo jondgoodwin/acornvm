@@ -134,6 +134,7 @@ void vmStdInit(Value th) {
 	// Add standard symbols
 	newstd(SymGet, "()");
 	newstd(SymPut, "()=");
+	newstd(SymNew, "new");
 	newstd(SymAdd, "+=");
 	newstd(SymNext, "next");
 	newstd(SymPlus, "+");

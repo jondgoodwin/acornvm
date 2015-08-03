@@ -19,7 +19,8 @@ namespace avm {
 extern "C" {
 #endif
 
-// A convenience macro for assert(), establishing the conditions expected to be true, before returning expression e
+/** A convenience macro for assert(), establishing the conditions expected to be true, 
+ * before returning expression e */
 #define assert_exp(c,e)	(assert(c), (e))
 
 /* *******************************************************

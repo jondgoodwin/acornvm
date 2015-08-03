@@ -31,10 +31,14 @@ void acn_init(Value th) {
 	// partAddProp(th, typ, aSym(th, "run"), acn_new);
 }
 
+/** Generate bytecode test programs */
 Value genTestPgm(Value th, int pgm) {
+	int saveip = 0;
 	Acorn* ac = &vm(th)->acornProgram;
 	genNew(ac, 0, aNull, aNull);
 	switch (pgm) {
+
+	// Test the Load instructions
 	case 0:
 		genAddParm(ac, aSym(th, "self"));
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 1, genLocalVar(ac, aSym(th, "self")), 0)); // load self into 1
@@ -44,6 +48,8 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 4, genAddLit(ac, aSym(th, "$g"))));
 		genAddInstr(ac, BCINS_ABC(OpReturn, 1, 4, 0));
 		break;
+
+	// Test variable parameters
 	case 1:
 		genAddParm(ac, aSym(th, "self"));
 		genVarParms(ac);
@@ -51,6 +57,8 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_ABC(OpLoadVararg, 2, BCVARRET, 0)); // Load var args
 		genAddInstr(ac, BCINS_ABC(OpReturn, 1, BCVARRET, 0));
 		break;
+
+	// Test call and jump instructions with a fibonacci calculation
 	case 2:
 		genAddParm(ac, aSym(th, "self"));
 		genMaxStack(ac, 6);
@@ -74,6 +82,8 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_AJ(OpJump, 0, -11));
 		genAddInstr(ac, BCINS_ABC(OpReturn, 1, 1, 0));
 		break;
+
+	// Test tailcall with a factorial method
 	case 3:
 		genAddParm(ac, aSym(th, "self"));
 		genAddParm(ac, aSym(th, "a"));
@@ -90,11 +100,39 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_AJ(OpJump, 0, 1));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 6, genAddLit(ac, anInt(1))));
 		genAddInstr(ac, BCINS_ABC(OpCall, 4, 2, 1));
-		genAddInstr(ac, BCINS_ABC(OpTailcall, 2, 2, BCVARRET));
+		genAddInstr(ac, BCINS_ABC(OpTailCall, 2, 2, BCVARRET));
 
 		partAddMethod(th, gloGet(th, aSym(th,"Integer")), aSym(th, "fact"), ac->func);
-
 		break;
+
+	// Test repetitive preps and calls, doing a build and for loop on a list, summing its integers
+	case 4:
+		genAddParm(ac, aSym(th, "self"));
+		genMaxStack(ac, 9);
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 0, SymNew));
+		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 4, genAddLit(ac, aSym(th, "List"))));
+		genAddInstr(ac, BCINS_ABC(OpCall, 3, 1, 1));
+		genAddInstr(ac, BCINS_ABC(OpRptPrep, 2, 3, SymAdd));
+		genAddInstr(ac, BCINS_ABx(OpLoadLit, 4, genAddLit(ac, anInt(5))));
+		genAddInstr(ac, BCINS_ABC(OpRptCall, 2, 2, 0));
+		genAddInstr(ac, BCINS_ABx(OpLoadLit, 4, genAddLit(ac, anInt(7))));
+		genAddInstr(ac, BCINS_ABC(OpRptCall, 2, 2, 0));
+		genAddInstr(ac, BCINS_ABx(OpLoadLit, 4, genAddLit(ac, anInt(8))));
+		genAddInstr(ac, BCINS_ABC(OpRptCall, 2, 2, 0));
+		genAddInstr(ac, BCINS_ABx(OpLoadLit, 1, genAddLit(ac, anInt(0))));
+		genAddInstr(ac, BCINS_ABC(OpForPrep, 2, 3, SymNext));
+		genAddInstr(ac, BCINS_ABC(OpRptCall, 2, 2, 2));
+		saveip = ac->ip; // Save loc of jump
+		genAddInstr(ac, BCINS_AJ(OpJNull, 4, BCNO_JMP)); // Will calculate to 5
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 6, 1, SymPlus));
+		genAddInstr(ac, BCINS_ABC(OpLoadReg, 8, 5, 0));
+		genAddInstr(ac, BCINS_ABC(OpCall, 6, 2, 1));
+		genAddInstr(ac, BCINS_ABC(OpLoadReg, 1, 6, 0));
+		genAddInstr(ac, BCINS_AJ(OpJump, 0, -7));
+		genSetJumpList(ac, saveip, ac->ip); // Correct the jump to go to here
+		genAddInstr(ac, BCINS_ABC(OpReturn, 1, 1, 0));
+		break;
+
 	default:
 		break;
 	}

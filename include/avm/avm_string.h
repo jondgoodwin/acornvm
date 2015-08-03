@@ -43,6 +43,7 @@ typedef struct StrInfo {
 	mem_gcrealloc(th, (s)->str, (s)->avail + 1, 0); \
 	mem_free(th, (s));
 
+/** The total amount of memory allocated for a specific string */
 #define str_memsize(val) (sizeof(StrInfo) + (str_info(val)->avail) + 1)
 
 /** Mark all in-use string values for garbage collection 
@@ -64,6 +65,7 @@ typedef struct StrInfo {
 // Non-API String functions
 // ***********
 
+/** Calculate the hash value for a string */
 AuintIdx str_hash(Value th, Value val);
 
 #ifdef __cplusplus

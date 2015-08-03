@@ -31,14 +31,14 @@ void testGen(void) {
 	// Bytecode-function and Thread call stack tests
 	Value testbfn = genTestPgm(th, 0);
 	stkPush(th, testbfn);
-	thrCall(th, 0, 1); // Call with no parameters, will return puffed null
+	funcCall(th, 0, 1); // Call with no parameters, will return puffed null
 	t(stkPop(th)==aNull, "b-function return success: stkPop(th)==aNull");
 	t(stkSize(th)==0, "stkSize(th)==0");
 
 	// Call function that tests loader
 	stkPush(th, testbfn);
 	stkPush(th, anInt(4));
-	thrCall(th, 1, 4); // Call with 1 parameter, will return 4
+	funcCall(th, 1, 4); // Call with 1 parameter, will return 4
 	t(stkPop(th)==aFloat(3.14f), "b-function return success: stkPop(th)==3.14");
 	t(stkPop(th)==aFloat(3.14f), "stkPop(th)==3.14");
 	t(stkPop(th)==aTrue, "stkPop(th)==true");
@@ -50,24 +50,31 @@ void testGen(void) {
 	stkPush(th, anInt(1));
 	stkPush(th, anInt(2));
 	stkPush(th, anInt(3));
-	thrCall(th, 3, 3); // Call with 3 parameters, will return 3
+	funcCall(th, 3, 3); // Call with 3 parameters, will return 3
 	t(stkPop(th)==anInt(3), "stkPop(th)==3");
 	t(stkPop(th)==anInt(2), "stkPop(th)==2");
 	t(stkPop(th)==anInt(1), "stkPop(th)==1");
 	t(stkSize(th)==0, "stkSize(th)==0");
 
-	// Call function for 1 fixed and 2 varargs
+	// Call fibonacci calculator with (conditional) jumps and calls
 	stkPush(th, genTestPgm(th,2));
 	stkPush(th, anInt(4));
-	thrCall(th, 1, 1);
+	funcCall(th, 1, 1);
 	t(stkPop(th)==anInt(5), "stkPop(th)==5");
 	t(stkSize(th)==0, "stkSize(th)==0");
 
-	// Call function for 1 fixed and 2 varargs
+	// Call recursive factorial program with tailcall
 	stkPush(th, genTestPgm(th,3));
 	stkPush(th, anInt(4));
-	thrCall(th, 1, 1);
+	funcCall(th, 1, 1);
 	t(stkPop(th)==anInt(24), "stkPop(th)==24");
+	t(stkSize(th)==0, "stkSize(th)==0");
+
+	// Call List build and for loop program (summing its numbers)
+	stkPush(th, genTestPgm(th,4));
+	stkPush(th, anInt(4));
+	funcCall(th, 1, 1);
+	t(stkPop(th)==anInt(20), "stkPop(th)==20");
 	t(stkSize(th)==0, "stkSize(th)==0");
 
 	vm_close(th);

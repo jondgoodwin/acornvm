@@ -33,13 +33,13 @@ extern "C" {
 
 /** The generic structure for function Values */
 typedef struct FuncInfo {
-	MemCommonInfoF;
+	MemCommonInfoF; //!< Common function object header
 } FuncInfo;
 
-/* Flags2 is for a function's number of FIXED parameters (use as lval or rval) */
+/** Flags2 is for a function's number of FIXED parameters (use as lval or rval) */
 #define funcNParms(val) (((FuncInfo*)val)->flags2)
 
-/* Flags1 is for a function's flags - can use as lval or rval */
+/** Flags1 is for a function's flags - can use as lval or rval */
 #define funcFlags(val) (((FuncInfo*)val)->flags1)
 
 #define FUNC_FLG_C			0x80 //!< The function is coded in C (vs. Bytecode)
@@ -82,39 +82,39 @@ typedef struct CFuncInfo {
 typedef uint32_t Instruction;
 
 /* Bytecode instruction format, 32 bit wide, fields of 8 or 16 bit:
-**
-** +----+----+----+----+
-** | B  | C  | A  | OP | Format ABC
-** +----+----+----+----+
-** |    D    | A  | OP | Format AD
-** +--------------------
-** MSB               LSB
-**
-** In-memory instructions are always stored in host byte order.
+ *
+ * +----+----+----+----+
+ * | B  | C  | A  | OP | Format ABC
+ * +----+----+----+----+
+ * |    D    | A  | OP | Format AD
+ * +--------------------
+ * MSB               LSB
+ *
+ * In-memory instructions are always stored in host byte order.
 */
 
-typedef unsigned char BCOp; //!< Bytecode operator.
-typedef unsigned char BCIns;
-typedef AuintIdx BCReg;  //!< Bytecode register.
+typedef unsigned char BCOp;		//!< Bytecode operator.
+typedef unsigned char BCIns;	//!< A byte within an instruction
+typedef AuintIdx BCReg;			//!< Bytecode register.
 
 /* Operand ranges and related constants. */
-#define BCMAX_A		0xff
-#define BCMAX_B		0xff
-#define BCMAX_C		0xff
-#define BCMAX_D		0xffff
-#define BCBIAS_J	0x8000
-#define NO_REG		BCMAX_A
-#define NO_JMP		(~(BCPos)0)
-#define BCVARRET    BCMAX_B
+#define BCMAX_A		0xff		//!< Largest value for A field
+#define BCMAX_B		0xff		//!< Largest value for B field
+#define BCMAX_C		0xff		//!< Largest value for C field
+#define BCMAX_BX	0xffff		//!< Largest value for Bx field
+#define BCBIAS_J	0x8000		//!< Bias amount for signed Jmp field
+#define NO_REG		BCMAX_A		//!< Indicates no register used
+#define BCNO_JMP	-1			//!< No jump value stored in instruction
+#define BCVARRET    BCMAX_B		//!< Variable number of return values
 
 /* Macros to get instruction fields. */
-#define bc_op(i)	((BCOp)((i)&0xff))
-#define bc_a(i)		((BCReg)(((i)>>8)&0xff))
-#define bc_ax(i)	((BCReg)(((i)>>8)))
-#define bc_b(i)		((BCReg)((i)>>24))
-#define bc_c(i)		((BCReg)(((i)>>16)&0xff))
-#define bc_d(i)		((uint16_t)((i)>>16))
-#define bc_j(i)		((ptrdiff_t)bc_d(i)-BCBIAS_J)
+#define bc_op(i)	((BCOp)((i)&0xff))			//!< Get instruction's op code
+#define bc_a(i)		((BCReg)(((i)>>8)&0xff))	//!< Get instruction's A field
+#define bc_ax(i)	((BCReg)(((i)>>8)))			//!< Get all but op code
+#define bc_b(i)		((BCReg)((i)>>24))			//!< Get instruction's B field
+#define bc_c(i)		((BCReg)(((i)>>16)&0xff))	//!< Get instruction's C field
+#define bc_bx(i)		((uint16_t)((i)>>16))		//!< Get instruction's Bx field
+#define bc_j(i)		((bc_bx(i)-BCBIAS_J))	//!< Get instruction's jump field
 
 /** Byte Code Op Code Instructions */
 enum ByteCodeOps {
@@ -144,11 +144,10 @@ enum ByteCodeOps {
 	OpLoadStd,
 	OpCall,
 	OpReturn,
-	OpTailcall,
+	OpTailCall,
 	OpForPrep,
-	OpForNext,
 	OpRptPrep,
-	OpRptNext
+	OpRptCall
 };
 
 /** Information about a bytecode function */
@@ -203,7 +202,7 @@ typedef struct Acorn {
 // ***********
 
 /** Execute byte-code program pointed at by thread's current call frame */
-void bfnRun(Value th);
+void funcRunBC(Value th);
 
 /** AAAAARGH */
 AVM_API void bfnFake(Value th, Value func);

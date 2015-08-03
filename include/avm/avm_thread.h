@@ -25,7 +25,8 @@ extern "C" {
 
 /** A single entry on the thread's call stack */
 typedef struct CallInfo {
-	struct CallInfo *previous, *next;	//!< call stack chain links
+	struct CallInfo *previous;			//!< call stack chain back link
+	struct CallInfo *next;				//!< call stack chain next link
 
 	// Data stack pointers
 	Value *funcbase;					//!< Points to function value, just below varargs
@@ -33,45 +34,30 @@ typedef struct CallInfo {
 	Value *begin;						//!< Points to function's parameters and local vars 
 	Value *end;							//!< Points to highest allocated area for function
 
-	short nresults;						//!< expected number of results from this function
-	char callstatus;
-
 	// Bytecode only
-	Instruction *ip;					//< Pointer to current instruction
+	Instruction *ip;					//!< Pointer to current instruction
+
+	short nresults;						//!< expected number of results from this function
+	// char callstatus;					//!< flags indicating call status for this frame
 } CallInfo;
-
-
-/*
- * CallInfo callstatus flags 
- */
-#define CIST_BYTECODE	(1<<0)	/* call is running a Bytecode function */
-#define CIST_HOOKED	(1<<1)	/* call is running a debug hook */
-#define CIST_REENTRY	(1<<2)	/* call is running on same invocation of
-                                   execute of previous call */
-#define CIST_YIELDED	(1<<3)	/* call reentered after suspension */
-#define CIST_YPCALL	(1<<4)	/* call is a yieldable protected call */
-#define CIST_STAT	(1<<5)	/* call has an error status (pcall) */
-#define CIST_TAIL	(1<<6)	/* call was tail called */
-#define CIST_HOOKYIELD	(1<<7)	/* last hook called yielded */
-
 
 /** Information about a Thread */
 typedef struct ThreadInfo {
-	MemCommonInfoGray;
+	MemCommonInfoGray;	//!< Common header for markable objects
 
 	// VM and global namespace
-	VmInfo *vm;			//< Virtual machine that thread is part of
-	Value global;		//< thread's global namespace
+	VmInfo *vm;			//!< Virtual machine that thread is part of
+	Value global;		//!< thread's global namespace
 
 	// Data stack pointers
 	// Note: "size" is the data stack's allocated size
-	Value *stack;		//< Points to the lowest value on the stack
-	Value *stk_top;		//< Points to the next available value on the stack
-	Value *stk_last;	//< Points to EXTRA slots below the highest stack value
+	Value *stack;		//!< Points to the lowest value on the stack
+	Value *stk_top;		//!< Points to the next available value on the stack
+	Value *stk_last;	//!< Points to EXTRA slots below the highest stack value
 
 	// Call stack
-	CallInfo *curfn;	//< Call info for current function
-	CallInfo entryfn;	//< Call info for C-function that started this thread
+	CallInfo *curfn;	//!< Call info for current function
+	CallInfo entryfn;	//!< Call info for C-function that started this thread
 } ThreadInfo;
 
 /** Mark all in-use thread values for garbage collection 
@@ -102,11 +88,8 @@ void thrInit(ThreadInfo* thr, VmInfo* vm, Value glo, AuintIdx stksz);
 /** Free everything allocated for thread */
 void thrFreeStacks(Value th);
 
-bool thrCalli(Value th, Value *funcval, int nexpected);
-
-/** Restore call and data stack after call, copying return values down 
- * nreturned is how many values the called function actually returned */
-void thrReturn(Value th, int nreturned);
+/** Internal routine to allocate and append a new CallInfo structure to end of call stack */
+CallInfo *thrGrowCI(Value th);
 
 #ifdef __cplusplus
 } // end "C"

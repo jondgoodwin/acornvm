@@ -101,8 +101,8 @@ enum EncType {
 
 	NbrEnc  /**< The number of encodings */
 };
-#define TypedEnc StrEnc /** Below this, encodings are self-typed */
-#define NbrPEnc NullEnc /** Number of pointer encodings */
+#define TypedEnc StrEnc /**< Below this, encodings are self-typed */
+#define NbrPEnc NullEnc /**< Number of pointer encodings */
 
 /** Is value a pointer to the encoding data structure? */
 #define isEnc(val, enc) (isPtr(val) && ((MemInfo*) val)->enctyp==enc)
@@ -137,18 +137,19 @@ enum EncType {
 #define FIXEDBIT	5  //!< object is fixed (should not be collected) 
 #define OLDBIT		6  //!< object is old (only in generational mode)
 // bit 7 is currently used by tests (checkmemory)
-#define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)
+#define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)	//!< Both white colors together
 
 #define iswhite(x)      testbits((x)->marked, WHITEBITS) //!< Return true if object is white
 #define isblack(x)      testbit((x)->marked, BLACKBIT) //!< Return true if object is black
 
-#define resetoldbit(o)	resetbit((o)->marked, OLDBIT)
+#define resetoldbit(o)	resetbit((o)->marked, OLDBIT) //!< Reset the old bit to zero
 
 /** Initialize memory and garbage collection for VM */
 void mem_init(struct VmInfo* vm);
 
 /** Create a new variable-sized object (with given encoding and size) and add to front of *list. */
 /**
+ * \param th the current thread
  * \param enc the encoding of the new object
  * \param sz number of bytes to allocate
  * \param list forward-link chain to push allocated object onto

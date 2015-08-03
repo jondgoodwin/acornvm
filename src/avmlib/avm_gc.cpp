@@ -38,21 +38,23 @@ extern "C" {
 /** Divisor for adjusting 'pause' (value chosen by tests) */
 #define PAUSEADJ		100
 
-#define MAX_UMEM	((Auint)(~(Auint)0)-2)
-#define MAX_MEM     ((Aint) ((MAX_UMEM >> 1) - 2))
+
+#define MAX_UMEM	((Auint)(~(Auint)0)-2)			//!< Maximum value for an unsigned integer
+#define MAX_MEM     ((Aint) ((MAX_UMEM >> 1) - 2))	//!< Maximum value for a signed integer
 
 // Garbage collector modes 
-#define KGC_NORMAL	0
+#define KGC_NORMAL	0		//!< gc is in normal (non-generational) collection
 #define KGC_EMERGENCY	1	//!< gc was forced by an allocation failure
-#define KGC_GEN		2	//!< generational collection
+#define KGC_GEN		2		//!< generational collection
 
 // Garbage collector states
-#define GCSmark	0
-#define GCSatomic	1
-#define GCSsweepsymbol	2
-#define GCSsweep	3
-#define GCSpause	4
+#define GCSmark	0			//!< Mark stage of collection
+#define GCSatomic	1		//!< Atomic marking stage of collection
+#define GCSsweepsymbol	2	//!< Sweeping symbol table
+#define GCSsweep	3		//!< General purpose sweep stage
+#define GCSpause	4		//!< Pause stage during collection
 
+/** true during all sweep stages */
 #define GCSsweepphases (bitmask(GCSsweepsymbol) | bitmask(GCSsweep))
 
 /** Initialize the global state for garbage collection */
@@ -278,6 +280,7 @@ void mem_sweepfree(Value th, MemInfo *mb) {
  *   old; stop when hitting an old object, as all objects after that
  *   one will be old too.
  * When object is a thread, sweep its list of open upvalues too.
+ * \param th current thread
  * \param p pointer to linked chain of objects to sweep
  * \param count Maximum number of objects to sweep
  * \return Where we stopped sweep */
@@ -319,11 +322,13 @@ MemInfo **mem_sweeplist(Value th, MemInfo **p, Auint count) {
 	return (*p == NULL) ? NULL : p;
 }
 
+/** Sweep the entire list (rather than incremental) */
 MemInfo **mem_sweepwholelist(Value th, MemInfo **p) { 
 	return mem_sweeplist(th, p, MAX_MEM); 
 }
 
 /** Sweep a list until we find a live object (or end of list)
+ * \param th current thread
  * \param p List of objects to sweep
  * \param n pointer to a nbr to increment by how many objects were swept
  * \return Pointer to object inside the list */

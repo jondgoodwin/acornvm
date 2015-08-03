@@ -60,11 +60,11 @@ struct SymTable {
 	Auint nbrUsed;  /**< Number of table entries in use */
 };
 
-/* Memory size of symbol table - used by garbage collector */
+/** Memory size of symbol table - used by garbage collector */
 #define sym_tblsz(th) \
 	(sizeof(SymTable) + vm(th)->sym_table.nbrAvail * sizeof(SymInfo*))
 
-// After deleting unused symbols, shrink symbol table by half, if using less than half of it
+/** After deleting unused symbols, shrink symbol table by half, if using less than half of it */
 #define sym_tblshrinkcheck(th) \
 	{Auint hs = vm(th)->sym_table.nbrAvail >> 1; \
 	if (vm(th)->sym_table.nbrUsed < hs) \
@@ -77,7 +77,7 @@ struct SymTable {
 
 /** Initialize vm's symbol table */
 void sym_init(Value th);
-/* Free the symbol table */
+/** Free the symbol table */
 void sym_free(Value th);
 /** Resize the symbol table */
 void sym_resize_tbl(Value th, Auint newsize);

@@ -25,6 +25,7 @@
  * A value of 200 means that the collector waits for the total memory in use to double 
  * before starting a new cycle. */
 #define AVM_GCPAUSE	200  /* 200% */
+/** When generational garbage collection should do a major vs. minor collection cycle */
 #define AVM_GCMAJOR	200  /* 200% */
 /** Controls the relative speed of the collector relative to memory allocation. 
  * Larger values make the collector more aggressive but also increase the size of each incremental step. 

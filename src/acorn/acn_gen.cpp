@@ -102,6 +102,34 @@ void genMaxStack(Acorn *ac, AuintIdx reg) {
 		ac->func->maxstacksize = reg+1;
 }
 
+/** Get the destination where Jump is going */
+int genGetJump (Acorn *ac, int ip) {
+	int offset = bc_j(ac->func->code[ip]);
+	if (offset == BCNO_JMP)  /* point to itself represents end of list */
+		return BCNO_JMP;  /* end of list */
+	else
+		return (ip+1)+offset;  /* turn offset into absolute position */
+}
+
+/** Set the Jump instruction at ip to jump to dest instruction */
+void genSetJump (Acorn *ac, int ip, int dest) {
+	Instruction *jmp = &ac->func->code[ip];
+	int offset = dest-(ip+1);
+	assert(dest != BCNO_JMP);
+	if (((offset+BCBIAS_J) >> 16)!=0)
+		assert(0 && "control structure too long");
+	*jmp = setbc_j(*jmp, offset);
+}
+
+/* Set the jump instruction link chain starting at listip to jump to dest */
+void genSetJumpList(Acorn *ac, int listip, int dest) {
+	while (listip != BCNO_JMP) {
+		int next = genGetJump(ac, listip);
+		genSetJump(ac, listip, dest);
+		listip = next;
+	}
+}
+
 #ifdef __cplusplus
 } // extern "C"
 } // namespace avm

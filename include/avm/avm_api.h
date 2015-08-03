@@ -159,6 +159,7 @@ AVM_API Value partGetMixins(Value th, Value part);
 AVM_API void partAddType(Value th, Value part, Value type);
 /** Copy a type's methods to the Part */
 AVM_API void partCopyMethods(Value th, Value part, Value type);
+/** Macro to add a c-method to a type */
 #define addCMethod(th,part,methsym,meth,methnm) \
 	partAddMethodc(th, part, methsym, aCMethod(th, meth, methnm, __FILE__));
 
@@ -167,17 +168,15 @@ AVM_API void partCopyMethods(Value th, Value part, Value type);
 AVM_API Value aCFunc(Value th, AcFuncp func, const char* name, const char* src);
 /** Build a new c-method value, pointing to a function written in C */
 AVM_API Value aCMethod(Value th, AcFuncp func, const char* name, const char* src);
+/** Call a method or function value placed on stack (with nparms above it). 
+ * Indicate how many return values to expect to find on stack. */
+AVM_API void funcCall(Value th, int nparms, int nexpected);
 
 // Implemented in avm_thread.cpp
 /** Return a new Thread with a starter namespace and stack. */
 AVM_API Value newThread(Value th, Value ns, AuintIdx stksz);
 /** Return 1 if a Thread, else return 0 */
 AVM_API int isThread(Value th);
-/** Call a function value placed on stack (with nparms above it). 
- * Indicate how many return values to expect to find on stack. */
-AVM_API void thrCall(Value th, int nparms, int nexpected);
-/** Replace self+method on stack with function+self, then call */
-AVM_API bool thrCallMethod(Value th, int nparms, int nexpected);
 
 // Implemented in avm_global.cpp
 /** Create a new global namespace (typically for main thread) */

@@ -63,7 +63,7 @@ void sym_init(Value th) {
 	sym_resize_tbl(th, AVM_SYMTBLMINSIZE);
 }
 
-/* Free the symbol table */
+/** Free the symbol table */
 void sym_free(Value th) {
 	mem_freearray(th, vm(th)->sym_table.symArray, vm(th)->sym_table.nbrAvail);
 }

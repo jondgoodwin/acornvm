@@ -18,6 +18,7 @@ extern "C" {
 // Non-API C-Function functions
 // ***********
 
+/** A temporary function for generating byte-code test programs */
 AVM_API Value genTestPgm(Value th, int pgm);
 
 #ifdef __cplusplus

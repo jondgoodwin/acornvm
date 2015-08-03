@@ -47,9 +47,9 @@ extern "C" {
 
 /** Structure of a table index node The index has an array of many such nodes. */
 typedef struct Node {
-	Value val;
-	Value key;
-	struct Node *next;  // for chaining
+	Value val;			//!< Node's value
+	Value key;			//!< Node's key
+	struct Node *next;  //!< Link to next node with same hash
 } Node;
 
 /** Information about an table information block. (uses MemCommonInfoT) 

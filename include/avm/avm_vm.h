@@ -82,6 +82,7 @@ extern "C" {
 		// Byte-code (and parser) standard methods
 		SymGet,		//!< '()'
 		SymPut,		//!< '()='
+		SymNew,		//!< 'new'
 		SymAdd,		//!< '+='
 		SymNext,	//!< 'next'
 		SymPlus,	//!< '+'

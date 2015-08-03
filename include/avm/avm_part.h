@@ -32,10 +32,10 @@ extern "C" {
 /** Information about a part. (uses MemCommonInfoT) */
 typedef struct PartInfo {
 	MemCommonInfoT;
-	Value items;	//< An array of the part's parts
-	Value props;	//< A table of the part's properties
-	Value methods;	//< A table of the part's methods
-	Value mixins;	//< An array of mixin Types
+	Value items;	//!< An array of the part's parts
+	Value props;	//!< A table of the part's properties
+	Value methods;	//!< A table of the part's methods
+	Value mixins;	//!< An array of mixin Types
 } PartInfo;
 
 /** Mark all Part values for garbage collection 

@@ -106,13 +106,13 @@ void arrAdd(Value th, Value arr, Value val) {
 	assert(isArr(arr));
 
 	// Grow, if needed
-	if (sz>a->avail)
-		arrMakeRoom(th, arr, sz);
-	// Perform copy
-	a->arr[sz-1]=val;
+	if (sz+1>a->avail)
+		arrMakeRoom(th, arr, sz+1);
+
+	// Append value
+	a->arr[sz]=val;
 	mem_markChk(th, arr, val);
-	// If final fill is past array size, reset size higher
-	a->size = sz;
+	a->size++;
 }
 
 /* Propagate n copies of val into the array starting at pos.

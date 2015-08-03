@@ -14,8 +14,8 @@ extern "C" {
 
 /** Helps cast between float and unsigned without any conversion */
 union Fcaster {
-	Afloat f;
-	Auint u;
+	Afloat f;	//!< float encoding of a Value
+	Auint u;	//!< unsigned integer encoding of a Value
 };
 
 /** Cast c-float n into a Float value
@@ -67,7 +67,7 @@ Value getType(Value th, Value val) {
 	return aNull; // Should not ever get here
 }
 
-/* Find method in part's methods or mixins. Return aNull if not found */
+/** Find method in part's methods or mixins. Return aNull if not found */
 Value findMethodR(Value th, Value part, Value methsym) {
 	Value meth;
 	// Check methods first
@@ -91,7 +91,7 @@ Value findMethod(Value th, Value self, Value methsym) {
 	Value meth;
 
 	// If it is a non-Type part, look for method first in self's methods and mixins
-	if (isPart(self) && !(part_info(self)->flags1 & PartType)) {
+	if (isPart(self) && !(part_info(self)->flags1 & PartType && methsym!=ss(th, SymNew))) {
 		if (aNull != (meth = findMethodR(th, self, methsym)))
 			return meth;
 	}

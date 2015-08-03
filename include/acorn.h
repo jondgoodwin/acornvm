@@ -1,4 +1,4 @@
-/** Use this in Acorn library C++ source files - gets all #includes
+/** Use this in Acorn compiler source files - gets all avmlib and acorn include files 
  * @file
  *
  * This source file is part of avm - Acorn Virtual Machine.

@@ -48,8 +48,195 @@ Value aCMethod(Value th, AcFuncp func, const char* name, const char* src) {
 	return fn;
 }
 
-/* Execute byte-code program pointed at by thread's current call frame */
-void bfnRun(Value th) {
+/** Return codes from funcCallPrep */
+enum FuncTypes {
+	FuncBad,	//!< Not a valid function (probably unknown method)
+	FuncBC,		//!< Byte-code function
+	FuncC		//!< C-function
+};
+
+/** Prepare call to method or function value on stack (with parms above it). 
+ * Specify how many return values to expect to find on stack.
+ * Returns 0 if bad function, 1 if bytecode, 2 if C-function
+ *
+ * For c-functions, all parameters are passed, reserving 20 slots of stack space.
+ *
+ * For byte code, parameters are massaged to ensure the expected number of
+ * fixed parameters and establish a holding place for the variable parameters.
+ */
+FuncTypes funcCallPrep(Value th, Value *funcval, int nexpected) {
+
+	// Return if we do not have a valid function to call
+	if (!isFunc(*funcval))
+		return FuncBad;
+
+	// Start and initialize a new CallInfo block
+	CallInfo * ci = th(th)->curfn = th(th)->curfn->next ? th(th)->curfn->next : thrGrowCI(th);
+	ci->nresults = nexpected;
+	ci->retTo = ci->funcbase = funcval;  // Address of function value, varargs and return values
+	ci->begin = ci->end = funcval + 1; // Parameter values are right after function value
+
+	// C-function call - Does the whole thing: setup, call and stack clean up after return
+	if (isCFunc(*funcval)) {
+		// ci->callstatus=0;
+
+		// Allocate room for local variables, no parm adjustments needed
+		stkNeeds(th, STACK_MINSIZE);
+
+		return FuncC; // C-function return
+	}
+
+	// Bytecode function call - Only does set-up, call done by caller
+	else {
+		int nparms = th(th)->stk_top - funcval - 1; // Actual number of parameters pushed
+		BFuncInfo *bfunc = (BFuncInfo*) *funcval; // Capture it now before it moves
+
+		// Initialize byte-code's call info
+		ci->ip = bfunc->code; // Start with first instruction
+
+		// Ensure sufficient data stack space.
+		stkNeeds(th, bfunc->maxstacksize); // funcval may no longer be reliable
+
+		// If we do not have enough fixed parameters then add in nulls
+		for (; nparms < funcNParms(bfunc); nparms++)
+			*th(th)->stk_top++ = aNull;
+
+		// If we expected variable number of parameters, tidy them
+		if (isVarParm(bfunc)) {
+			int i;
+
+			// Reset where fixed parms start (where we are about to put them)
+			Value *from = ci->begin; // Capture where fixed parms are now
+			ci->begin = th(th)->stk_top;
+
+			// Copy fixed parms up into new frame start
+			for (i=0; i<funcNParms(bfunc); i++) {
+				*th(th)->stk_top++ = *from;
+				*from++ = aNull;  // we don't want dupes that might confuse garbage collector
+			}
+		}
+
+		// Bytecode rarely uses stk_top; put it above local frame stack.
+		th(th)->stk_top = ci->end;
+
+		return FuncBC; // byte-code function return
+	}
+}
+
+/** Prepare tailcall to method or function value on stack (with parms above it). 
+ * Specify how many return values to expect to find on stack.
+ * Returns 0 if bad function, 1 if bytecode, 2 if C-function
+ *
+ * For c-functions, all parameters are passed, reserving 20 slots of stack space.
+ *
+ * For byte code, parameters are massaged to ensure the expected number of
+ * fixed parameters and establish a holding place for the variable parameters.
+ */
+FuncTypes funcTailCallPrep(Value th, Value *funcval, int nexpected) {
+
+	// Return if we do not have a valid function to call
+	if (!isFunc(*funcval))
+		return FuncBad;
+
+	// Re-initialize current CallInfo frame
+	CallInfo * ci = th(th)->curfn;
+	int nparms = th(th)->stk_top - funcval - 1;
+	memmove(ci->funcbase, funcval, (nparms+1)*sizeof(Value)); // Move down parms
+	th(th)->stk_top = ci->funcbase + nparms + 1;
+	ci->nresults = nexpected;
+	ci->retTo = ci->funcbase;  // Address of function value, varargs and return values
+	ci->begin = ci->end = ci->funcbase + 1; // Parameter values are right after function value
+
+	// C-function call - Does the whole thing: setup, call and stack clean up after return
+	if (isCFunc(*funcval)) {
+		// ci->callstatus=0;
+
+		// Allocate room for local variables, no parm adjustments needed
+		stkNeeds(th, STACK_MINSIZE);
+
+		return FuncC; // C-function return
+	}
+
+	// Bytecode function call - Only does set-up, call done by caller
+	else {
+		BFuncInfo *bfunc = (BFuncInfo*) *ci->funcbase; // Capture it now before it moves
+
+		// Initialize byte-code's call info
+		ci->ip = bfunc->code; // Start with first instruction
+
+		// Ensure sufficient data stack space.
+		stkNeeds(th, bfunc->maxstacksize); // funcval may no longer be reliable
+
+		// If we do not have enough fixed parameters then add in nulls
+		for (; nparms < funcNParms(bfunc); nparms++)
+			*th(th)->stk_top++ = aNull;
+
+		// If we expected variable number of parameters, tidy them
+		if (isVarParm(bfunc)) {
+			int i;
+
+			// Reset where fixed parms start (where we are about to put them)
+			Value *from = ci->begin; // Capture where fixed parms are now
+			ci->begin = th(th)->stk_top;
+
+			// Copy fixed parms up into new frame start
+			for (i=0; i<funcNParms(bfunc); i++) {
+				*th(th)->stk_top++ = *from;
+				*from++ = aNull;  // we don't want dupes that might confuse garbage collector
+			}
+		}
+
+		// Bytecode rarely uses stk_top; put it above local frame stack.
+		th(th)->stk_top = ci->end;
+
+		return FuncBC; // byte-code function return
+	}
+}
+
+/* Return nulls instead of doing an invalid function call */
+void funcRetNulls(Value th) {
+
+	// Copy the desired number of return values (nulls) where indicated
+	CallInfo *ci =th(th)->curfn;
+	Value* to = ci->retTo;
+	AintIdx want = ci->nresults; // how many caller wants
+	while (want--)
+		*to++ = aNull;
+	return;
+}
+
+/* Execute C function (and do return) at thread's current call frame 
+ * Call and data stack already set up by funcCallPrep. */
+void funcRunC(Value th) {
+	CallInfo *ci =th(th)->curfn;
+
+	// Perform C function, capturing number of return values
+	AintIdx have = (((CFuncInfo*)(*ci->funcbase))->funcp)(th);
+	
+	// Calculate how any we have to copy down and how many nulls for padding
+	Value *from = th(th)->stk_top-have;
+	Value* to = ci->retTo;
+	AintIdx want = ci->nresults; // how many caller wants
+	AintIdx nulls = 0; // how many nulls for padding
+	if (have != want && want!=BCVARRET) { // performance penalty only to mismatches
+		if (have > want) have = want; // cap down to what we want
+		else /* if (have < want) */ nulls = want - have; // need some null padding
+	}
+
+	// Copy return values into previous frame's data stack
+	while (have--)
+		*to++ = *from++;
+	while (nulls--)
+		*to++ = aNull;  // Fill rest with nulls
+
+	// Update thread's values
+	th(th)->stk_top = to; // Mark position of last returned
+	th(th)->curfn = ci->previous; // Back up a frame
+	return;
+}
+
+/* Execute byte-code function pointed at by thread's current call frame */
+void funcRunBC(Value th) {
 	CallInfo *ci = ((ThreadInfo*)th)->curfn;
 	BFuncInfo* func = (BFuncInfo*) (*ci->funcbase);
 	Value *lits = func->lits; 
@@ -75,7 +262,7 @@ void bfnRun(Value th) {
 
 		// OpLoadLit: R(A) := Literals(D)
 		case OpLoadLit:
-			*rega = *(lits + bc_d(i));
+			*rega = *(lits + bc_bx(i));
 			// Clone a string literal, as program might change it
 			if (isStr(*rega))
 				*rega = newStrl(th, str_cstr(*rega), str_size(*rega)); 
@@ -120,12 +307,12 @@ void bfnRun(Value th) {
 
 		// OpGetGlobal: R(A) := Globals(Literals(D))
 		case OpGetGlobal:
-			*rega = gloGet(th, *(lits + bc_d(i)));
+			*rega = gloGet(th, *(lits + bc_bx(i)));
 			break;
 
 		// OpSetGlobal: Globals(Literals(D)) := R(A)
 		case OpSetGlobal:
-			gloSet(th, *(lits + bc_d(i)), *rega);
+			gloSet(th, *(lits + bc_bx(i)), *rega);
 			break;
 
 		// OpJump: ip += sBx
@@ -187,19 +374,92 @@ void bfnRun(Value th) {
 			*rega = ss(th, bc_c(i));
 			break;
 
+		// OpForPrep: R(A+1) := R(B); R(A) = R(A+1).StdMeth(C); R(A+2):=null
+		case OpForPrep:
+			*(rega+1) = *(stkbeg + bc_b(i));
+			*rega = findMethod(th, *(rega+1), ss(th, bc_c(i)));
+			*(rega+2) = aNull;
+			break;
+
+		// OpRptPrep: R(A+1) := R(B); R(A) = R(A+1).StdMeth(C)
+		case OpRptPrep:
+			*(rega+1) = *(stkbeg + bc_b(i));
+			*rega = findMethod(th, *(rega+1), ss(th, bc_c(i)));
+			break;
+
 		// OpCall: R(A .. A+C-1) := R(A+1).R(A)(R(A+1) .. A+B-1))
 		// if (B == 0xFF) then B = top. If (C == 0xFF), then top is set to last_result+1, 
-		// so next open instruction (CALL, RETURN, SETLIST) may use top.
+		// so next open instruction (CALL, RETURN, VAR) may use top.
 		case OpCall: {
 			int b = bc_b(i); // nbr of parms
 			// Reset frame top for fixed parms (var already has it adjusted)
 			if (b != BCVARRET) 
 				th(th)->stk_top = rega+b+1;
-			int nresults = bc_c(i); // number of results expected
+
+			// Prepare call frame and stack, then perform the call
 			*rega = findMethod(th, *(rega+1), *rega);
-			if (thrCalli(th, rega, nresults)) {
+			switch (funcCallPrep(th, rega, bc_c(i))) {
+			case FuncBad: 
+				funcRetNulls(th); 
+				break;
+			case FuncC:
+				funcRunC(th);
+				break;
+			case FuncBC:
 				ci = th(th)->curfn;
-				ci->callstatus |= CIST_REENTRY;
+				func = (BFuncInfo*) (*ci->funcbase);
+				lits = func->lits; // literals
+				stkbeg = ci->begin;
+			} }
+			break;
+
+		// OpCall: R(A .. A+C-1) := R(A+1).R(A)(R(A+1) .. A+B-1))
+		// if (B == 0xFF) then B = top. If (C == 0xFF), then top is set to last_result+1, 
+		// so next open instruction (CALL, RETURN, VAR) may use top.
+		case OpTailCall: {
+			int b = bc_b(i); // nbr of parms
+			// Reset frame top for fixed parms (var already has it adjusted)
+			if (b != BCVARRET) 
+				th(th)->stk_top = rega+b+1;
+
+			// Prepare call frame and stack, then perform the call
+			*rega = findMethod(th, *(rega+1), *rega);
+			switch (funcTailCallPrep(th, rega, bc_c(i))) {
+			case FuncBad: 
+				funcRetNulls(th); 
+				break;
+			case FuncC:
+				funcRunC(th);
+				break;
+			case FuncBC:
+				ci = th(th)->curfn;
+				func = (BFuncInfo*) (*ci->funcbase);
+				lits = func->lits; // literals
+				stkbeg = ci->begin;
+			} }
+			break;
+
+		// OpRptCall: R(A+2 .. A+C+1) := R(A)(R(A+1) .. A+B-1))
+		// if (B == 0xFF) then B = top. If (C == 0xFF), then top is set to last_result+1, 
+		// so next open instruction (CALL, RETURN, VAR) may use top.
+		case OpRptCall: {
+			int b = bc_b(i); // nbr of parms
+			// Reset frame top for fixed parms (var already has it adjusted)
+			if (b != BCVARRET) 
+				th(th)->stk_top = rega+b+1;
+
+			// Prepare call frame and stack, then perform the call
+			FuncTypes ftyp = funcCallPrep(th, rega, bc_c(i));
+			th(th)->curfn->retTo += 2;
+			switch (ftyp) {
+			case FuncBad: 
+				funcRetNulls(th); 
+				break;
+			case FuncC:
+				funcRunC(th);
+				break;
+			case FuncBC:
+				ci = th(th)->curfn;
 				func = (BFuncInfo*) (*ci->funcbase);
 				lits = func->lits; // literals
 				stkbeg = ci->begin;
@@ -232,15 +492,13 @@ void bfnRun(Value th) {
 
 			// Update thread's values
 			th(th)->stk_top = to; // Mark position of last returned
-			th(th)->curfn = ci->previous; // Back up a frame
+			ci = th(th)->curfn = ci->previous; // Back up a frame
 
 			// Return to 'c' function caller, if we were called from there
-			if (!(ci->callstatus & CIST_REENTRY))  // 'ci' still the called one
+			if (!isFunc(*ci->funcbase) || isCFunc(*ci->funcbase))
 				return;
 
 			// For bytecode, restore info from the previous call stack frame
-			ci = th(th)->curfn;
-			assert(ci->callstatus & CIST_BYTECODE);
 			if (want != BCVARRET) 
 				th(th)->stk_top = ci->end; // Restore top to end for known # of returns
 			func = (BFuncInfo*) (*ci->funcbase);
@@ -249,64 +507,35 @@ void bfnRun(Value th) {
 			}
 			break;
 
-		// OpTailCall: return R(A)(R(A+1), ... ,R(A+B-1))
-		// if (B == 0xFF) then B = top. If (C == 0xFF), then top is set to last_result+1, 
-		// so next open instruction (CALL, RETURN, SETLIST) may use top.
-		case OpTailcall: {
-			int b = bc_b(i); // nbr of parms
-			// Reset frame top for fixed parms (var already has it adjusted)
-			if (b != BCVARRET) 
-				th(th)->stk_top = rega+b+1;
-			assert(bc_c(i) == BCVARRET);
-			*rega = findMethod(th, *(rega+1), *rega);
-			if (thrCalli(th, rega, BCVARRET)) {
-				// byte-code tail call: put called frame (n) in place of caller one (o)
-				CallInfo *nci = th(th)->curfn;
-				CallInfo *oci = nci->previous;
-				Value *nfunc = nci->funcbase;
-				Value *ofunc = oci->funcbase;
-
-				/* Move var and fixed parms down to old stack frame */
-				Value *lim = nci->begin + funcNParms(*nfunc);
-				for (AuintIdx aux = 0; nfunc + aux < lim; aux++)
-					*(ofunc + aux) = *(nfunc + aux);
-
-				// Correct old frame values
-				oci->begin = ofunc + (nci->begin - nfunc);
-				oci->end = th(th)->stk_top = ofunc + (th(th)->stk_top - nfunc);
-				oci->ip = nci->ip;
-				oci->callstatus |= CIST_TAIL;  /* function was tail called */
-				ci = th(th)->curfn = oci;  /* remove new frame */
-				assert(th(th)->stk_top == oci->begin + ((BFuncInfo*)(*ofunc))->maxstacksize);
-
-				// Load up local variables
-				func = (BFuncInfo*) (*ci->funcbase);
-				lits = func->lits; // literals
-				stkbeg = ci->begin;
-			} else
-				// We did full C-function call
-				stkbeg = ci->begin;
-			} break;
-
-		// OpForPrep: R(A+1) := R(B); R(A) = R(A+1).StdMeth(C); R(A+2):=null
-		case OpForPrep:
-			*(rega+1) = *(stkbeg + bc_b(i));
-			*rega = findMethod(th, *(rega+1), ss(th, bc_c(i)));
-			*(rega+2) = aNull;
-			break;
-
-		// OpRptPrep: R(A+1) := R(B); R(A) = R(A+1).StdMeth(C)
-		case OpRptPrep:
-			*(rega+1) = *(stkbeg + bc_b(i));
-			*rega = findMethod(th, *(rega+1), ss(th, bc_c(i)));
-			break;
-
 		// Should never reach here
 		default:
 			assert(0);
 			break;
 	}
   }
+}
+
+/* Call a method or function value placed on stack (with nparms above it). 
+ * Indicate how many return values to expect to find on stack. */
+void funcCall(Value th, int nparms, int nexpected) {
+	Value* funcpos = th(th)->stk_top - nparms - 1;
+
+	// If "function" is a symbol, treat it as a method to lookup
+	if (isSym(*funcpos))
+		*funcpos = findMethod(th, *(funcpos+1), *funcpos);
+
+	// Prepare call frame and stack, then perform the call
+	switch (funcCallPrep(th, funcpos, nexpected)) {
+	case FuncBad: 
+		funcRetNulls(th);
+		break;
+	case FuncC:
+		funcRunC(th);
+		break;
+	case FuncBC:
+		funcRunBC(th);
+		break;
+	}
 }
 
 #ifdef __cplusplus

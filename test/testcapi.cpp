@@ -228,35 +228,15 @@ void testCapi(void) {
 	Value testcfn = aCFunc(th, test_cfunc, "test_cfunc", __FILE__);
 	stkPush(th, testcfn);
 	stkPush(th, aTrue); // Pass parameter
-	thrCall(th, 1, 1);
+	funcCall(th, 1, 1);
 	t(stkPop(th)==aFalse, "c-function return success: stkPop(th)==aFalse");
 	t(stkSize(th)==i, "stkSize(th)==0");
-
-	// Bytecode-function and Thread call stack tests
-	/*
-	Value testbfn = aBFunc(th, 2, aNull, aNull);
-	stkPush(th, testbfn);
-	thrCall(th, 0, 1); // Call with no parameters, will return puffed null
-	t(stkPop(th)==aNull, "b-function return success: stkPop(th)==aNull");
-	t(stkSize(th)==i, "stkSize(th)==0");
-	stkPush(th, testbfn);
-	stkPush(th, stkGet(th, array1));
-	thrCall(th, 1, 1); // Call with parameters, will return array
-	t(isArr(stkPop(th)), "b-function return success: isArr(stkPop(th)");
-	t(stkSize(th)==i, "stkSize(th)==0");
-	Value testbfnv = aBFunc(th, -2, aNull, aNull);
-	stkPush(th, testbfnv);
-	stkPush(th, stkGet(th, true1));
-	thrCall(th, 1, 1); // Call with parameters, will return symbol
-	t(isSym(stkPop(th)), "b-function return success: isSym(stkPop(th)");
-	t(stkSize(th)==i, "stkSize(th)==0");
-	*/
 
 	// Type API tests - makes use of built-in types, which use the API to create types and its methods
 	stkPush(th, aSym(th, "+"));
 	stkPush(th, anInt(50));
 	stkPush(th, anInt(40));
-	thrCallMethod(th, 2, 1);
+	funcCall(th, 2, 1);
 	t(stkPop(th)==anInt(90), "stkPop(th)==anInt(90)"); // Yay - first successful O-O request!
 	t(isType(gloGetc(th, "Integer")), "isType(gloGetc(th, 'Integer'))");
 	t(getType(th, gloGetc(th, "Integer"))==gloGetc(th, "Type"), "isType(getType(th, gloGetc(th, 'Integer'))==gloGetc(th, 'Type'))");

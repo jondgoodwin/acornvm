@@ -22,14 +22,14 @@
 #ifndef avm_h
 #define avm_h
 
-#define AVM_VERSION_MAJOR	"0"
-#define AVM_VERSION_MINOR	"1"
-#define AVM_VERSION_NUM		0
-#define AVM_VERSION_RELEASE	"0"
+#define AVM_VERSION_MAJOR	"0"		//!< Major version number
+#define AVM_VERSION_MINOR	"1"		//!< Minor version number
+#define AVM_VERSION_NUM		0		//!< Version number
+#define AVM_VERSION_RELEASE	"1"		//!< Version release
 
-#define AVM_VERSION	"AcornVM " AVM_VERSION_MAJOR "." AVM_VERSION_MINOR
-#define AVM_RELEASE	AVM_VERSION "." AVM_VERSION_RELEASE
-#define AVM_COPYRIGHT	AVM_RELEASE "  Copyright (C) 2015 Jonathan Goodwin"
+#define AVM_VERSION	"AcornVM " AVM_VERSION_MAJOR "." AVM_VERSION_MINOR		//!< Full version string
+#define AVM_RELEASE	AVM_VERSION "." AVM_VERSION_RELEASE		//!< Full version+release string
+#define AVM_COPYRIGHT	AVM_RELEASE "  Copyright (C) 2015 Jonathan Goodwin"		//!< Name + version + copyright string
 
 #include "avm/avm_memory.h"
 #include "avm/avm_api.h"
