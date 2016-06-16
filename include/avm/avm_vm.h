@@ -29,7 +29,7 @@ extern "C" {
 	/** Virtual Machine instance information 
 	 *  Is never garbage collected, but is the root for garbage collection. */
 	typedef struct VmInfo {
-		MemCommonInfoGray;
+		MemCommonInfoGray;			//!< Common header for value-containing object
 
 		Value main_thread;			//!< VM's main thread
 		struct ThreadInfo main_thr; //!< State space for main thread
@@ -80,10 +80,10 @@ extern "C" {
 	/** C index values for standard symbols used by bytecode and parser */
 	enum StdSymbols {
 		// Byte-code (and parser) standard methods
-		SymGet,		//!< '()'
-		SymPut,		//!< '()='
+		SymParGet,		//!< '()'
+		SymParSet,		//!< '()='
 		SymNew,		//!< 'new'
-		SymAdd,		//!< '+='
+		SymAppend,		//!< '+='
 		SymNext,	//!< 'next'
 		SymPlus,	//!< '+'
 		SymMinus,	//!< '-'

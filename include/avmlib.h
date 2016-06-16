@@ -32,7 +32,7 @@ extern "C" {
 #endif
 
 /** Initializes all core types */
-void atyp_init(Value th);
+void glo_init(Value th);
 
 #ifdef __cplusplus
 } // end "C"

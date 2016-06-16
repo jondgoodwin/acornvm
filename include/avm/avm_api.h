@@ -162,6 +162,9 @@ AVM_API void partCopyMethods(Value th, Value part, Value type);
 /** Macro to add a c-method to a type */
 #define addCMethod(th,part,methsym,meth,methnm) \
 	partAddMethodc(th, part, methsym, aCMethod(th, meth, methnm, __FILE__));
+/** Macro to add a c-method to a type's properties */
+#define addCPropfn(th,part,methsym,meth,methnm) \
+	partAddPropc(th, part, methsym, aCMethod(th, meth, methnm, __FILE__));
 
 // Implemented in avm_func.cpp
 /** Build a new c-function value, pointing to a function written in C */

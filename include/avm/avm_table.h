@@ -55,7 +55,7 @@ typedef struct Node {
 /** Information about an table information block. (uses MemCommonInfoT) 
  * Note that flags2 is used to indicate the log2 of size of 'nodes' buffer */
 typedef struct TblInfo {
-	MemCommonInfoT;
+	MemCommonInfoT;				//!< Common header for typed value
 	struct Node *nodes;			//!< Pointer to allocated table index
 	struct Node *lastfree;		//!< any free node in index is before this position
 } TblInfo;

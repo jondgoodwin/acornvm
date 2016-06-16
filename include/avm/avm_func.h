@@ -27,7 +27,7 @@ extern "C" {
 
 /** The common header fields for a function. */
 #define MemCommonInfoF \
-	MemCommonInfoGray; \
+	MemCommonInfoGray; /**< Common info header */ \
 	Value name;		/**< Function's name (a string) */ \
 	Value source   /**< Function's source (Filename or Url) & anchor */
 
@@ -65,7 +65,7 @@ typedef struct FuncInfo {
 
 /** Information about a c-function */
 typedef struct CFuncInfo {
-	MemCommonInfoF; // Common function header: see function macros in avm_memory.h
+	MemCommonInfoF; //!< Common function header: see function macros in avm_memory.h
 
 	AcFuncp funcp; //!< Address of function code
 } CFuncInfo;
@@ -152,7 +152,7 @@ enum ByteCodeOps {
 
 /** Information about a bytecode function */
 typedef struct BFuncInfo {
-	MemCommonInfoF;
+	MemCommonInfoF;			//!< Common function header
 	Instruction *code;		//!< Array of bytecode instructions (size is its size)
 	Value *lits;			//!< Array of literals used by this function
 	Value *locals;			//!< Array of local variables (& parms) used by function
@@ -200,12 +200,6 @@ typedef struct Acorn {
 // ***********
 // Non-API C-Function functions
 // ***********
-
-/** Execute byte-code program pointed at by thread's current call frame */
-void funcRunBC(Value th);
-
-/** AAAAARGH */
-AVM_API void bfnFake(Value th, Value func);
 
 #ifdef __cplusplus
 } // end "C"

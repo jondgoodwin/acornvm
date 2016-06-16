@@ -46,7 +46,10 @@
     <ClCompile Include="src\avmlib\avm_thread.cpp" />
     <ClCompile Include="src\avmlib\avm_value.cpp" />
     <ClCompile Include="src\avmlib\avm_vm.cpp" />
-    <ClCompile Include="src\coretypes\atyp_init.cpp" />
+    <ClCompile Include="src\globals\env_stream.cpp" />
+    <ClCompile Include="src\globals\typ_file.cpp" />
+    <ClCompile Include="src\globals\glo_init.cpp" />
+    <ClCompile Include="src\globals\typ_url.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8B302A7E-1179-481B-8EBB-C599161470F1}</ProjectGuid>
@@ -88,6 +91,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <AdditionalIncludeDirectories>$(ProjectDir)\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>
@@ -100,6 +104,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <AdditionalIncludeDirectories>$(ProjectDir)\include</AdditionalIncludeDirectories>
+      <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <GenerateDebugInformation>true</GenerateDebugInformation>

@@ -1,0 +1,2 @@
+# A test Acorn program
+$stream << File::get("test.acn")

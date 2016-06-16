@@ -77,6 +77,10 @@ void testGen(void) {
 	t(stkPop(th)==anInt(20), "stkPop(th)==20");
 	t(stkSize(th)==0, "stkSize(th)==0");
 
+	// File, Url etc
+	stkPush(th, genTestPgm(th,5));
+	funcCall(th, 0, 0);
+
 	vm_close(th);
 	printf("All %ld Gen tests completed. %ld failed.\n", tests, fails);
 }

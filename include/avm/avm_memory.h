@@ -62,17 +62,17 @@ typedef unsigned char AByte;
 
 /** The header structure for any variable-sized Value (see MemCommonInfo) */
 typedef struct MemInfo {
-	MemCommonInfo;
+	MemCommonInfo;	//!< Common header
 } MemInfo;
 
 /** The generic structure for any Value containing other Values (will be marked Gray) */
 typedef struct MemInfoGray {
-	MemCommonInfoGray;
+	MemCommonInfoGray;	//!< Common header for value-containing objects
 } MemInfoGray;
 
 /** The generic structure for all typed variable-sized Value */
 typedef struct MemInfoT {
-	MemCommonInfoT;
+	MemCommonInfoT;		//!< Common header for typed Values
 } MemInfoT;
 
 /** Various types of Value encodings, some stored in pointer Values and

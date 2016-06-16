@@ -31,7 +31,7 @@ extern "C" {
 
 /** Information about a part. (uses MemCommonInfoT) */
 typedef struct PartInfo {
-	MemCommonInfoT;
+	MemCommonInfoT;	//!< Common header for typed value
 	Value items;	//!< An array of the part's parts
 	Value props;	//!< A table of the part's properties
 	Value methods;	//!< A table of the part's methods

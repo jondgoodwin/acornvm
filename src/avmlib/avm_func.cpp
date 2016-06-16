@@ -193,7 +193,7 @@ FuncTypes funcTailCallPrep(Value th, Value *funcval, int nexpected) {
 	}
 }
 
-/* Return nulls instead of doing an invalid function call */
+/** Return nulls instead of doing an invalid function call */
 void funcRetNulls(Value th) {
 
 	// Copy the desired number of return values (nulls) where indicated
@@ -205,7 +205,7 @@ void funcRetNulls(Value th) {
 	return;
 }
 
-/* Execute C function (and do return) at thread's current call frame 
+/** Execute C function (and do return) at thread's current call frame 
  * Call and data stack already set up by funcCallPrep. */
 void funcRunC(Value th) {
 	CallInfo *ci =th(th)->curfn;
@@ -235,7 +235,7 @@ void funcRunC(Value th) {
 	return;
 }
 
-/* Execute byte-code function pointed at by thread's current call frame */
+/** Execute byte-code function pointed at by thread's current call frame */
 void funcRunBC(Value th) {
 	CallInfo *ci = ((ThreadInfo*)th)->curfn;
 	BFuncInfo* func = (BFuncInfo*) (*ci->funcbase);

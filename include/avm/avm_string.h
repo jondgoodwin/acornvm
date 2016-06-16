@@ -33,7 +33,7 @@ extern "C" {
 
 /** Information about a string information block. (uses MemCommonInfoT) */
 typedef struct StrInfo {
-	MemCommonInfoT;
+	MemCommonInfoT;	//!< Common header for typed value
 	char *str;		//!< Pointer to allocated buffer for bytes
 	AuintIdx avail;	//!< Allocated size of character buffer
 } StrInfo;

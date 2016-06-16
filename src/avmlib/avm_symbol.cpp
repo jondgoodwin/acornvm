@@ -8,6 +8,7 @@
 #include "avmlib.h"
 
 #include <string.h>
+#include <wctype.h>
 
 #ifdef __cplusplus
 namespace avm {
@@ -107,6 +108,13 @@ Value aSym(Value th, const char *str) {
 /* Return 1 if the value is a Symbol, otherwise 0 */
 int isSym(Value sym) {
 	return isEnc(sym, SymEnc);
+}
+
+/* Return 1 if symbol starts with a uppercase letter or $ */
+int isGlobal(Value sym) {
+	assert(isSym(sym));
+	wchar_t c = (sym_cstr(sym))[0];
+	return iswupper(c) || c=='$';
 }
 
 /* Iterate to next symbol after key in symbol table (or first if key is NULL). Return Null if no more. 

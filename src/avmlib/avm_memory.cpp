@@ -67,6 +67,7 @@ void *mem_frealloc(void *block, Auint size) {
 
 /** Create a new variable-sized object (with given encoding and size) and add to front of *list. */
 /**
+ * \param th the current thread
  * \param enc the encoding of the new object
  * \param sz number of bytes to allocate
  * \param list forward-link chain to push allocated object onto

@@ -73,9 +73,10 @@ AVM_API Value newVM(void) {
 	sym_init(th);
 	vmStdInit(th);
 
-	// Initialize all core types
-	atyp_init(th);
+	// Initialize all global variables: types and environment
+	glo_init(th);
 
+	// Initialize the Acorn compiler
 	acn_init(th);
 
 	// Start garbage collection
@@ -132,10 +133,10 @@ void vmStdInit(Value th) {
 	mem_reallocvector(th, vm->stdsym, 0, nStdSyms, Value);
 	
 	// Add standard symbols
-	newstd(SymGet, "()");
-	newstd(SymPut, "()=");
-	newstd(SymNew, "new");
-	newstd(SymAdd, "+=");
+	newstd(SymParGet, "()");
+	newstd(SymParSet, "()=");
+	newstd(SymNew, "New");
+	newstd(SymAppend, "<<");
 	newstd(SymNext, "next");
 	newstd(SymPlus, "+");
 	newstd(SymMinus, "-");

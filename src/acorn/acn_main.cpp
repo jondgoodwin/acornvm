@@ -36,6 +36,7 @@ Value genTestPgm(Value th, int pgm) {
 	int saveip = 0;
 	Acorn* ac = &vm(th)->acornProgram;
 	genNew(ac, 0, aNull, aNull);
+	stkPush(th, ac->func);
 	switch (pgm) {
 
 	// Test the Load instructions
@@ -112,7 +113,7 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 0, SymNew));
 		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 4, genAddLit(ac, aSym(th, "List"))));
 		genAddInstr(ac, BCINS_ABC(OpCall, 3, 1, 1));
-		genAddInstr(ac, BCINS_ABC(OpRptPrep, 2, 3, SymAdd));
+		genAddInstr(ac, BCINS_ABC(OpRptPrep, 2, 3, SymAppend));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 4, genAddLit(ac, anInt(5))));
 		genAddInstr(ac, BCINS_ABC(OpRptCall, 2, 2, 0));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 4, genAddLit(ac, anInt(7))));
@@ -133,9 +134,26 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_ABC(OpReturn, 1, 1, 0));
 		break;
 
+	// Test File and URL stuff
+	case 5:
+		genAddParm(ac, aSym(th, "self"));
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 1, 2, SymAppend));
+		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 2, genAddLit(ac, aSym(th, "$stream"))));
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 4, SymParGet));
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 4, 5, SymParGet));
+		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 5, genAddLit(ac, aSym(th, "File"))));
+		genAddInstr(ac, BCINS_ABx(OpLoadLit, 6, genAddLit(ac, aSym(th, "get"))));
+		genAddInstr(ac, BCINS_ABC(OpCall, 4, 2, 1));
+		genAddInstr(ac, BCINS_ABx(OpLoadLit, 5, genAddLit(ac, newStr(th, "test.acn"))));
+		genAddInstr(ac, BCINS_ABC(OpCall, 3, 2, 1));
+		genAddInstr(ac, BCINS_ABC(OpCall, 1, 2, 1));
+		genAddInstr(ac, BCINS_ABC(OpReturn, 1, 1, 0));
+		break;
+
 	default:
 		break;
 	}
+	stkPop(th);
 	return ac->func;
 }
 
