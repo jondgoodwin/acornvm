@@ -30,55 +30,55 @@ void testGen(void) {
 
 	// Bytecode-function and Thread call stack tests
 	Value testbfn = genTestPgm(th, 0);
-	stkPush(th, testbfn);
+	pushValue(th, testbfn);
 	funcCall(th, 0, 1); // Call with no parameters, will return puffed null
-	t(stkPop(th)==aNull, "b-function return success: stkPop(th)==aNull");
-	t(stkSize(th)==0, "stkSize(th)==0");
+	t(popValue(th)==aNull, "b-function return success: popValue(th)==aNull");
+	t(getTop(th)==0, "getTop(th)==0");
 
 	// Call function that tests loader
-	stkPush(th, testbfn);
-	stkPush(th, anInt(4));
+	pushValue(th, testbfn);
+	pushValue(th, anInt(4));
 	funcCall(th, 1, 4); // Call with 1 parameter, will return 4
-	t(stkPop(th)==aFloat(3.14f), "b-function return success: stkPop(th)==3.14");
-	t(stkPop(th)==aFloat(3.14f), "stkPop(th)==3.14");
-	t(stkPop(th)==aTrue, "stkPop(th)==true");
-	t(toAint(stkPop(th))==4, "stkPop(th)==4");
-	t(stkSize(th)==0, "stkSize(th)==0");
+	t(popValue(th)==aFloat(3.14f), "b-function return success: popValue(th)==3.14");
+	t(popValue(th)==aFloat(3.14f), "popValue(th)==3.14");
+	t(popValue(th)==aTrue, "popValue(th)==true");
+	t(toAint(popValue(th))==4, "popValue(th)==4");
+	t(getTop(th)==0, "getTop(th)==0");
 
 	// Call function for 1 fixed and 2 varargs
-	stkPush(th, genTestPgm(th,1));
-	stkPush(th, anInt(1));
-	stkPush(th, anInt(2));
-	stkPush(th, anInt(3));
+	pushValue(th, genTestPgm(th,1));
+	pushValue(th, anInt(1));
+	pushValue(th, anInt(2));
+	pushValue(th, anInt(3));
 	funcCall(th, 3, 3); // Call with 3 parameters, will return 3
-	t(stkPop(th)==anInt(3), "stkPop(th)==3");
-	t(stkPop(th)==anInt(2), "stkPop(th)==2");
-	t(stkPop(th)==anInt(1), "stkPop(th)==1");
-	t(stkSize(th)==0, "stkSize(th)==0");
+	t(popValue(th)==anInt(3), "popValue(th)==3");
+	t(popValue(th)==anInt(2), "popValue(th)==2");
+	t(popValue(th)==anInt(1), "popValue(th)==1");
+	t(getTop(th)==0, "getTop(th)==0");
 
 	// Call fibonacci calculator with (conditional) jumps and calls
-	stkPush(th, genTestPgm(th,2));
-	stkPush(th, anInt(4));
+	pushValue(th, genTestPgm(th,2));
+	pushValue(th, anInt(4));
 	funcCall(th, 1, 1);
-	t(stkPop(th)==anInt(5), "stkPop(th)==5");
-	t(stkSize(th)==0, "stkSize(th)==0");
+	t(popValue(th)==anInt(5), "popValue(th)==5");
+	t(getTop(th)==0, "getTop(th)==0");
 
 	// Call recursive factorial program with tailcall
-	stkPush(th, genTestPgm(th,3));
-	stkPush(th, anInt(4));
+	pushValue(th, genTestPgm(th,3));
+	pushValue(th, anInt(4));
 	funcCall(th, 1, 1);
-	t(stkPop(th)==anInt(24), "stkPop(th)==24");
-	t(stkSize(th)==0, "stkSize(th)==0");
+	t(popValue(th)==anInt(24), "popValue(th)==24");
+	t(getTop(th)==0, "getTop(th)==0");
 
 	// Call List build and for loop program (summing its numbers)
-	stkPush(th, genTestPgm(th,4));
-	stkPush(th, anInt(4));
+	pushValue(th, genTestPgm(th,4));
+	pushValue(th, anInt(4));
 	funcCall(th, 1, 1);
-	t(stkPop(th)==anInt(20), "stkPop(th)==20");
-	t(stkSize(th)==0, "stkSize(th)==0");
+	t(popValue(th)==anInt(20), "popValue(th)==20");
+	t(getTop(th)==0, "getTop(th)==0");
 
 	// File, Url etc
-	stkPush(th, genTestPgm(th,5));
+	pushValue(th, genTestPgm(th,5));
 	funcCall(th, 0, 0);
 
 	vm_close(th);

@@ -16,7 +16,7 @@ extern "C" {
 
 /** Get contents for passed filename string or Url */
 int typ_file_get(Value th) {
-	Value fnval = stkGet(th,0);
+	Value fnval = getLocal(th,0);
 
 	// Assume fnval is a string for now
 	char *fn = isStr(fnval)? str_cstr(fnval) : NULL;
@@ -24,7 +24,7 @@ int typ_file_get(Value th) {
 	// Open the file - return null on failure
 	FILE *file;
 	if (fn==NULL || !(file = fopen(fn, "rb"))) {
-		stkPush(th, aNull);
+		pushValue(th, aNull);
 		return 1;
 	}
 
@@ -36,7 +36,7 @@ int typ_file_get(Value th) {
 
 	// Create the string buffer (which will be returned)
 	Value strbuf;
-	stkPush(th, strbuf = newStrl(th, "", size));
+	pushValue(th, strbuf = newStrl(th, "", size));
 
 	// Load the data into an allocated buffer
 	fread(str_cstr(strbuf), 1, size, file);

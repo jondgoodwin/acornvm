@@ -15,7 +15,7 @@ extern "C" {
 
 /** Compile and run an Acorn resource */
 int acn_new(Value th) {
-	stkPush(th, newPart(th, gloGet(th, aSym(th, "Acorn"))));
+	pushValue(th, newPart(th, gloGet(th, aSym(th, "Acorn"))));
 	return 1;
 }
 
@@ -36,7 +36,7 @@ Value genTestPgm(Value th, int pgm) {
 	int saveip = 0;
 	Acorn* ac = &vm(th)->acornProgram;
 	genNew(ac, 0, aNull, aNull);
-	stkPush(th, ac->func);
+	pushValue(th, ac->func);
 	switch (pgm) {
 
 	// Test the Load instructions
@@ -153,7 +153,7 @@ Value genTestPgm(Value th, int pgm) {
 	default:
 		break;
 	}
-	stkPop(th);
+	popValue(th);
 	return ac->func;
 }
 

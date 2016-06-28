@@ -184,8 +184,6 @@ AVM_API int isThread(Value th);
 // Implemented in avm_global.cpp
 /** Create a new global namespace (typically for main thread) */
 AVM_API Value newGlobal(Value th, AuintIdx size);
-/** Creates a new global namespace, extending thread's current global to an Array */
-AVM_API Value growGlobal(Value th, AuintIdx size);
 /** Retrieve a value from global namespace */
 AVM_API Value gloGet(Value th, Value var);
 /** Retrieve a value from global namespace */
@@ -198,34 +196,34 @@ AVM_API void gloSetc(Value th, const char* var, Value val);
 // Implemented in avm_stack.cpp
 /** Retrieve the stack value at the index. Be sure 0<= idx < top.
  * Good for getting method's parameters: 0=self, 1=parm 1, etc. */
-AVM_API Value stkGet(Value th, AintIdx idx);
+AVM_API Value getLocal(Value th, AintIdx idx);
 /** Put the value on the stack at the designated position. Be sure 0<= idx < top. */
-AVM_API void stkSet(Value th, AintIdx idx, Value val);
+AVM_API void setLocal(Value th, AintIdx idx, Value val);
 /** Copy the stack value at fromidx into toidx */
-AVM_API void stkCopy(Value th, AintIdx toidx, AintIdx fromidx);
+AVM_API void copyLocal(Value th, AintIdx toidx, AintIdx fromidx);
 /** Remove the value at index (shifting down all values above it to top) */
-AVM_API void stkRemove(Value th, AintIdx idx);
-/** Insert the value at index (shifting up all values above it) */
-AVM_API void stkInsert(Value th, AintIdx idx, Value val);
+AVM_API void deleteLocal(Value th, AintIdx idx);
+/** Insert the popped value into index (shifting up all values above it) */
+AVM_API void insertLocal(Value th, AintIdx idx);
 /** Push a value on the stack's top */
-AVM_API void stkPush(Value th, Value val);
+AVM_API Value pushValue(Value th, Value val);
 /** Push a copy of a stack's value at index onto the stack's top */
-AVM_API void  stkPushCopy(Value th, AintIdx idx);
+AVM_API Value pushLocal(Value th, AintIdx idx);
 /** Pop a value off the top of the stack */
-AVM_API Value stkPop(Value th);
+AVM_API Value popValue(Value th);
 /** Pops the top value and writes it at idx. Often used to set return value */
-AVM_API void stkPopTo(Value th, AintIdx idx);
+AVM_API void popLocal(Value th, AintIdx idx);
 /** Obtain value "from top" index , where 0=top, 1 is next */
-AVM_API Value stkFromTop(Value th, AintIdx fromtop);
+AVM_API Value getFromTop(Value th, AintIdx fromtop);
 /** Return number of values on the current function's stack */
-AVM_API AuintIdx stkSize(Value th);
+AVM_API AuintIdx getTop(Value th);
 /** When index is positive, this indicates how many Values are on the function's stack.
  *	This can shrink the stack or grow it (padding with 'null's).
  *	A negative index removes that number of values off the top. */
-AVM_API void stkSetSize(Value th, AintIdx idx);
-/** Ensure stack has room for 'size' values. Returns 0 on failure. 
+AVM_API void setTop(Value th, AintIdx idx);
+/** Ensure stack has room for 'needed' values above top. Returns 0 on failure. 
  * This may grow the stack, but never shrinks it. */
-AVM_API int stkNeeds(Value th, AuintIdx size);
+AVM_API int needMoreLocal(Value th, AuintIdx needed);
 
 // Implemented in avm_vm.cpp
 /** Start a new Virtual Machine. Return the main thread */

@@ -20,25 +20,25 @@ void env_stream_init(Value th);
 
 /** Add two integers */
 int typ_int_plus(Value th) {
-	if (!isInt(stkGet(th, 1)))
-		stkSet(th, 1, anInt(0));
-	stkPush(th, anInt(toAint(stkGet(th,0)) + toAint(stkGet(th,1))));
+	if (!isInt(getLocal(th, 1)))
+		setLocal(th, 1, anInt(0));
+	pushValue(th, anInt(toAint(getLocal(th,0)) + toAint(getLocal(th,1))));
 	return 1;
 }
 
 /** Subtract two integers */
 int typ_int_minus(Value th) {
-	if (!isInt(stkGet(th, 1)))
-		stkSet(th, 1, anInt(0));
-	stkPush(th, anInt(toAint(stkGet(th,0)) - toAint(stkGet(th,1))));
+	if (!isInt(getLocal(th, 1)))
+		setLocal(th, 1, anInt(0));
+	pushValue(th, anInt(toAint(getLocal(th,0)) - toAint(getLocal(th,1))));
 	return 1;
 }
 
 /** Multiply two integers */
 int typ_int_mult(Value th) {
-	if (!isInt(stkGet(th, 1)))
-		stkSet(th, 1, anInt(0));
-	stkPush(th, anInt(toAint(stkGet(th,0)) * toAint(stkGet(th,1))));
+	if (!isInt(getLocal(th, 1)))
+		setLocal(th, 1, anInt(0));
+	pushValue(th, anInt(toAint(getLocal(th,0)) * toAint(getLocal(th,1))));
 	return 1;
 }
 
@@ -53,23 +53,23 @@ Value typ_int_init(Value th) {
 
 /** Create a new List */
 int typ_list_new(Value th) {
-	stkPush(th, newArr(th, 0));
+	pushValue(th, newArr(th, 0));
 	return 1;
 }
 
 /** Add to a List */
 int typ_list_add(Value th) {
-	arrAdd(th, stkGet(th,0), stkGet(th,1));
+	arrAdd(th, getLocal(th,0), getLocal(th,1));
 	return 0;
 }
 
 /** Get next item from a List */
 int typ_list_next(Value th) {
-	Value arr = stkGet(th,0);
+	Value arr = getLocal(th,0);
 	AintIdx sz = arr_size(arr);
-	AintIdx pos = (stkGet(th,1)==aNull)? 0 : toAint(stkGet(th,1));
-	stkPush(th, pos>=sz? aNull : arrGet(th, arr, pos));
-	stkSet(th, 1, pos>=sz? aNull : anInt((Aint)pos+1));
+	AintIdx pos = (getLocal(th,1)==aNull)? 0 : toAint(getLocal(th,1));
+	pushValue(th, pos>=sz? aNull : arrGet(th, arr, pos));
+	setLocal(th, 1, pos>=sz? aNull : anInt((Aint)pos+1));
 	return 2;
 }
 
@@ -84,8 +84,8 @@ Value typ_list_init(Value th) {
 
 /** Call the method, passing its parameters */
 int typ_meth_get(Value th) {
-	funcCall(th, stkSize(th)-1, BCVARRET);
-	return stkSize(th);
+	funcCall(th, getTop(th)-1, BCVARRET);
+	return getTop(th);
 }
 
 /** Initialize the Type type, used to create other types */
@@ -97,7 +97,7 @@ Value typ_meth_init(Value th) {
 
 /** Lookup a value from type's named property */
 int typ_type_get(Value th) {
-	stkPush(th, stkSize(th)>=2? tblGet(th, part_props(stkGet(th,0)), stkGet(th,1)) : aNull);
+	pushValue(th, getTop(th)>=2? tblGet(th, part_props(getLocal(th,0)), getLocal(th,1)) : aNull);
 	return 1;
 }
 

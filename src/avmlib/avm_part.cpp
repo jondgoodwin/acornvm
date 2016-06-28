@@ -105,12 +105,13 @@ void partAddMethod(Value th, Value part, Value methnm, Value meth) {
 
 /** Add a C method to a part */
 void partAddMethodc(Value th, Value part, const char* methsym, Value meth) {
+	Value methval, methsymval;
 	assert(isPart(part));
 	// Use stack to ensure GC does not collect either value
-	stkPush(th, meth);
-	stkPush(th, aSym(th, methsym));
-	tblSet(th, part_methods(part), stkFromTop(th,0), stkFromTop(th,1));
-	stkSetSize(th, -2);
+	methval=pushValue(th, meth);
+	methsymval=pushValue(th, aSym(th, methsym));
+	tblSet(th, part_methods(part), methsymval, methval);
+	setTop(th, -2);
 }
 
 /* Get the Mixins array (use array API functions to manipulate). 

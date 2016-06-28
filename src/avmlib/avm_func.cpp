@@ -17,16 +17,15 @@ extern "C" {
 /* Build a new c-function value, pointing to a function written in C */
 Value aCFunc(Value th, AcFuncp func, const char* name, const char* src) {
 	// Put on stack to keep safe from GC
-	stkPush(th, newStr(th, name));
-	stkPush(th, newStr(th, src));
+	pushValue(th, newStr(th, name));
+	pushValue(th, newStr(th, src));
 
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 	CFuncInfo *fn = (CFuncInfo*) mem_new(th, FuncEnc, sizeof(CFuncInfo), NULL, 0);
 	funcFlags(fn) = FUNC_FLG_C;
 	fn->funcp = func;
-	fn->name = stkFromTop(th,1);
-	fn->source = stkFromTop(th,0);
-	stkSetSize(th, -2); // Pop values off stack
+	fn->source = popValue(th);
+	fn->name = popValue(th);
 
 	return fn;
 }
@@ -34,16 +33,15 @@ Value aCFunc(Value th, AcFuncp func, const char* name, const char* src) {
 /* Build a new c-method value, pointing to a function written in C */
 Value aCMethod(Value th, AcFuncp func, const char* name, const char* src) {
 	// Put on stack to keep safe from GC
-	stkPush(th, newStr(th, name));
-	stkPush(th, newStr(th, src));
+	pushValue(th, newStr(th, name));
+	pushValue(th, newStr(th, src));
 
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 	CFuncInfo *fn = (CFuncInfo*) mem_new(th, FuncEnc, sizeof(CFuncInfo), NULL, 0);
 	funcFlags(fn) = FUNC_FLG_C | FUNC_FLG_METHOD;
 	fn->funcp = func;
-	fn->name = stkFromTop(th,1);
-	fn->source = stkFromTop(th,0);
-	stkSetSize(th, -2); // Pop values off stack
+	fn->source = popValue(th);
+	fn->name = popValue(th);
 
 	return fn;
 }
@@ -81,7 +79,7 @@ FuncTypes funcCallPrep(Value th, Value *funcval, int nexpected) {
 		// ci->callstatus=0;
 
 		// Allocate room for local variables, no parm adjustments needed
-		stkNeeds(th, STACK_MINSIZE);
+		needMoreLocal(th, STACK_MINSIZE);
 
 		return FuncC; // C-function return
 	}
@@ -95,7 +93,7 @@ FuncTypes funcCallPrep(Value th, Value *funcval, int nexpected) {
 		ci->ip = bfunc->code; // Start with first instruction
 
 		// Ensure sufficient data stack space.
-		stkNeeds(th, bfunc->maxstacksize); // funcval may no longer be reliable
+		needMoreLocal(th, bfunc->maxstacksize); // funcval may no longer be reliable
 
 		// If we do not have enough fixed parameters then add in nulls
 		for (; nparms < funcNParms(bfunc); nparms++)
@@ -152,7 +150,7 @@ FuncTypes funcTailCallPrep(Value th, Value *funcval, int nexpected) {
 		// ci->callstatus=0;
 
 		// Allocate room for local variables, no parm adjustments needed
-		stkNeeds(th, STACK_MINSIZE);
+		needMoreLocal(th, STACK_MINSIZE);
 
 		return FuncC; // C-function return
 	}
@@ -165,7 +163,7 @@ FuncTypes funcTailCallPrep(Value th, Value *funcval, int nexpected) {
 		ci->ip = bfunc->code; // Start with first instruction
 
 		// Ensure sufficient data stack space.
-		stkNeeds(th, bfunc->maxstacksize); // funcval may no longer be reliable
+		needMoreLocal(th, bfunc->maxstacksize); // funcval may no longer be reliable
 
 		// If we do not have enough fixed parameters then add in nulls
 		for (; nparms < funcNParms(bfunc); nparms++)
@@ -297,7 +295,7 @@ void funcRunBC(Value th) {
 			AuintIdx cnt = bc_b(i);
 			if (cnt==BCVARRET) {
 				cnt = nbrvar;  /* get all var. arguments */
-				stkNeeds(th, nbrvar);
+				needMoreLocal(th, nbrvar);
 				rega = stkbeg + bc_a(i);  /* previous call may change the stack */
 				th(th)->stk_top = rega + nbrvar;
 			}

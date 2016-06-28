@@ -374,10 +374,10 @@ void tblSet(Value th, Value tbl, Value key, Value val) {
  * This C API version is safer than tblSet from accidental garbage 
  * collection when key and val are both new values. */
 void tblSetc(Value th, Value tbl, const char* key, Value val) {
-	stkPush(th, val); // To ensure val is not collected when creating key symbol
+	pushValue(th, val); // To ensure val is not collected when creating key symbol
 	Value k = aSym(th, key);
-	tblSet(th, tbl, k, stkFromTop(th, 0));
-	stkSetSize(th, -1);
+	tblSet(th, tbl, k, val);
+	setTop(th, -1);
 }
 
 #ifdef __cplusplus

@@ -16,7 +16,7 @@ extern "C" {
 
 /** Convert passed value to Text and print out to stdout */
 int env_stream_add(Value th) {
-	Value val = stkGet(th,1);
+	Value val = getLocal(th,1);
 
 	// Write string's text to stdout console
 	if (isStr(val))
