@@ -35,7 +35,7 @@ extern "C" {
 typedef struct StrInfo {
 	MemCommonInfoT;	//!< Common header for typed value
 	char *str;		//!< Pointer to allocated buffer for bytes
-	AuintIdx avail;	//!< Allocated size of character buffer
+	AuintIdx avail;	//!< Allocated size of character buffe
 } StrInfo;
 
 /** Free all of a string's allocated memory */

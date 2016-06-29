@@ -49,7 +49,7 @@ enum stkit {
 
 void testCapi(void) {
 	Value th = newVM();
-	// Run with HardMemTest to test garbage collector
+	// Run with HardMemTest to test garbage collecto
 
 	// Integer value primitive tests
 	t(isInt(anInt(-1000)), "isInt(anInt(-1000))");
@@ -178,7 +178,7 @@ void testCapi(void) {
 	pushValue(th, newTbl(th, 0)); // tbl1
 	pushValue(th, aSym(th, "name")); // name
 	pushValue(th, aSym(th, "George")); // george
-	pushValue(th, aSym(th, "Peter")); // peter
+	pushValue(th, aSym(th, "Peter")); // pete
 	pushValue(th, aSym(th, "weight")); // weight
 	t(!isTbl(getLocal(th, string1)), "!isTbl('a string')");
 	t(isTbl(getLocal(th, tbl1)), "isTbl(hash1)");
@@ -211,15 +211,18 @@ void testCapi(void) {
 	t(getSize(getLocal(th, tbl1))==4, "getSize(tbl1)==4");
 
 	// Thread tests - global namespace
-	gloSetc(th, "$v", getLocal(th, array1));
-	t(isArr(gloGetc(th, "$v")), "isArr(gloGetc(th, '$v'))");
-	t(gloGetc(th, "$p")==aNull, "gloGetc(th, '$p')==aNull"); // unknown variable
+	pushLocal(th, array1);
+	popGlobal(th, "$v");
+	pushGlobal(th, "$v");
+	t(isArr(popValue(th)), "isArr(popValue(th))");
+	pushGlobal(th, "$p");
+	t(popValue(th)==aNull, "popValue(th)==aNull"); // unknown global variable
 
 	// C-function and Thread call stack tests
 	i = getTop(th);
 	Value testcfn = aCFunc(th, test_cfunc, "test_cfunc", __FILE__);
 	pushValue(th, testcfn);
-	pushValue(th, aTrue); // Pass parameter
+	pushValue(th, aTrue); // Pass paramete
 	funcCall(th, 1, 1);
 	t(popValue(th)==aFalse, "c-function return success: popValue(th)==aFalse");
 	t(getTop(th)==i, "getTop(th)==0");
@@ -230,8 +233,12 @@ void testCapi(void) {
 	pushValue(th, anInt(40));
 	funcCall(th, 2, 1);
 	t(popValue(th)==anInt(90), "popValue(th)==anInt(90)"); // Yay - first successful O-O request!
-	t(isType(gloGetc(th, "Integer")), "isType(gloGetc(th, 'Integer'))");
-	t(getType(th, gloGetc(th, "Integer"))==gloGetc(th, "Type"), "isType(getType(th, gloGetc(th, 'Integer'))==gloGetc(th, 'Type'))");
+	pushGlobal(th, "Integer");
+	t(isType(popValue(th)), "pushGlobal(th, 'Integer'); isType(popValue(th))");
+	pushGlobal(th, "Type");
+	Value typtyp = popValue(th);
+	pushGlobal(th, "Integer");
+	t(getType(th, popValue(th))==typtyp, "isType(getType(th, Global(th, 'Integer'))==Global(th, 'Type'))");
 	vm_close(th);
 	printf("All %ld C-API tests completed. %ld failed.\n", tests, fails);
 }

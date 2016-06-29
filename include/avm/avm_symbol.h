@@ -27,7 +27,7 @@ extern "C" {
 
 /** Information about a symbol memory block. (uses MemCommonInfo) */
 typedef struct SymInfo {
-	MemCommonInfo; //!< Common header
+	MemCommonInfo; //!< Common heade
 	AuintIdx hash; //!< Calculated hash
 	// The symbol characters follow here: char sym[len+1];
 } SymInfo;

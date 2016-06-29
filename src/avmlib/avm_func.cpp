@@ -84,7 +84,7 @@ FuncTypes funcCallPrep(Value th, Value *funcval, int nexpected) {
 		return FuncC; // C-function return
 	}
 
-	// Bytecode function call - Only does set-up, call done by caller
+	// Bytecode function call - Only does set-up, call done by calle
 	else {
 		int nparms = th(th)->stk_top - funcval - 1; // Actual number of parameters pushed
 		BFuncInfo *bfunc = (BFuncInfo*) *funcval; // Capture it now before it moves
@@ -110,7 +110,7 @@ FuncTypes funcCallPrep(Value th, Value *funcval, int nexpected) {
 			// Copy fixed parms up into new frame start
 			for (i=0; i<funcNParms(bfunc); i++) {
 				*th(th)->stk_top++ = *from;
-				*from++ = aNull;  // we don't want dupes that might confuse garbage collector
+				*from++ = aNull;  // we don't want dupes that might confuse garbage collecto
 			}
 		}
 
@@ -155,7 +155,7 @@ FuncTypes funcTailCallPrep(Value th, Value *funcval, int nexpected) {
 		return FuncC; // C-function return
 	}
 
-	// Bytecode function call - Only does set-up, call done by caller
+	// Bytecode function call - Only does set-up, call done by calle
 	else {
 		BFuncInfo *bfunc = (BFuncInfo*) *ci->funcbase; // Capture it now before it moves
 
@@ -180,7 +180,7 @@ FuncTypes funcTailCallPrep(Value th, Value *funcval, int nexpected) {
 			// Copy fixed parms up into new frame start
 			for (i=0; i<funcNParms(bfunc); i++) {
 				*th(th)->stk_top++ = *from;
-				*from++ = aNull;  // we don't want dupes that might confuse garbage collector
+				*from++ = aNull;  // we don't want dupes that might confuse garbage collecto
 			}
 		}
 
@@ -240,7 +240,7 @@ void funcRunBC(Value th) {
 	Value *lits = func->lits; 
 	Value *stkbeg = ci->begin;
 
-	// main loop of interpreter
+	// main loop of interprete
 	for (;;) {
 		Instruction i = *(ci->ip++);
 		Value *rega = stkbeg + bc_a(i);

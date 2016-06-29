@@ -23,7 +23,7 @@ Value newStrl(Value th, const char *str, AuintIdx len) {
 	MemInfo **linkp = NULL;
 	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo), linkp, 0);
 	val->avail = len;
-	val->str = (char*) mem_gcrealloc(th, NULL, 0, len+1); // an extra byte for 0-terminator
+	val->str = (char*) mem_gcrealloc(th, NULL, 0, len+1); // an extra byte for 0-terminato
 	val->flags1 = 0;
 
 	// Copy string's contents over, if provided.

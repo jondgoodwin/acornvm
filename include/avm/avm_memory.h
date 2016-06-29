@@ -62,7 +62,7 @@ typedef unsigned char AByte;
 
 /** The header structure for any variable-sized Value (see MemCommonInfo) */
 typedef struct MemInfo {
-	MemCommonInfo;	//!< Common header
+	MemCommonInfo;	//!< Common heade
 } MemInfo;
 
 /** The generic structure for any Value containing other Values (will be marked Gray) */
@@ -92,7 +92,7 @@ enum EncType {
 	/* Immediate value encoding types (not Value Pointers) */
 	NullEnc,	//!< Null
 	BoolEnc,	//!< Boolean: true or false
-	IntEnc,		//!< Integer
+	IntEnc,		//!< Intege
 	FloatEnc,	//!< Floating point
 
 	// These are not encodings, but types we need access to
@@ -137,7 +137,7 @@ enum EncType {
 #define FIXEDBIT	5  //!< object is fixed (should not be collected) 
 #define OLDBIT		6  //!< object is old (only in generational mode)
 // bit 7 is currently used by tests (checkmemory)
-#define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)	//!< Both white colors together
+#define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)	//!< Both white colors togethe
 
 #define iswhite(x)      testbits((x)->marked, WHITEBITS) //!< Return true if object is white
 #define isblack(x)      testbit((x)->marked, BLACKBIT) //!< Return true if object is black
@@ -169,7 +169,7 @@ Value mem_gcrealloc(Value th, void *block, Auint osize, Auint nsize);
    ((v)=(t *) mem_gcreallocv(th, v, oldn, n, sizeof(t)))
 
 /** Garbage-collection savvy vector memory malloc, free and realloc function
- * - esize is the size of each entry in the vector
+ * - esize is the size of each entry in the vecto
  * - If nsize==0, it frees the memory block (if non-NULL)
  * - If ptr==NULL, it allocates a new uninitialized memory block
  * - Otherwise it changes the size of the memory block (and may move its location)

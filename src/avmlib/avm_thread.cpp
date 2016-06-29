@@ -16,19 +16,19 @@ extern "C" {
 
 /* Return a new Thread with a starter namespace and stack. */
 Value newThread(Value th, Value glo, AuintIdx stksz) {
-	ThreadInfo *nthr;
+	ThreadInfo *newth;
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 
 	// Create and initialize a thread
 	MemInfo **linkp = NULL;
-	nthr = (ThreadInfo *) mem_new(th, ThrEnc, sizeof(ThreadInfo), linkp, 0);
-	thrInit(nthr, vm(th), glo, stksz);
-	return (Value)nthr;
+	newth = (ThreadInfo *) mem_new(th, ThrEnc, sizeof(ThreadInfo), linkp, 0);
+	thrInit(newth, vm(th), stksz);
+	return (Value)newth;
 }
 
 /* Initialize a thread.
  * We do this separately, as Vm allocates main thread as part of VmInfo */
-void thrInit(ThreadInfo* thr, VmInfo* vm, Value glo, AuintIdx stksz) {
+void thrInit(ThreadInfo* thr, VmInfo* vm, AuintIdx stksz) {
 
 	thr->vm = vm;
 	thr->size = 0;
@@ -51,7 +51,7 @@ void thrInit(ThreadInfo* thr, VmInfo* vm, Value glo, AuintIdx stksz) {
 	ci->end = thr->stk_top + STACK_MINSIZE;
 	thr->curfn = ci;
 
-	thr->global = (glo==aNull)? newGlobal(thr, GLOBAL_NEWSIZE) : glo;
+	thr->global = aNull;
 }
 
 /** Return 1 if it is a Thread, else return 0 */
@@ -89,6 +89,19 @@ void thrFreeStacks(Value th) {
 	thrFreeCI(th);
 	// Free data stack
 	mem_freearray(th, th(th)->stack, th(th)->size);  /* free stack array */
+}
+
+
+/* Retrieve a value from global namespace */
+Value gloGet(Value th, Value var) {
+	assert(isTbl(th(th)->global));
+	return tblGet(th, th(th)->global, var);
+}
+
+/* Add or change a global variable */
+void gloSet(Value th, Value var, Value val) {
+	assert(isTbl(th(th)->global));
+	tblSet(th, th(th)->global, var, val);
 }
 
 #ifdef __cplusplus

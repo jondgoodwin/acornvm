@@ -83,13 +83,18 @@ typedef struct ThreadInfo {
 void stkRealloc(Value th, int newsize);
 
 /** Initialize a thread */
-void thrInit(ThreadInfo* thr, VmInfo* vm, Value glo, AuintIdx stksz);
+void thrInit(ThreadInfo* thr, VmInfo* vm, AuintIdx stksz);
 
 /** Free everything allocated for thread */
 void thrFreeStacks(Value th);
 
 /** Internal routine to allocate and append a new CallInfo structure to end of call stack */
 CallInfo *thrGrowCI(Value th);
+
+/** Retrieve a value from global namespace */
+Value gloGet(Value th, Value var);
+/** Add or change a global variable */
+void gloSet(Value th, Value var, Value val);
 
 #ifdef __cplusplus
 } // end "C"

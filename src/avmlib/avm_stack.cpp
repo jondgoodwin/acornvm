@@ -106,7 +106,8 @@ Value popValue(Value th) {
 
 /* Pops the top value and writes it at idx. Often used to set return value */
 void popLocal(Value th, AintIdx idx) {
-	assert(idx < stkSz(th)-1 && "idx not lower than top"); // Must be at least one value to remove!
+	assert(stkSz(th)>0); // Must be at least one value to remove!
+	assert(idx>=0 && idx < stkSz(th)-1 && "invalid local index");
 	setLocal(th, idx, *(--th(th)->stk_top));
 }
 
@@ -138,6 +139,30 @@ void setTop(Value th, AintIdx idx) {
 		assert((-(idx) <= th(th)->stk_top - base) && "invalid new top");
 		th(th)->stk_top += idx;  // Adjust top using negative index
 	}
+}
+
+/* ****************************************
+   GLOBAL VARIABLE ACCESS
+   ***************************************/
+
+/* Push and return the symbolically-named global variable's value */
+Value pushGlobal(Value th, const char *var) {
+	stkCanIncTop(th); /* Check if there is room */
+	assert(isTbl(th(th)->global));
+	return *th(th)->stk_top++ = tblGet(th, th(th)->global, aSym(th, var));
+}
+
+/* Alter the symbolically-named global variable to have the value popped off the local stack */
+void popGlobal(Value th, const char *var) {
+	assert(stkSz(th)>0); // Must be at least one value to remove!
+	assert(isTbl(th(th)->global));
+	tblSetc(th, th(th)->global, var, *(--th(th)->stk_top));
+}
+
+/* Push the value of the current process thread's global variable table. */
+Value pushGlobalTbl(Value th) {
+	stkCanIncTop(th); /* Check if there is room */
+	return *th(th)->stk_top++ = th(th)->global;
 }
 
 /* ****************************************

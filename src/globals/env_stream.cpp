@@ -27,9 +27,9 @@ int env_stream_add(Value th) {
 
 /** Initialize $stream global variable */
 void env_stream_init(Value th) {
-	Value val = newPart(th, aNull);
-	gloSetc(th, "$stream", val);
-	addCMethod(th, val, "<<", env_stream_add, "File.'<<'");
+	Value val = pushValue(th, newPart(th, aNull));
+		addCMethod(th, val, "<<", env_stream_add, "File.'<<'");
+	popGlobal(th, "$stream");
 }
 
 #ifdef __cplusplus

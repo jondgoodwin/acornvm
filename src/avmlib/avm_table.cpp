@@ -149,7 +149,7 @@ Node *tblLastFreeNode(TblInfo* t) {
 /** Insert a *new* key into a hash table, growing table if necessary.
  * Do not use this function if key is already in the table. */
 void tblAdd(Value th, Value tbl, Value key, Value val) {
-	Node *mp; // main position node for new key/value pair
+	Node *mp; // main position node for new key/value pai
 	assert(isTbl(tbl) && key!=aNull && val!=aNull);
 
 	// Handle when calculated position is not available
@@ -180,7 +180,7 @@ void tblAdd(Value th, Value tbl, Value key, Value val) {
 		}
 	}
 
-	// Set the key/value pair
+	// Set the key/value pai
 	mp->key = key;
 	mp->val = val;
 	tbl_info(tbl)->size++;
@@ -353,7 +353,7 @@ void tblSet(Value th, Value tbl, Value key, Value val) {
 		return;
 	}
 
-	// Look for key. If found, replace value. Otherwise, insert key/value pair
+	// Look for key. If found, replace value. Otherwise, insert key/value pai
 	Node *n = tblFind(tbl, key);
 	if (n) {
 		n->val = val;

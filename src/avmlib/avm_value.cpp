@@ -23,7 +23,7 @@ union Fcaster {
 Value aFloat(Afloat n) {
 	union Fcaster x;
 	x.f = n;
-	return (Value) ((x.u & ~ValMask) + ValFloat); // replace bottom 2-bits with float marker
+	return (Value) ((x.u & ~ValMask) + ValFloat); // replace bottom 2-bits with float marke
 }
 
 /** Cast an Float value into a c-float 

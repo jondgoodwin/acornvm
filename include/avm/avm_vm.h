@@ -31,6 +31,8 @@ extern "C" {
 	typedef struct VmInfo {
 		MemCommonInfoGray;			//!< Common header for value-containing object
 
+		Value global;				//!< VM's "built in" Global hash table
+
 		Value main_thread;			//!< VM's main thread
 		struct ThreadInfo main_thr; //!< State space for main thread
 
@@ -50,12 +52,12 @@ extern "C" {
 		MemInfoGray *grayagain;		//!< list of objects to be traversed atomically
 
 		Auint totalbytes;			//!< number of bytes currently allocated - GCdebt
-		Aint gcdebt;				//!< bytes allocated, not yet compensated by the collector
+		Aint gcdebt;				//!< bytes allocated, not yet compensated by the collecto
 		Auint gcmemtrav;			//!< cumulative size of all objects marked black
 		Auint gcestimate;			//!< an estimate of the non-garbage memory in use
 
 		char gcmode;				//!< Collection mode: Normal, Emergency, Gen
-		char gcstate;				//!< state of garbage collector
+		char gcstate;				//!< state of garbage collecto
 		char gcrunning;				//!< true if GC is running
 		char currentwhite;			//!< Current white color for new objects
 

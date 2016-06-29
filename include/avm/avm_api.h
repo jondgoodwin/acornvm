@@ -182,16 +182,12 @@ AVM_API Value newThread(Value th, Value ns, AuintIdx stksz);
 AVM_API int isThread(Value th);
 
 // Implemented in avm_global.cpp
-/** Create a new global namespace (typically for main thread) */
-AVM_API Value newGlobal(Value th, AuintIdx size);
-/** Retrieve a value from global namespace */
-AVM_API Value gloGet(Value th, Value var);
-/** Retrieve a value from global namespace */
-#define gloGetc(th, var) (gloGet(th, aSym(th, var)))
-/** Add or change a global variable */
-AVM_API void gloSet(Value th, Value var, Value val);
-/** Add or change a global variable */
-AVM_API void gloSetc(Value th, const char* var, Value val);
+/** Push and return the symbolically-named global variable's value */
+AVM_API Value pushGlobal(Value th, const char *var);
+/** Alter the symbolically-named global variable to have the value popped off the local stack */
+AVM_API void popGlobal(Value th, const char *var);
+/** Push the value of the current process thread's global variable table. */
+AVM_API Value pushGlobalTbl(Value th);
 
 // Implemented in avm_stack.cpp
 /** Retrieve the stack value at the index. Be sure 0<= idx < top.

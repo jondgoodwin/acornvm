@@ -57,7 +57,11 @@ AVM_API Value newVM(void) {
 	((ThreadInfo*) th)->marked = vm->currentwhite & WHITEBITS;
 	((ThreadInfo*) th)->enctyp = ThrEnc;
 	((ThreadInfo*) th)->next = NULL;
-	thrInit(&vm->main_thr, vm, aNull, STACK_NEWSIZE);
+	thrInit(&vm->main_thr, vm, STACK_NEWSIZE);
+
+	// Initialize vm's built-in global hash table
+	vm->global = newTbl(th, GLOBAL_NEWSIZE);
+	((ThreadInfo*) th)->global = vm->global;
 
 	// Compute a randomized seed, using address space layout to increaase randomness
 	// Seed is used to help hash symbols

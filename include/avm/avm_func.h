@@ -33,7 +33,7 @@ extern "C" {
 
 /** The generic structure for function Values */
 typedef struct FuncInfo {
-	MemCommonInfoF; //!< Common function object header
+	MemCommonInfoF; //!< Common function object heade
 } FuncInfo;
 
 /** Flags2 is for a function's number of FIXED parameters (use as lval or rval) */
@@ -152,7 +152,7 @@ enum ByteCodeOps {
 
 /** Information about a bytecode function */
 typedef struct BFuncInfo {
-	MemCommonInfoF;			//!< Common function header
+	MemCommonInfoF;			//!< Common function heade
 	Instruction *code;		//!< Array of bytecode instructions (size is its size)
 	Value *lits;			//!< Array of literals used by this function
 	Value *locals;			//!< Array of local variables (& parms) used by function

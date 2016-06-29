@@ -38,7 +38,7 @@ int typ_file_get(Value th) {
 	Value strbuf;
 	pushValue(th, strbuf = newStrl(th, "", size));
 
-	// Load the data into an allocated buffer
+	// Load the data into an allocated buffe
 	fread(str_cstr(strbuf), 1, size, file);
 
 	// Close the file
