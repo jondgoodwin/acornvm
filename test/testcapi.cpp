@@ -49,7 +49,7 @@ enum stkit {
 
 void testCapi(void) {
 	Value th = newVM();
-	// Run with HardMemTest to test garbage collecto
+	// Run with HardMemTest to test garbage collector
 
 	// Integer value primitive tests
 	t(isInt(anInt(-1000)), "isInt(anInt(-1000))");
@@ -178,7 +178,7 @@ void testCapi(void) {
 	pushValue(th, newTbl(th, 0)); // tbl1
 	pushValue(th, aSym(th, "name")); // name
 	pushValue(th, aSym(th, "George")); // george
-	pushValue(th, aSym(th, "Peter")); // pete
+	pushValue(th, aSym(th, "Peter")); // peter
 	pushValue(th, aSym(th, "weight")); // weight
 	t(!isTbl(getLocal(th, string1)), "!isTbl('a string')");
 	t(isTbl(getLocal(th, tbl1)), "isTbl(hash1)");
@@ -222,7 +222,7 @@ void testCapi(void) {
 	i = getTop(th);
 	Value testcfn = aCFunc(th, test_cfunc, "test_cfunc", __FILE__);
 	pushValue(th, testcfn);
-	pushValue(th, aTrue); // Pass paramete
+	pushValue(th, aTrue); // Pass parameter
 	funcCall(th, 1, 1);
 	t(popValue(th)==aFalse, "c-function return success: popValue(th)==aFalse");
 	t(getTop(th)==i, "getTop(th)==0");

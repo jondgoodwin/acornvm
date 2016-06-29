@@ -1,4 +1,4 @@
-/** Bytecode generator for Acorn compile
+/** Bytecode generator for Acorn compiler
  *
  * @file
  *

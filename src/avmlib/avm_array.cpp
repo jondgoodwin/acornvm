@@ -94,7 +94,7 @@ void arrSet(Value th, Value arr, AuintIdx pos, Value val) {
 	// Perform copy
 	a->arr[pos]=val;
 	mem_markChk(th, arr, val);
-	// If final fill is past array size, reset size highe
+	// If final fill is past array size, reset size higher
 	if (pos+1 > a->size)
 		a->size = pos+1;
 }
@@ -136,7 +136,7 @@ void arrRpt(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val) {
 	for (i=pos; i<pos+n; i++)
 		a->arr[i]=val;
 	mem_markChk(th, arr, val); // only need to check once
-	// If final fill is past array size, reset size highe
+	// If final fill is past array size, reset size higher
 	if (pos+n > a->size)
 		a->size = pos+n;
 }

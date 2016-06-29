@@ -4,7 +4,7 @@
  * The garbage collector implements a tri-color, incremental, single- (or dual-) generation
  * mark-and-sweep algorithm.
  *
- * All pointer-based Values (e.g., string, symbol) share a common heade
+ * All pointer-based Values (e.g., string, symbol) share a common header
  * at the start of the allocated area. The implementation code for such pointer-based Values 
  * is interwoven with the garbage collection routines in this file.
  *
@@ -39,8 +39,8 @@ extern "C" {
 #define PAUSEADJ		100
 
 
-#define MAX_UMEM	((Auint)(~(Auint)0)-2)			//!< Maximum value for an unsigned intege
-#define MAX_MEM     ((Aint) ((MAX_UMEM >> 1) - 2))	//!< Maximum value for a signed intege
+#define MAX_UMEM	((Auint)(~(Auint)0)-2)			//!< Maximum value for an unsigned integer
+#define MAX_MEM     ((Aint) ((MAX_UMEM >> 1) - 2))	//!< Maximum value for a signed integer
 
 // Garbage collector modes 
 #define KGC_NORMAL	0		//!< gc is in normal (non-generational) collection
@@ -394,7 +394,7 @@ void mem_freeAll(Value th) {
 
 
 /** \file
- * Garbage Collecto
+ * Garbage Collector
  * -----------------
  *
  * The garbage collector implements a tri-color, incremental, single- (or dual-) generation 
@@ -438,7 +438,7 @@ void mem_setpause(Value th, Aint estimate) {
  * Returns the amount of memory traversed during the step. */
 Aint mem_gconestep(Value th) {
 
-	// Perform next step based on the current state of the garbage collecto
+	// Perform next step based on the current state of the garbage collector
 	switch (vm(th)->gcstate) {
 
 	// Pause begins the collection process anew, initializing the marking cycle

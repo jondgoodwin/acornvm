@@ -26,7 +26,7 @@ static void t(int test, const char *text) {
 
 void testGen(void) {
 	Value th = newVM();
-	// Run with HardMemTest to test garbage collecto
+	// Run with HardMemTest to test garbage collector
 
 	// Bytecode-function and Thread call stack tests
 	Value testbfn = genTestPgm(th, 0);
@@ -35,7 +35,7 @@ void testGen(void) {
 	t(popValue(th)==aNull, "b-function return success: popValue(th)==aNull");
 	t(getTop(th)==0, "getTop(th)==0");
 
-	// Call function that tests loade
+	// Call function that tests loader
 	pushValue(th, testbfn);
 	pushValue(th, anInt(4));
 	funcCall(th, 1, 4); // Call with 1 parameter, will return 4

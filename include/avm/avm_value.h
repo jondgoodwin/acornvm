@@ -104,7 +104,7 @@ AVM_API Afloat toAfloat(Value v);
 
 /* *******************************************************
    null, false and true values and functions.
-   (they are encoded in the impossible space for a symbol pointe
+   (they are encoded in the impossible space for a symbol pointer
    **************************************************** */
 
 /** The null value */

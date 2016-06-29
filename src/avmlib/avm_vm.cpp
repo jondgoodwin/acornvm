@@ -17,7 +17,7 @@ namespace avm {
 extern "C" {
 #endif
 
-void acn_init(Value th); // Initializer for Acorn compiler
+void acn_init(Value th); // Initializer for Acorn compile
 void vmStdInit(Value th); // Initializer for standard symbols
 
 /** Used by vm_init to build random seed */
@@ -67,9 +67,9 @@ AVM_API Value newVM(void) {
 	// Seed is used to help hash symbols
 	char seedstr[4 * sizeof(Auint)];
 	time_t timehash = time(NULL);
-	memcpy_Auint(0, vm)			// heap pointer
+	memcpy_Auint(0, vm)			// heap pointe
 	memcpy_Auint(1, timehash)	// current time in seconds
-	memcpy_Auint(2, &timehash)	// local variable pointer
+	memcpy_Auint(2, &timehash)	// local variable pointe
 	memcpy_Auint(3, &newVM)		// public function
 	vm->hashseed = tblCalcStrHash(seedstr, sizeof(seedstr), (AuintIdx) timehash);
 
@@ -80,7 +80,7 @@ AVM_API Value newVM(void) {
 	// Initialize all global variables: types and environment
 	glo_init(th);
 
-	// Initialize the Acorn compiler
+	// Initialize the Acorn compile
 	acn_init(th);
 
 	// Start garbage collection

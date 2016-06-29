@@ -31,9 +31,9 @@ extern "C" {
 
 /** Information about an array information block. (uses MemCommonInfoT) */
 typedef struct ArrInfo {
-	MemCommonInfoT;	//!< Common typed object heade
-	Value *arr;		//!< Pointer to allocated array buffe
-	AuintIdx avail;	//!< Allocated size of buffe
+	MemCommonInfoT;	//!< Common typed object header
+	Value *arr;		//!< Pointer to allocated array buffer
+	AuintIdx avail;	//!< Allocated size of buffer
 } ArrInfo;
 
 /** Mark all in-use array values for garbage collection 
