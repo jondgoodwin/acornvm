@@ -15,7 +15,8 @@ extern "C" {
 
 /** Compile and run an Acorn resource */
 int acn_new(Value th) {
-	pushValue(th, newPart(th, gloGet(th, aSym(th, "Acorn"))));
+	pushGlobal(th, "Acorn");
+	pushValue(th, newPart(th, getFromTop(th, 0)));
 	return 1;
 }
 
@@ -27,8 +28,9 @@ void acn_init(Value th) {
 	ac->th = th;
 
 	// Create Acorn type, properties and methods
-	// Value typ = newType(th, "Acorn");
-	// partAddProp(th, typ, aSym(th, "run"), acn_new);
+	// Value typ = pushType(th);
+	// partAddProp(th, typ, pushSym(th, "run"), acn_new);
+	// popGlobal(th, "Acorn");
 }
 
 /** Generate bytecode test programs */
@@ -37,31 +39,34 @@ Value genTestPgm(Value th, int pgm) {
 	Acorn* ac = &vm(th)->acornProgram;
 	genNew(ac, 0, aNull, aNull);
 	pushValue(th, ac->func);
+	Value self = pushSym(th, "self");
 	switch (pgm) {
 
 	// Test the Load instructions
-	case 0:
-		genAddParm(ac, aSym(th, "self"));
-		genAddInstr(ac, BCINS_ABC(OpLoadReg, 1, genLocalVar(ac, aSym(th, "self")), 0)); // load self into 1
+	case 0: {
+		Value glosym = pushSym(th, "$g");
+		genAddParm(ac, self);
+		genAddInstr(ac, BCINS_ABC(OpLoadReg, 1, genLocalVar(ac, self), 0)); // load self into 1
 		genAddInstr(ac, BCINS_ABC(OpLoadPrim, 2, 2, 0)); // Load primitive true
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 3, genAddLit(ac, aFloat(3.14f))));  // Load literal
-		genAddInstr(ac, BCINS_ABx(OpSetGlobal, 3, genAddLit(ac, aSym(th, "$g"))));
-		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 4, genAddLit(ac, aSym(th, "$g"))));
+		genAddInstr(ac, BCINS_ABx(OpSetGlobal, 3, genAddLit(ac, glosym)));
+		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 4, genAddLit(ac, glosym)));
 		genAddInstr(ac, BCINS_ABC(OpReturn, 1, 4, 0));
-		break;
+		popValue(th);
+			} break;
 
 	// Test variable parameters
 	case 1:
-		genAddParm(ac, aSym(th, "self"));
+		genAddParm(ac, self);
 		genVarParms(ac);
-		genAddInstr(ac, BCINS_ABC(OpLoadReg, 1, genLocalVar(ac, aSym(th, "self")), 0)); // load self into 1
+		genAddInstr(ac, BCINS_ABC(OpLoadReg, 1, genLocalVar(ac, self), 0)); // load self into 1
 		genAddInstr(ac, BCINS_ABC(OpLoadVararg, 2, BCVARRET, 0)); // Load var args
 		genAddInstr(ac, BCINS_ABC(OpReturn, 1, BCVARRET, 0));
 		break;
 
 	// Test call and jump instructions with a fibonacci calculation
 	case 2:
-		genAddParm(ac, aSym(th, "self"));
+		genAddParm(ac, self);
 		genMaxStack(ac, 6);
 		genAddInstr(ac, BCINS_AJ(OpJNNull, 0, 2));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 1, genAddLit(ac, anInt(5))));
@@ -85,13 +90,16 @@ Value genTestPgm(Value th, int pgm) {
 		break;
 
 	// Test tailcall with a factorial method
-	case 3:
-		genAddParm(ac, aSym(th, "self"));
-		genAddParm(ac, aSym(th, "a"));
+	case 3: {
+		Value a = pushSym(th, "a");
+		Value fact = pushSym(th, "fact");
+		Value integer = pushSym(th, "Integer");
+		genAddParm(ac, self);
+		genAddParm(ac, a);
 		genMaxStack(ac, 6);
 		genAddInstr(ac, BCINS_AJ(OpJGt, 0, 1));
 		genAddInstr(ac, BCINS_ABC(OpReturn, 1, 1, 0));
-		genAddInstr(ac, BCINS_ABx(OpLoadLit, 2, genAddLit(ac, aSym(th, "fact"))));
+		genAddInstr(ac, BCINS_ABx(OpLoadLit, 2, genAddLit(ac, fact)));
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 0, SymMinus));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 5, genAddLit(ac, anInt(1))));
 		genAddInstr(ac, BCINS_ABC(OpCall, 3, 2, 1));
@@ -103,15 +111,19 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_ABC(OpCall, 4, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpTailCall, 2, 2, BCVARRET));
 
-		partAddMethod(th, gloGet(th, aSym(th,"Integer")), aSym(th, "fact"), ac->func);
-		break;
+		partAddMethod(th, gloGet(th, integer), fact, ac->func);
+		popValue(th);
+		popValue(th);
+		popValue(th);
+			} break;
 
 	// Test repetitive preps and calls, doing a build and for loop on a list, summing its integers
-	case 4:
-		genAddParm(ac, aSym(th, "self"));
+	case 4: {
+		Value list = pushSym(th, "List");
+		genAddParm(ac, self);
 		genMaxStack(ac, 9);
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 0, SymNew));
-		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 4, genAddLit(ac, aSym(th, "List"))));
+		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 4, genAddLit(ac, list)));
 		genAddInstr(ac, BCINS_ABC(OpCall, 3, 1, 1));
 		genAddInstr(ac, BCINS_ABC(OpRptPrep, 2, 3, SymAppend));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 4, genAddLit(ac, anInt(5))));
@@ -132,27 +144,37 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_AJ(OpJump, 0, -7));
 		genSetJumpList(ac, saveip, ac->ip); // Correct the jump to go to here
 		genAddInstr(ac, BCINS_ABC(OpReturn, 1, 1, 0));
-		break;
+		popValue(th);
+			} break;
 
 	// Test File and URL stuff
-	case 5:
-		genAddParm(ac, aSym(th, "self"));
+	case 5: {
+		Value str = pushSym(th, "$stream");
+		Value fil = pushSym(th, "File");
+		Value get = pushSym(th, "get");
+		Value testacn = pushValue(th, newStr(th, "test.acn"));
+		genAddParm(ac, self);
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 1, 2, SymAppend));
-		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 2, genAddLit(ac, aSym(th, "$stream"))));
+		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 2, genAddLit(ac, str)));
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 4, SymParGet));
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 4, 5, SymParGet));
-		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 5, genAddLit(ac, aSym(th, "File"))));
-		genAddInstr(ac, BCINS_ABx(OpLoadLit, 6, genAddLit(ac, aSym(th, "get"))));
+		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 5, genAddLit(ac, fil)));
+		genAddInstr(ac, BCINS_ABx(OpLoadLit, 6, genAddLit(ac, get)));
 		genAddInstr(ac, BCINS_ABC(OpCall, 4, 2, 1));
-		genAddInstr(ac, BCINS_ABx(OpLoadLit, 5, genAddLit(ac, newStr(th, "test.acn"))));
+		genAddInstr(ac, BCINS_ABx(OpLoadLit, 5, genAddLit(ac, testacn)));
 		genAddInstr(ac, BCINS_ABC(OpCall, 3, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpCall, 1, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpReturn, 1, 1, 0));
-		break;
+		popValue(th);
+		popValue(th);
+		popValue(th);
+		popValue(th);
+			} break;
 
 	default:
 		break;
 	}
+	popValue(th);
 	popValue(th);
 	return ac->func;
 }

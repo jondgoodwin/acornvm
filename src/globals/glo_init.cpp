@@ -44,10 +44,11 @@ int typ_int_mult(Value th) {
 
 /** Initialize the Integer type */
 Value typ_int_init(Value th) {
-	Value typ = newType(th, "Integer");
+	Value typ = pushType(th);
 	addCMethod(th, typ, "+", typ_int_plus, "Integer.+");
 	addCMethod(th, typ, "-", typ_int_minus, "Integer.-");
 	addCMethod(th, typ, "*", typ_int_mult, "Integer.*");
+	popGlobal(th, "Integer");
 	return typ;
 }
 
@@ -75,10 +76,11 @@ int typ_list_next(Value th) {
 
 /** Initialize the List type */
 Value typ_list_init(Value th) {
-	Value typ = newType(th, "List");
+	Value typ = pushType(th);
 	addCMethod(th, typ, "New", typ_list_new, "List.New");
 	addCMethod(th, typ, "<<", typ_list_add, "List.<<");
 	addCMethod(th, typ, "next", typ_list_next, "List.next");
+	popGlobal(th, "List");
 	return typ;
 }
 
@@ -90,8 +92,9 @@ int typ_meth_get(Value th) {
 
 /** Initialize the Type type, used to create other types */
 Value typ_meth_init(Value th) {
-	Value typ = newType(th, "Method");
+	Value typ = pushType(th);
 	addCMethod(th, typ, "()", typ_meth_get, "Method.()");
+	popGlobal(th, "Method");
 	return typ;
 }
 
@@ -103,9 +106,10 @@ int typ_type_get(Value th) {
 
 /** Initialize the Type type, used to create other types */
 Value typ_type_init(Value th) {
-	Value typ = newType(th, "Type");
+	Value typ = pushType(th);
 	setType(th, typ, typ); // Needed because default encoding not in place until this finishes
 	addCMethod(th, typ, "()", typ_type_get, "Type.()");
+	popGlobal(th, "Type");
 	return typ;
 }
 
@@ -117,7 +121,8 @@ void glo_init(Value th) {
 	def[FuncEnc] = typ_meth_init(th);
 	def[IntEnc] = typ_int_init(th);
 	def[ArrEnc] = typ_list_init(th);
-	def[AllEnc] = newType(th, "All");
+	def[AllEnc] = pushType(th);
+	popGlobal(th, "All");
 
 	typ_file_init(th);
 

@@ -30,14 +30,12 @@ Value newPart(Value th, Value type) {
 }
 
 /* Return a new Type. */
-Value newType(Value th, const char* typnm) {
+Value newType(Value th) {
 	PartInfo *part;
 
 	// Create and initialize Type object (which is a flagged Part)
 	part = (PartInfo *) newPart(th, vm(th)->defEncTypes[TypeEnc]);
 	part->flags1 = PartType;
-
-	gloSet(th, aSym(th, typnm), part);	// Register Type as a global variable
 	return (Value) part;
 }
 
@@ -109,7 +107,7 @@ void partAddMethodc(Value th, Value part, const char* methsym, Value meth) {
 	assert(isPart(part));
 	// Use stack to ensure GC does not collect either value
 	methval=pushValue(th, meth);
-	methsymval=pushValue(th, aSym(th, methsym));
+	methsymval=pushSym(th, methsym);
 	tblSet(th, part_methods(part), methsymval, methval);
 	setTop(th, -2);
 }

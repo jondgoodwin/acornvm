@@ -46,6 +46,15 @@ Value aCMethod(Value th, AcFuncp func, const char* name, const char* src) {
 	return fn;
 }
 
+/* Build a new c-method value, pointing to a function written in C */
+Value newCMethod(Value th, AcFuncp func) {
+	mem_gccheck(th);	// Incremental GC before memory allocation events
+	CFuncInfo *fn = (CFuncInfo*) mem_new(th, FuncEnc, sizeof(CFuncInfo), NULL, 0);
+	funcFlags(fn) = FUNC_FLG_C | FUNC_FLG_METHOD;
+	fn->funcp = func;
+	return fn;
+}
+
 /** Return codes from funcCallPrep */
 enum FuncTypes {
 	FuncBad,	//!< Not a valid function (probably unknown method)

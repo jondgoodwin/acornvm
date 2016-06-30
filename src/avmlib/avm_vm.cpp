@@ -60,7 +60,7 @@ AVM_API Value newVM(void) {
 	thrInit(&vm->main_thr, vm, STACK_NEWSIZE);
 
 	// Initialize vm's built-in global hash table
-	vm->global = newTbl(th, GLOBAL_NEWSIZE);
+	vm->global = newTbl(th, aNull, GLOBAL_NEWSIZE);
 	((ThreadInfo*) th)->global = vm->global;
 
 	// Compute a randomized seed, using address space layout to increaase randomness
@@ -79,6 +79,7 @@ AVM_API Value newVM(void) {
 
 	// Initialize all global variables: types and environment
 	glo_init(th);
+	setType(th, vm->global, vm(th)->defEncTypes[TblEnc]);
 
 	// Initialize the Acorn compile
 	acn_init(th);
@@ -132,7 +133,7 @@ void vmStdInit(Value th) {
 	// Allocate mapping tables
 	Value sym;
 	VmInfo* vm = vm(th);
-	Value stdidx = vm->stdidx = newTbl(th, sizeof(StdSymbols));
+	Value stdidx = vm->stdidx = newTbl(th, aNull, sizeof(StdSymbols));
 	vm->stdsym = NULL;
 	mem_reallocvector(th, vm->stdsym, 0, nStdSyms, Value);
 	

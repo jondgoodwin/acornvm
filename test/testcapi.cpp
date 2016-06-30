@@ -86,7 +86,7 @@ void testCapi(void) {
 	t(getLocal(th,i+1)==aTrue, "getLocal(th,1)==aTrue");
 	setLocal(th, i+1, aFalse);
 	t(getLocal(th,i+1)==aFalse, "getLocal(th,1)==aFalse");
-	pushValue(th, aSym(th, "self"));
+	pushSym(th, "self");
 	t(isSym(getLocal(th,i+2)), "isSym(getLocal(th,2))");
 	insertLocal(th, i);
 	t(getTop(th)==i+3, "getTop(th)==3");
@@ -111,14 +111,14 @@ void testCapi(void) {
 	// Symbol API tests
 	t(!isSym(aNull), "!isSym(aNull)");
 	t(!isSym(aTrue), "!isSym(aTrue)");
-	pushValue(th, aSym(th, "true")); // true1
-	pushValue(th, aSyml(th, "true", 4)); // true2
-	pushValue(th, aSym(th, "false")); // false1
-	t(isSame(getLocal(th, true1), getLocal(th, true2)), "aSym('true')==aSyml('true',4)");
-	t(isSym(getLocal(th, true1)), "isSym(true1)");
-	t(!isSame(getLocal(th, true2), false), "aSym('true')!=aSym(false')");
+	pushSym(th, "true"); // true1
+	pushSyml(th, "true", 4); // true2
+	pushSym(th, "false"); // false1
+	t(isSame(getLocal(th, true1), getLocal(th, true2)), "'true'=='true'");
+	t(isSym(getLocal(th, true1)), "isSym('true1')");
+	t(!isSame(getLocal(th, true2), false), "'true'!='false'");
 	t(getSize(getLocal(th, true1))==4, "getSize('true')==4");
-	t(strEq(getLocal(th, false1),"false"), "strEq(aSym('false'),'false')");
+	t(strEq(getLocal(th, false1),"false"), "strEq(sym'false','false')");
 	t(strcmp(toStr(getLocal(th, true2)),"true")==0, "toStr('true')=='true'");
 
 	// String API tests
@@ -175,27 +175,27 @@ void testCapi(void) {
 	t(getSize(arrGet(th, getLocal(th, array1), 4))==21, "getSize(arrGet(th, array1, 5))==21");
 
 	// Table API tests
-	pushValue(th, newTbl(th, 0)); // tbl1
-	pushValue(th, aSym(th, "name")); // name
-	pushValue(th, aSym(th, "George")); // george
-	pushValue(th, aSym(th, "Peter")); // peter
-	pushValue(th, aSym(th, "weight")); // weight
+	pushValue(th, newTbl(th, aNull, 0)); // tbl1
+	pushSym(th, "name"); // name
+	pushSym(th, "George"); // george
+	pushSym(th, "Peter"); // peter
+	pushSym(th, "weight"); // weight
 	t(!isTbl(getLocal(th, string1)), "!isTbl('a string')");
 	t(isTbl(getLocal(th, tbl1)), "isTbl(hash1)");
 	t(getSize(getLocal(th, tbl1))==0, "getSize(tbl1)==0");
 	tblSet(th, getLocal(th, tbl1), getLocal(th, name),  getLocal(th, george)); // This will trigger table index growth
 	t(getSize(getLocal(th, tbl1))==1, "getSize(tbl1)==1");
-	t(tblGet(th, getLocal(th, tbl1), getLocal(th, name))==getLocal(th, george), "tblGet(th, tbl1, aSym(th, 'name'))==aSym(th, 'George')");
+	t(tblGet(th, getLocal(th, tbl1), getLocal(th, name))==getLocal(th, george), "tblGet(th, tbl1, 'name')=='George'");
 	tblSet(th, getLocal(th, tbl1), getLocal(th, name), getLocal(th, peter));
 	t(getSize(getLocal(th, tbl1))==1, "getSize(tbl1)==1");
-	t(tblGet(th, getLocal(th, tbl1), getLocal(th, name))==getLocal(th, peter), "tblGet(th, tbl1, aSym(th, 'name'))==aSym(th, 'Peter')");
+	t(tblGet(th, getLocal(th, tbl1), getLocal(th, name))==getLocal(th, peter), "tblGet(th, tbl1, 'name')=='Peter'");
 	Value iter=aNull;
 	iter = tblNext(getLocal(th, tbl1), iter); // Find first entry
-	t(iter==getLocal(th, name), "iter==aSym(th, 'name')");
+	t(iter==getLocal(th, name), "iter=='name'");
 	iter = tblNext(getLocal(th, tbl1), iter); // End of entries
 	t(iter==aNull, "iter==aNull");
-	t(tblGet(th, getLocal(th, tbl1), getLocal(th, weight))==aNull, "tblGet(th, tbl1, aSym(th, 'weight'))==aNull"); // not found
-	t(tblNext(getLocal(th, tbl1), getLocal(th, weight))==aNull, "tblNext(tbl1, aSym(th, 'weight'))==aNull"); // not found
+	t(tblGet(th, getLocal(th, tbl1), getLocal(th, weight))==aNull, "tblGet(th, tbl1, 'weight')==aNull"); // not found
+	t(tblNext(getLocal(th, tbl1), getLocal(th, weight))==aNull, "tblNext(tbl1, 'weight')==aNull"); // not found
 	tblSet(th, getLocal(th, tbl1), aTrue, aFalse); // Bool as key
 	t(aFalse == tblGet(th, getLocal(th, tbl1), aTrue), "aFalse == tblGet(th, tbl1, aTrue)");
 	tblSet(th, getLocal(th, tbl1), anInt(23), anInt(24)); // Integer as key
@@ -207,7 +207,7 @@ void testCapi(void) {
 	t(isStr(tblGet(th, getLocal(th, tbl1), getLocal(th, array1))), "isStr(tblGet(th, tbl1, array1))");
 	t(getSize(getLocal(th, tbl1))==5, "getSize(tbl1)==5"); // table has doubled 4 times: 0->1->2->4->8
 	tblSet(th, getLocal(th, tbl1), getLocal(th, name), aNull); // Delete 'name' entry
-	t(tblGet(th, getLocal(th, tbl1), getLocal(th, name))==aNull, "tblGet(th, tbl1, aSym(th, 'name'))==aNull"); // not found
+	t(tblGet(th, getLocal(th, tbl1), getLocal(th, name))==aNull, "tblGet(th, tbl1, 'name')==aNull"); // not found
 	t(getSize(getLocal(th, tbl1))==4, "getSize(tbl1)==4");
 
 	// Thread tests - global namespace
@@ -228,7 +228,7 @@ void testCapi(void) {
 	t(getTop(th)==i, "getTop(th)==0");
 
 	// Type API tests - makes use of built-in types, which use the API to create types and its methods
-	pushValue(th, aSym(th, "+"));
+	pushSym(th, "+");
 	pushValue(th, anInt(50));
 	pushValue(th, anInt(40));
 	funcCall(th, 2, 1);

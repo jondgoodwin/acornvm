@@ -88,8 +88,42 @@ void insertLocal(Value th, AintIdx idx) {
 Value pushValue(Value th, Value val) {
 	stkCanIncTop(th); /* Check if there is room */
 	*th(th)->stk_top++ = val;
-	mem_markChk(th, th, val);
+	mem_markChk(th, th, val); // Keep, if marked for deletion?
 	return val;
+}
+
+/* Push and return the corresponding Symbol value for a 0-terminated c-string */
+Value pushSym(Value th, const char *str) {
+	stkCanIncTop(th); /* Check if there is room */
+	return *th(th)->stk_top++ = aSyml(th, str, strlen(str));
+}
+
+/* Push and return the corresponding Symbol value for a byte sequence of specified length */
+Value pushSyml(Value th, const char *str, AuintIdx len) {
+	stkCanIncTop(th); /* Check if there is room */
+	return *th(th)->stk_top++ = aSyml(th, str, len);
+}
+
+/* Push and return a new Type value */
+Value pushType(Value th/*, Value type, AuintIdx size*/) {
+	stkCanIncTop(th); /* Check if there is room */
+	return *th(th)->stk_top++ = newType(th/*, type, size*/);
+}
+
+/* Push and return the value for a method written in C */
+Value pushCMethod(Value th, AcFuncp func) {
+	stkCanIncTop(th); /* Check if there is room */
+	return *th(th)->stk_top++ = newCMethod(th, func);
+}
+
+/* Put the local stack's top value into the named member of the table found at the stack's specified index */
+void popMember(Value th, AintIdx tblidx, const char *mbrnm) {
+	assert(stkSz(th)>0); // Must be at least one value to remove!
+	Value tbl = *stkAt(th, tblidx);
+	assert(isTbl(tbl));
+	*th(th)->stk_top++ = aSyml(th, mbrnm, strlen(mbrnm));
+	tblSet(th, tbl, *(th(th)->stk_top-1), *(th(th)->stk_top-2));
+	th(th)->stk_top -= 2; // Pop key & value after value is safely in table
 }
 
 /* Push a copy of a stack's value at index onto the stack's top */
@@ -108,7 +142,8 @@ Value popValue(Value th) {
 void popLocal(Value th, AintIdx idx) {
 	assert(stkSz(th)>0); // Must be at least one value to remove!
 	assert(idx>=0 && idx < stkSz(th)-1 && "invalid local index");
-	setLocal(th, idx, *(--th(th)->stk_top));
+	setLocal(th, idx, *(th(th)->stk_top-1));
+	--th(th)->stk_top; // Pop after value is safely in Global
 }
 
 /* Retrieve the stack value at the index from top. Be sure 0<= idx < top. */
@@ -149,14 +184,18 @@ void setTop(Value th, AintIdx idx) {
 Value pushGlobal(Value th, const char *var) {
 	stkCanIncTop(th); /* Check if there is room */
 	assert(isTbl(th(th)->global));
-	return *th(th)->stk_top++ = tblGet(th, th(th)->global, aSym(th, var));
+	Value val = *th(th)->stk_top++ = aSyml(th, var, strlen(var));
+	mem_markChk(th, th, val); /* Mark it if needed */
+	return *(th(th)->stk_top-1) = tblGet(th, th(th)->global, val);
 }
 
 /* Alter the symbolically-named global variable to have the value popped off the local stack */
 void popGlobal(Value th, const char *var) {
 	assert(stkSz(th)>0); // Must be at least one value to remove!
 	assert(isTbl(th(th)->global));
-	tblSetc(th, th(th)->global, var, *(--th(th)->stk_top));
+	Value val = *th(th)->stk_top++ = aSyml(th, var, strlen(var));
+	tblSet(th, th(th)->global, *(th(th)->stk_top-1), *(th(th)->stk_top-2));
+	th(th)->stk_top -= 2; // Pop key & value after value is safely in Global
 }
 
 /* Push the value of the current process thread's global variable table. */

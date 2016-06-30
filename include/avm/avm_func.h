@@ -201,6 +201,9 @@ typedef struct Acorn {
 // Non-API C-Function functions
 // ***********
 
+/** Build a new c-method value, pointing to a function written in C */
+Value newCMethod(Value th, AcFuncp func);
+
 #ifdef __cplusplus
 } // end "C"
 } // end namespace

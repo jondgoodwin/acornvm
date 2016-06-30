@@ -48,8 +48,9 @@ int typ_file_get(Value th) {
 
 /** Initialize the File type */
 Value typ_file_init(Value th) {
-	Value typ = newType(th, "File");
+	Value typ = pushType(th);
 	addCPropfn(th, typ, "get", typ_file_get, "File::get");
+	popGlobal(th, "File");
 	return typ;
 }
 

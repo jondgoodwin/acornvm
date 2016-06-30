@@ -67,11 +67,11 @@ Value partSetColl(Value th, Value part, Value* mbr, Value coll);
 
 /** Retrieves properties table (creating if null) */
 #define part_props(val) ((((PartInfo*) val)->props!=aNull)? (((PartInfo*) val)->props) : \
-	partSetColl(th, val, &((PartInfo*) val)->props, newTbl(th, 0)))
+	partSetColl(th, val, &((PartInfo*) val)->props, newTbl(th, aNull, 0)))
 
 /** Retrieves methods table (creating if null) */
 #define part_methods(val) ((((PartInfo*) val)->methods!=aNull)? (((PartInfo*) val)->methods) : \
-	partSetColl(th, val, &((PartInfo*) val)->methods, newTbl(th, 0)))
+	partSetColl(th, val, &((PartInfo*) val)->methods, newTbl(th, aNull, 0)))
 
 /** Retrieves mixins array (creating if null) */
 #define part_mixins(val) ((((PartInfo*) val)->mixins!=aNull)? (((PartInfo*) val)->mixins) : \

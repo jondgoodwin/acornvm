@@ -309,12 +309,13 @@ void tblResize(Value th, Value tbl, AuintIdx newsize) {
 }
 
 /* Create and initialize a new Table */
-Value newTbl(Value th, AuintIdx size) {
+Value newTbl(Value th, Value type, AuintIdx size) {
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 	TblInfo *t = (TblInfo*) mem_new(th, TblEnc, sizeof(TblInfo), NULL, 0);
+	t->type = type;
 	t->size = 0;
+
 	tblAllocnodes(th, t, size);
-	t->type = vm(th)->defEncTypes[TblEnc]; // Assume default type
 	return (Value) t;
 }
 

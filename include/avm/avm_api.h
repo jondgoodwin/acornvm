@@ -96,8 +96,8 @@ AVM_API void arrIns(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val);
 AVM_API void arrSub(Value th, Value arr, AuintIdx pos, AuintIdx n, Value arr2, AuintIdx pos2, AuintIdx n2);
 
 // Implemented in avm_table.cpp
-/** Create and initialize a new empty hash value */
-AVM_API Value newTbl(Value th, AuintIdx len);
+/** Create and initialize a new hash table with room for size entries */
+AVM_API Value newTbl(Value th, Value type, AuintIdx size);
 /** Return 1 if the value is a Hash, otherwise 0 */
 AVM_API int isTbl(Value val);
 /** Resize a table for more/fewer elements (cannot be less than used size) */
@@ -130,7 +130,7 @@ AVM_API Value newPart(Value th, Value type);
 /** Return 1 if the value is an Part, otherwise 0 */
 AVM_API int isPart(Value val);
 /** Return a new Type. */
-AVM_API Value newType(Value th, const char* typnm);
+AVM_API Value newType(Value th);
 /** Return 1 if the value is an Type, otherwise 0 */
 AVM_API int isType(Value val);
 /** Get the Items array (use array API functions to manipulate). 
@@ -203,6 +203,14 @@ AVM_API void deleteLocal(Value th, AintIdx idx);
 AVM_API void insertLocal(Value th, AintIdx idx);
 /** Push a value on the stack's top */
 AVM_API Value pushValue(Value th, Value val);
+/** Push and return the corresponding Symbol value for a 0-terminated c-string */
+AVM_API Value pushSym(Value th, const char *str);
+/** Push and return the corresponding Symbol value for a byte sequence of specified length */
+AVM_API Value pushSyml(Value th, const char *str, AuintIdx len);
+/** Push and return the value for a method written in C */
+AVM_API Value pushCMethod(Value th, AcFuncp func);
+/** Push and return a new Type value */
+AVM_API Value pushType(Value th/*, Value type, AuintIdx size*/);
 /** Push a copy of a stack's value at index onto the stack's top */
 AVM_API Value pushLocal(Value th, AintIdx idx);
 /** Pop a value off the top of the stack */
