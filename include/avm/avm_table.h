@@ -63,6 +63,8 @@ typedef struct TblInfo {
 /** flags2 holds log2 of available number of nodes in 'node' buffer */
 #define lAvailNodes flags2
 
+#define TypeTbl 0x80	//!< Set in flags2 if table is for a Type (members are properties)
+
 /** Mark all in-use table values for garbage collection 
  * Increments how much allocated memory the table uses. */
 #define tblMark(th, t) \
@@ -76,7 +78,7 @@ typedef struct TblInfo {
 
 /** Free all of an array's allocated memory */
 #define tblFree(th, t) \
-	{if ((t)->lAvailNodes>0) \
+	{if ((t)->nodes  != &emptyNode) \
 		mem_freearray(th, (t)->nodes, 1<<(t)->lAvailNodes); \
 	mem_free(th, (t));}
 
@@ -89,6 +91,11 @@ typedef struct TblInfo {
 // ***********
 // Non-API Table functions
 // ***********
+
+extern const struct Node emptyNode;
+
+/** Create and initialize a new Type (a table where members are properties) */
+Value newType(Value th, Value type, AuintIdx size);
 
 AuintIdx tblCalcStrHash(const char *str, Auint len, AuintIdx seed);
 

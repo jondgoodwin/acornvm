@@ -197,7 +197,6 @@ void mem_marktopgray(Value th) {
 	case StrEnc: strMark(th, (StrInfo*) o); return;
 	case ArrEnc: arrMark(th, (ArrInfo*) o);	return;
 	case TblEnc: tblMark(th, (TblInfo*)o); return;
-	case PartEnc: partMark(th, (PartInfo*)o); return;
 	case FuncEnc: funcMark(th, (FuncInfo *)o); return;
 	case ThrEnc: thrMark(th, (ThreadInfo *)o); return;
 	case VmEnc: vmMark(th, (VmInfo *)o); return;
@@ -264,7 +263,6 @@ void mem_sweepfree(Value th, MemInfo *mb) {
 	case StrEnc: strFree(th, (StrInfo*)mb); break;
 	case ArrEnc: arrFree(th, (ArrInfo *)mb); break;
 	case TblEnc: tblFree(th, (TblInfo *)mb); break;
-	case PartEnc: partFree(th, (PartInfo*)mb); break;
 	case FuncEnc: funcFree(th, (FuncInfo*)mb); break;
 	case ThrEnc: thrFree(th, (ThreadInfo *)mb); break;
 	default: assert(0);

@@ -16,7 +16,7 @@ extern "C" {
 /** Compile and run an Acorn resource */
 int acn_new(Value th) {
 	pushGlobal(th, "Acorn");
-	pushValue(th, newPart(th, getFromTop(th, 0)));
+	pushType(th, getFromTop(th, 0), 0);
 	return 1;
 }
 
@@ -93,7 +93,6 @@ Value genTestPgm(Value th, int pgm) {
 	case 3: {
 		Value a = pushSym(th, "a");
 		Value fact = pushSym(th, "fact");
-		Value integer = pushSym(th, "Integer");
 		genAddParm(ac, self);
 		genAddParm(ac, a);
 		genMaxStack(ac, 6);
@@ -111,8 +110,9 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_ABC(OpCall, 4, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpTailCall, 2, 2, BCVARRET));
 
-		partAddMethod(th, gloGet(th, integer), fact, ac->func);
-		popValue(th);
+		pushGlobal(th, "Integer");
+		tblSet(th, popValue(th), fact, ac->func);
+
 		popValue(th);
 		popValue(th);
 			} break;

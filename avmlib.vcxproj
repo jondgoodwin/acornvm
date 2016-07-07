@@ -19,7 +19,6 @@
     <ClInclude Include="include\avm\avm_api.h" />
     <ClInclude Include="include\avm\avm_array.h" />
     <ClInclude Include="include\avm\avm_func.h" />
-    <ClInclude Include="include\avm\avm_part.h" />
     <ClInclude Include="include\avm\avm_table.h" />
     <ClInclude Include="include\avm\avm_memory.h" />
     <ClInclude Include="include\avm\avm_string.h" />
@@ -36,7 +35,6 @@
     <ClCompile Include="src\avmlib\avm_array.cpp" />
     <ClCompile Include="src\avmlib\avm_func.cpp" />
     <ClCompile Include="src\avmlib\avm_gc.cpp" />
-    <ClCompile Include="src\avmlib\avm_part.cpp" />
     <ClCompile Include="src\avmlib\avm_stack.cpp" />
     <ClCompile Include="src\avmlib\avm_table.cpp" />
     <ClCompile Include="src\avmlib\avm_memory.cpp" />

@@ -384,14 +384,14 @@ void funcRunBC(Value th) {
 		// OpForPrep: R(A+1) := R(B); R(A) = R(A+1).StdMeth(C); R(A+2):=null
 		case OpForPrep:
 			*(rega+1) = *(stkbeg + bc_b(i));
-			*rega = findMethod(th, *(rega+1), ss(th, bc_c(i)));
+			*rega = getProperty(th, *(rega+1), ss(th, bc_c(i)));
 			*(rega+2) = aNull;
 			break;
 
 		// OpRptPrep: R(A+1) := R(B); R(A) = R(A+1).StdMeth(C)
 		case OpRptPrep:
 			*(rega+1) = *(stkbeg + bc_b(i));
-			*rega = findMethod(th, *(rega+1), ss(th, bc_c(i)));
+			*rega = getProperty(th, *(rega+1), ss(th, bc_c(i)));
 			break;
 
 		// OpCall: R(A .. A+C-1) := R(A+1).R(A)(R(A+1) .. A+B-1))
@@ -404,7 +404,7 @@ void funcRunBC(Value th) {
 				th(th)->stk_top = rega+b+1;
 
 			// Prepare call frame and stack, then perform the call
-			*rega = findMethod(th, *(rega+1), *rega);
+			*rega = getProperty(th, *(rega+1), *rega);
 			switch (funcCallPrep(th, rega, bc_c(i))) {
 			case FuncBad: 
 				funcRetNulls(th); 
@@ -430,7 +430,7 @@ void funcRunBC(Value th) {
 				th(th)->stk_top = rega+b+1;
 
 			// Prepare call frame and stack, then perform the call
-			*rega = findMethod(th, *(rega+1), *rega);
+			*rega = getProperty(th, *(rega+1), *rega);
 			switch (funcTailCallPrep(th, rega, bc_c(i))) {
 			case FuncBad: 
 				funcRetNulls(th); 
@@ -529,7 +529,7 @@ void funcCall(Value th, int nparms, int nexpected) {
 
 	// If "function" is a symbol, treat it as a method to lookup
 	if (isSym(*funcpos))
-		*funcpos = findMethod(th, *(funcpos+1), *funcpos);
+		*funcpos = getProperty(th, *(funcpos+1), *funcpos);
 
 	// Prepare call frame and stack, then perform the call
 	switch (funcCallPrep(th, funcpos, nexpected)) {

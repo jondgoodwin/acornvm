@@ -239,6 +239,7 @@ void testCapi(void) {
 	Value typtyp = popValue(th);
 	pushGlobal(th, "Integer");
 	t(getType(th, popValue(th))==typtyp, "isType(getType(th, Global(th, 'Integer'))==Global(th, 'Type'))");
+
 	vm_close(th);
 	printf("All %ld C-API tests completed. %ld failed.\n", tests, fails);
 }

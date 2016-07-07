@@ -68,18 +68,20 @@ Value getType(Value th, Value val) {
 }
 
 /** Find method in part's methods or mixins. Return aNull if not found */
-Value findMethodR(Value th, Value part, Value methsym) {
+Value getPropR(Value th, Value type, Value methsym) {
 	Value meth;
-	// Check methods first
-	if (part_info(part)->methods != aNull && aNull != (meth = tblGet(th, part_info(part)->methods, methsym)))
-		return meth;
+
+	// If this is a Type table, check its members
+	if (isType(type)) {
+		return tblGet(th, type, methsym);
+	}
 	
-	// Recursively examine each mixin
-	if (part_info(part)->mixins != aNull) {
-		Value *mixin = arr_info(part_info(part)->mixins)->arr;
-		AuintIdx mixsz = arr_size(part_info(part)->mixins);
-		while (mixsz--)
-			if (aNull != (meth = tblGet(th, *mixin, methsym)))
+	// Recursively examine each type in an array
+	if (isArr(type)) {
+		Value *types = arr_info(type)->arr;
+		AuintIdx ntypes = arr_size(type);
+		while (ntypes--)
+			if (aNull != (meth = tblGet(th, *types++, methsym)))
 				return meth;
 	}
 
@@ -87,21 +89,21 @@ Value findMethodR(Value th, Value part, Value methsym) {
 }
 
 /* Find method in self or its type. Return aNull if not found */
-Value findMethod(Value th, Value self, Value methsym) {
+Value getProperty(Value th, Value self, Value methsym) {
 	Value meth;
 
-	// If it is a non-Type part, look for method first in self's methods and mixins
-	if (isPart(self) && !(part_info(self)->flags1 & PartType && methsym!=ss(th, SymNew))) {
-		if (aNull != (meth = findMethodR(th, self, methsym)))
+	// If this is a Type table, search first among its members
+	if (isType(self)) {
+		if (aNull != (meth = tblGet(th, self, methsym)))
 			return meth;
 	}
 
 	// Next, look for the method in the value's type
-	if (aNull != (meth = findMethodR(th, getType(th, self), methsym)))
+	if (aNull != (meth = getPropR(th, getType(th, self), methsym)))
 		return meth;
 
 	// As a last resort, look for the method in the All type
-	if (aNull != (meth = findMethodR(th, vm(th)->defEncTypes[AllEnc], methsym)))
+	if (aNull != (meth = tblGet(th, vm(th)->defEncTypes[AllEnc], methsym)))
 		return meth;
 
 	return aNull;

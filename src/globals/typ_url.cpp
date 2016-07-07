@@ -21,8 +21,9 @@ int typ_url_new(Value th) {
 
 /** Initialize the File type */
 Value typ_url_init(Value th) {
-	Value typ = pushType(th);
-	addCMethod(th, typ, "New", typ_url_new, "Url.New");
+	Value typ = pushType(th, vm(th)->defEncTypes[TypeEnc], 1);
+		pushCMethod(th, typ_url_new);
+		popMember(th, 0, "New");
 	popGlobal(th, "Url");
 	return typ;
 }

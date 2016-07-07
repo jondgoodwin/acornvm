@@ -312,6 +312,19 @@ void tblResize(Value th, Value tbl, AuintIdx newsize) {
 Value newTbl(Value th, Value type, AuintIdx size) {
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 	TblInfo *t = (TblInfo*) mem_new(th, TblEnc, sizeof(TblInfo), NULL, 0);
+	t->flags1 = 0;
+	t->type = type;
+	t->size = 0;
+
+	tblAllocnodes(th, t, size);
+	return (Value) t;
+}
+
+/* Create and initialize a new Type (a table where members are properties) */
+Value newType(Value th, Value type, AuintIdx size) {
+	mem_gccheck(th);	// Incremental GC before memory allocation events
+	TblInfo *t = (TblInfo*) mem_new(th, TblEnc, sizeof(TblInfo), NULL, 0);
+	t->flags1 = TypeTbl;
 	t->type = type;
 	t->size = 0;
 
@@ -322,6 +335,11 @@ Value newTbl(Value th, Value type, AuintIdx size) {
 /* Return 1 if the value is a Table, otherwise 0 */
 int isTbl(Value val) {
 	return isEnc(val, TblEnc);
+}
+
+/* Return 1 if the value is a Type table, otherwise 0 */
+int isType(Value val) {
+	return isEnc(val, TblEnc) && tbl_info(val)->flags1 & TypeTbl;
 }
 
 /* Return the value paired with 'key', or 'null' if not found */

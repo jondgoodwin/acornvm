@@ -84,10 +84,10 @@ enum EncType {
 	FuncEnc,	//!< C or Bytecode function
 
 	/* after this, all encodings use typed info header */
-	StrEnc,		//1< String (bytes)
+	StrEnc,		//!< String (bytes)
 	ArrEnc,		//!< Array
 	TblEnc,		//!< Table
-	PartEnc,	//1< Part
+	PartEnc,	//!< Part
 
 	/* Immediate value encoding types (not Value Pointers) */
 	NullEnc,	//!< Null

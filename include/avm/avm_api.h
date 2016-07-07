@@ -27,7 +27,7 @@ AVM_API void setType(Value th, Value val, Value type);
 /** Return the value's type (works for all values) */
 AVM_API Value getType(Value th, Value val);
 /** Find method in self or its type. Return aNull if not found */
-AVM_API Value findMethod(Value th, Value self, Value methsym);
+AVM_API Value getProperty(Value th, Value self, Value methsym);
 /** Return the size of a symbol, array, hash, or other collection. Any other value type returns 0 */
 AVM_API Auint getSize(Value val);
 
@@ -100,6 +100,8 @@ AVM_API void arrSub(Value th, Value arr, AuintIdx pos, AuintIdx n, Value arr2, A
 AVM_API Value newTbl(Value th, Value type, AuintIdx size);
 /** Return 1 if the value is a Hash, otherwise 0 */
 AVM_API int isTbl(Value val);
+/** Return 1 if the value is a Type table, otherwise 0 */
+AVM_API int isType(Value val);
 /** Resize a table for more/fewer elements (cannot be less than used size) */
 AVM_API void tblResize(Value th, Value tbl, AuintIdx newsize);
 /** Return the value paired with 'key', or 'null' if not found */
@@ -123,48 +125,6 @@ AVM_API void tblSetc(Value th, Value tbl, const char* key, Value val);
  * Warning: Accurate traversal requires the table remains unchanged.
 */
 AVM_API Value tblNext(Value tbl, Value key);
-
-// Implemented in avm_part.cpp
-/** Return a new Part. */
-AVM_API Value newPart(Value th, Value type);
-/** Return 1 if the value is an Part, otherwise 0 */
-AVM_API int isPart(Value val);
-/** Return a new Type. */
-AVM_API Value newType(Value th);
-/** Return 1 if the value is an Type, otherwise 0 */
-AVM_API int isType(Value val);
-/** Get the Items array (use array API functions to manipulate). 
- * This allocates the array, if it does not exist yet. */
-AVM_API Value partGetItems(Value th, Value part);
-/** Add an item to the Part's array */
-AVM_API void partAddItem(Value th, Value part, Value item);
-/** Get the Properties table (use table API functions to manipulate). 
- * This allocates the table, if it does not exist yet. */
-AVM_API Value partGetProps(Value th, Value part);
-/** Add a Property to the Part's properties */
-AVM_API void partAddProp(Value th, Value part, Value key, Value val);
-/** Add a Property to the Part's properties */
-AVM_API void partAddPropc(Value th, Value part, const char* key, Value val);
-/** Get the Methods table (use table API functions to manipulate). 
- * This allocates the table, if it does not exist yet. */
-AVM_API Value partGetMethods(Value th, Value part);
-/** Add a Property to the Part's properties */
-AVM_API void partAddMethod(Value th, Value part, Value methnm, Value meth);
-/** Add a Method to the Part */
-AVM_API void partAddMethodc(Value th, Value part, const char* methnm, Value meth);
-/** Get the Mixins array (use array API functions to manipulate). 
- * This allocates the array, if it does not exist yet. */
-AVM_API Value partGetMixins(Value th, Value part);
-/** Add a type to the Part's mixins */
-AVM_API void partAddType(Value th, Value part, Value type);
-/** Copy a type's methods to the Part */
-AVM_API void partCopyMethods(Value th, Value part, Value type);
-/** Macro to add a c-method to a type */
-#define addCMethod(th,part,methsym,meth,methnm) \
-	partAddMethodc(th, part, methsym, aCMethod(th, meth, methnm, __FILE__));
-/** Macro to add a c-method to a type's properties */
-#define addCPropfn(th,part,methsym,meth,methnm) \
-	partAddPropc(th, part, methsym, aCMethod(th, meth, methnm, __FILE__));
 
 // Implemented in avm_func.cpp
 /** Build a new c-function value, pointing to a function written in C */
@@ -210,7 +170,9 @@ AVM_API Value pushSyml(Value th, const char *str, AuintIdx len);
 /** Push and return the value for a method written in C */
 AVM_API Value pushCMethod(Value th, AcFuncp func);
 /** Push and return a new Type value */
-AVM_API Value pushType(Value th/*, Value type, AuintIdx size*/);
+AVM_API Value pushType(Value th, Value type, AuintIdx size);
+/** Put the local stack's top value into the named member of the table found at the stack's specified index */
+AVM_API void popMember(Value th, AintIdx tblidx, const char *mbrnm);
 /** Push a copy of a stack's value at index onto the stack's top */
 AVM_API Value pushLocal(Value th, AintIdx idx);
 /** Pop a value off the top of the stack */

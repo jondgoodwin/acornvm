@@ -44,10 +44,13 @@ int typ_int_mult(Value th) {
 
 /** Initialize the Integer type */
 Value typ_int_init(Value th) {
-	Value typ = pushType(th);
-	addCMethod(th, typ, "+", typ_int_plus, "Integer.+");
-	addCMethod(th, typ, "-", typ_int_minus, "Integer.-");
-	addCMethod(th, typ, "*", typ_int_mult, "Integer.*");
+	Value typ = pushType(th, vm(th)->defEncTypes[TypeEnc], 3);
+		pushCMethod(th, typ_int_plus);
+		popMember(th, 0, "+");
+		pushCMethod(th, typ_int_minus);
+		popMember(th, 0, "-");
+		pushCMethod(th, typ_int_mult);
+		popMember(th, 0, "*");
 	popGlobal(th, "Integer");
 	return typ;
 }
@@ -76,10 +79,13 @@ int typ_list_next(Value th) {
 
 /** Initialize the List type */
 Value typ_list_init(Value th) {
-	Value typ = pushType(th);
-	addCMethod(th, typ, "New", typ_list_new, "List.New");
-	addCMethod(th, typ, "<<", typ_list_add, "List.<<");
-	addCMethod(th, typ, "next", typ_list_next, "List.next");
+	Value typ = pushType(th, vm(th)->defEncTypes[TypeEnc], 3);
+		pushCMethod(th, typ_list_new);
+		popMember(th, 0, "New");
+		pushCMethod(th, typ_list_add);
+		popMember(th, 0, "<<");
+		pushCMethod(th, typ_list_next);
+		popMember(th, 0, "next");
 	popGlobal(th, "List");
 	return typ;
 }
@@ -92,23 +98,24 @@ int typ_meth_get(Value th) {
 
 /** Initialize the Type type, used to create other types */
 Value typ_meth_init(Value th) {
-	Value typ = pushType(th);
-	addCMethod(th, typ, "()", typ_meth_get, "Method.()");
+	Value typ = pushType(th, vm(th)->defEncTypes[TypeEnc], 1);
+		pushCMethod(th, typ_meth_get);
+		popMember(th, 0, "()");
 	popGlobal(th, "Method");
 	return typ;
 }
 
 /** Lookup a value from type's named property */
 int typ_type_get(Value th) {
-	pushValue(th, getTop(th)>=2? tblGet(th, part_props(getLocal(th,0)), getLocal(th,1)) : aNull);
+	pushValue(th, getTop(th)>=2? getProperty(th, getLocal(th,0), getLocal(th,1)) : aNull);
 	return 1;
 }
 
 /** Initialize the Type type, used to create other types */
 Value typ_type_init(Value th) {
-	Value typ = pushType(th);
-	setType(th, typ, typ); // Needed because default encoding not in place until this finishes
-	addCMethod(th, typ, "()", typ_type_get, "Type.()");
+	Value typ = pushType(th, vm(th)->defEncTypes[TypeEnc], 1);
+		pushCMethod(th, typ_type_get);
+		popMember(th, 0, "()");
 	popGlobal(th, "Type");
 	return typ;
 }
@@ -117,11 +124,11 @@ Value typ_type_init(Value th) {
 void glo_init(Value th) {
 	Value *def = &vm(th)->defEncTypes[0];
 
-	def[TypeEnc] = typ_type_init(th); // This MUST be first in the list.
+	def[TypeEnc] = typ_type_init(th);
 	def[FuncEnc] = typ_meth_init(th);
 	def[IntEnc] = typ_int_init(th);
 	def[ArrEnc] = typ_list_init(th);
-	def[AllEnc] = pushType(th);
+	def[AllEnc] = pushType(th, aNull, 0);
 	popGlobal(th, "All");
 
 	typ_file_init(th);

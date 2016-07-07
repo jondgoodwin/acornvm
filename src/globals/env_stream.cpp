@@ -27,8 +27,9 @@ int env_stream_add(Value th) {
 
 /** Initialize $stream global variable */
 void env_stream_init(Value th) {
-	Value val = pushValue(th, newPart(th, aNull));
-		addCMethod(th, val, "<<", env_stream_add, "File.'<<'");
+	Value val = pushType(th, aNull, 1);
+		pushCMethod(th, env_stream_add);
+		popMember(th, 0, "<<");
 	popGlobal(th, "$stream");
 }
 

@@ -105,9 +105,9 @@ Value pushSyml(Value th, const char *str, AuintIdx len) {
 }
 
 /* Push and return a new Type value */
-Value pushType(Value th/*, Value type, AuintIdx size*/) {
+Value pushType(Value th, Value type, AuintIdx size) {
 	stkCanIncTop(th); /* Check if there is room */
-	return *th(th)->stk_top++ = newType(th/*, type, size*/);
+	return *th(th)->stk_top++ = newType(th, type, size);
 }
 
 /* Push and return the value for a method written in C */

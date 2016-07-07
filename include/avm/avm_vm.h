@@ -73,6 +73,7 @@ extern "C" {
 	 * Increments how much allocated memory the thread uses. */
 	#define vmMark(th, v) \
 		{mem_markobj(th, (v)->main_thread); \
+		mem_markobj(th, (v)->global); \
 		mem_markobj(th, (v)->stdidx); \
 		vm(th)->gcmemtrav += sizeof(VmInfo);}
 
