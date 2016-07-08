@@ -113,8 +113,7 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_ABC(OpCall, 4, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpTailCall, 2, 2, BCVARRET));
 
-		pushGlobal(th, "Integer");
-		tblSet(th, popValue(th), fact, ac->func);
+		tblSet(th, vmlit(TypeIntm), fact, ac->func);
 
 		popValue(th);
 		popValue(th);
@@ -128,7 +127,7 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 0, ss(SymNew)));
 		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 4, genAddLit(ac, list)));
 		genAddInstr(ac, BCINS_ABC(OpCall, 3, 1, 1));
-		genAddInstr(ac, BCINS_ABC(OpRptPrep, 2, 3, SymAppend));
+		genAddInstr(ac, BCINS_ABC(OpRptPrep, 2, 3, ss(SymAppend)));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 4, genAddLit(ac, anInt(5))));
 		genAddInstr(ac, BCINS_ABC(OpRptCall, 2, 2, 0));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 4, genAddLit(ac, anInt(7))));

@@ -42,8 +42,6 @@ extern "C" {
 		Value stdidx;				//!< Table to convert std symbol to index
 		Value *stdsym;				//!< c-array to convert index to std symbol
 
-		Value *defEncTypes;			//!< array of default types for each encoding
-
 		Acorn acornProgram;			//!< Compile state for a program
 
 		// Garbage Collection state
@@ -87,21 +85,47 @@ extern "C" {
 	    for common symbols and core types. They are forever immune from garbage collection
 		by being anchored to the VM. */
 	enum VmLiterals {
-		// Byte-code (and parser) standard methods
-		SymParGet,	//!< '()'
+		// Compiler symbols that are also methods
 		SymNew,		//!< 'new'
-		SymAppend,	//!< '+='
-		SymNext,	//!< 'next'
+		SymAppend,	//!< '<<'
 		SymPlus,	//!< '+'
 		SymMinus,	//!< '-'
 		SymMult,	//!< '*'
 		SymDiv,		//!< '/'
+
+		// Methods that are not compiler symbols
+		// Byte-code (and parser) standard methods
+		SymParGet,	//!< '()'
 		SymNeg,		//!< '-@'
+		SymNext,	//!< 'next'
 
-		// Parser-only standard symbols
-		SymNull,	//!< 'null'
-		SymNot,		//!< '!'
+		// Core type type
+		TypeType,	//!< Type
+		TypeNullc,	//!< Null class
+		TypeNullm,	//!< Null mixin
+		TypeBoolc,	//!< Float class
+		TypeBoolm,	//!< Float mixin
+		TypeIntc,	//!< Integer class
+		TypeIntm,	//!< Integer mixin
+		TypeFloc,	//!< Float class
+		TypeFlom,	//!< Float mixin
+		TypeMethc,	//!< Method class
+		TypeMethm,	//!< Method mixin
+		TypeThrc,	//!< Thread class
+		TypeThrm,	//!< Thread mixin
+		TypeVmc,	//!< Vm class
+		TypeVmm,	//!< Vm mixin
+		TypeSymc,	//!< Symbol class
+		TypeSymm,	//!< Symbol mixin
+		TypeStrc,	//!< String class
+		TypeStrm,	//!< String mixin
+		TypeListc,	//!< List class
+		TypeListm,	//!< List mixin
+		TypeIndexc,	//!< Index class
+		TypeIndexm,	//!< Index mixin
+		TypeAll,	//!< All
 
+		// Number of literals
 		nVmLits
 	};
 

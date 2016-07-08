@@ -60,6 +60,9 @@ typedef struct ArrInfo {
 // Non-API Array functions
 // ***********
 
+/** Return new array with allocated space for len Values. */
+Value newArr(Value th, Value *dest, Value type, AuintIdx len);
+
 #ifdef __cplusplus
 } // end "C"
 } // end namespace

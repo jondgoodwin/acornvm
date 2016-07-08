@@ -50,19 +50,22 @@ Value getType(Value th, Value val) {
 	// Decode the encoded Value
 	switch ((Auint)val & ValMask) {
 	case ValPtr:
+		switch (((MemInfo*)val)->enctyp) {
 		// For fixed type encodings, use its default type
-		if (((MemInfo*)val)->enctyp < TypedEnc)
-			return vm(th)->defEncTypes[((MemInfo*)val)->enctyp];
-
-		// Otherwise, get type from the value
-		return ((MemInfoT*)val)->type;
+		case SymEnc: return vmlit(TypeSymm);
+		case ThrEnc: return vmlit(TypeThrm);
+		case VmEnc: return vmlit(TypeVmm);
+		case FuncEnc: return vmlit(TypeMethm);
+		// Otherwise, use the type the instance claims
+		default: return ((MemInfoT*)val)->type;
+		}
 
 	case ValInt:
-		return vm(th)->defEncTypes[IntEnc];
+		return vmlit(TypeIntm);
 	case ValFloat:
-		return vm(th)->defEncTypes[FloatEnc];
+		return vmlit(TypeFlom);
 	case ValCons:
-		return vm(th)->defEncTypes[val==aNull? NullEnc : BoolEnc];
+		return vmlit(val==aNull? TypeNullm : TypeBoolm);
 	}
 	return aNull; // Should not ever get here
 }
@@ -103,7 +106,7 @@ Value getProperty(Value th, Value self, Value methsym) {
 		return meth;
 
 	// As a last resort, look for the method in the All type
-	if (aNull != (meth = tblGet(th, vm(th)->defEncTypes[AllEnc], methsym)))
+	if (aNull != (meth = tblGet(th, vmlit(TypeAll), methsym)))
 		return meth;
 
 	return aNull;

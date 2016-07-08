@@ -43,21 +43,23 @@ int typ_int_mult(Value th) {
 }
 
 /** Initialize the Integer type */
-Value typ_int_init(Value th) {
-	Value typ = pushType(th, vm(th)->defEncTypes[TypeEnc], 3);
-		pushCMethod(th, typ_int_plus);
-		popMember(th, 0, "+");
-		pushCMethod(th, typ_int_minus);
-		popMember(th, 0, "-");
-		pushCMethod(th, typ_int_mult);
-		popMember(th, 0, "*");
+void typ_int_init(Value th) {
+	vmlit(TypeIntc) = pushType(th, vmlit(TypeType), 2);
+		vmlit(TypeIntm) = pushType(th, vmlit(TypeType), 3);
+			pushCMethod(th, typ_int_plus);
+			popMember(th, 1, "+");
+			pushCMethod(th, typ_int_minus);
+			popMember(th, 1, "-");
+			pushCMethod(th, typ_int_mult);
+			popMember(th, 1, "*");
+		popMember(th, 0, "mixin");
 	popGlobal(th, "Integer");
-	return typ;
+	return;
 }
 
 /** Create a new List */
 int typ_list_new(Value th) {
-	pushValue(th, newArr(th, 0));
+	pushList(th, 0);
 	return 1;
 }
 
@@ -78,16 +80,18 @@ int typ_list_next(Value th) {
 }
 
 /** Initialize the List type */
-Value typ_list_init(Value th) {
-	Value typ = pushType(th, vm(th)->defEncTypes[TypeEnc], 3);
+void typ_list_init(Value th) {
+	vmlit(TypeListc) = pushType(th, vmlit(TypeType), 2);
+		vmlit(TypeListm) = pushType(th, vmlit(TypeType), 2);
+			pushCMethod(th, typ_list_add);
+			popMember(th, 1, "<<");
+			pushCMethod(th, typ_list_next);
+			popMember(th, 1, "next");
+		popMember(th, 0, "mixin");
 		pushCMethod(th, typ_list_new);
 		popMember(th, 0, "new");
-		pushCMethod(th, typ_list_add);
-		popMember(th, 0, "<<");
-		pushCMethod(th, typ_list_next);
-		popMember(th, 0, "next");
 	popGlobal(th, "List");
-	return typ;
+	return;
 }
 
 /** Call the method, passing its parameters */
@@ -97,12 +101,14 @@ int typ_meth_get(Value th) {
 }
 
 /** Initialize the Type type, used to create other types */
-Value typ_meth_init(Value th) {
-	Value typ = pushType(th, vm(th)->defEncTypes[TypeEnc], 1);
-		pushCMethod(th, typ_meth_get);
-		popMember(th, 0, "()");
+void typ_meth_init(Value th) {
+	vmlit(TypeMethc) = pushType(th, vmlit(TypeType), 1);
+		vmlit(TypeMethm) = pushType(th, vmlit(TypeType), 1);
+			pushCMethod(th, typ_meth_get);
+			popMember(th, 1, "()");
+		popMember(th, 0, "mixin");
 	popGlobal(th, "Method");
-	return typ;
+	return;
 }
 
 /** Lookup a value from type's named property */
@@ -112,23 +118,23 @@ int typ_type_get(Value th) {
 }
 
 /** Initialize the Type type, used to create other types */
-Value typ_type_init(Value th) {
-	Value typ = pushType(th, vm(th)->defEncTypes[TypeEnc], 1);
+void typ_type_init(Value th) {
+	vmlit(TypeType) = pushType(th, aNull, 1);
 		pushCMethod(th, typ_type_get);
 		popMember(th, 0, "()");
 	popGlobal(th, "Type");
-	return typ;
+	return;
 }
 
 /** Initialize all core types */
 void glo_init(Value th) {
-	Value *def = &vm(th)->defEncTypes[0];
 
-	def[TypeEnc] = typ_type_init(th);
-	def[FuncEnc] = typ_meth_init(th);
-	def[IntEnc] = typ_int_init(th);
-	def[ArrEnc] = typ_list_init(th);
-	def[AllEnc] = pushType(th, aNull, 0);
+	typ_type_init(th); // Type must be first, so other types can use this as their type
+	typ_meth_init(th);
+	typ_int_init(th);
+	typ_list_init(th);
+
+	vmlit(TypeAll) = pushType(th, aNull, 0);
 	popGlobal(th, "All");
 
 	typ_file_init(th);

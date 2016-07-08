@@ -95,10 +95,6 @@ enum EncType {
 	IntEnc,		//!< Integer
 	FloatEnc,	//!< Floating point
 
-	// These are not encodings, but types we need access to
-	TypeEnc,	//!< Type (really is a Part)
-	AllEnc,     //!< All type
-
 	NbrEnc  /**< The number of encodings */
 };
 #define TypedEnc StrEnc /**< Below this, encodings are self-typed */
@@ -106,12 +102,6 @@ enum EncType {
 
 /** Is value a pointer to the encoding data structure? */
 #define isEnc(val, enc) (isPtr(val) && ((MemInfo*) val)->enctyp==enc)
-
-/** The bit that indicates whether Value's type is fixed by encoding or dynamically set */ 
-#define TypedInfo 0x80
-/** Does the value provide its type information? */
-#define isTyped(val) (((Meminfo*)val)->enctyp & TypedInfo)
-
 
 
 /* ************************************

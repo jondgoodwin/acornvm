@@ -37,7 +37,7 @@ Value newStrl(Value th, const char *str, AuintIdx len) {
 		val->size = 0;
 	}
 	val->str[len] = '\0'; // put guaranteed 0-terminator, just in case
-	val->type = vm(th)->defEncTypes[StrEnc]; // Assume default type
+	val->type = vmlit(TypeStrm); // Assume default type
 	return (Value) val;
 }
 
@@ -113,7 +113,7 @@ const char* toStr(Value val) {
 }
 
 /* Return 1 if the symbol or string value's characters match the zero-terminated c-string, otherwise 0. */
-int strEq(Value val, const char* str) {
+int isEqStr(Value val, const char* str) {
 	if (isSym(val))
 		return sym_size(val)==strlen(str) && !strcmp(sym_cstr(val), str);
 	if (isStr(val))

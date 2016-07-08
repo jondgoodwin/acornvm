@@ -116,6 +116,12 @@ Value pushCMethod(Value th, AcFuncp func) {
 	return *th(th)->stk_top++ = newCMethod(th, func);
 }
 
+/* Push and return a new List value */
+Value pushList(Value th, AuintIdx size) {
+	stkCanIncTop(th); /* Check if there is room */
+	return newArr(th, th(th)->stk_top++, vmlit(TypeListm), size);
+}
+
 /* Put the local stack's top value into the named member of the table found at the stack's specified index */
 void popMember(Value th, AintIdx tblidx, const char *mbrnm) {
 	assert(stkSz(th)>0); // Must be at least one value to remove!

@@ -48,7 +48,7 @@ int typ_file_get(Value th) {
 
 /** Initialize the File type */
 Value typ_file_init(Value th) {
-	Value typ = pushType(th, vm(th)->defEncTypes[TypeEnc], 1);
+	Value typ = pushType(th, vmlit(TypeType), 1);
 		pushCMethod(th, typ_file_get);
 		popMember(th, 0, "get");
 	popGlobal(th, "File");

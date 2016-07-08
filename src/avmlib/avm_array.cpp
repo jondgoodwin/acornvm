@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 /* Return a new Array, allocating len slots for Values. */
-Value newArr(Value th, AuintIdx len) {
+Value newArr(Value th, Value *dest, Value type, AuintIdx len) {
 	ArrInfo *val;
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 
@@ -29,8 +29,8 @@ Value newArr(Value th, AuintIdx len) {
 	if (len>0)
 		mem_reallocvector(th, val->arr, 0, len, Value);
 	val->flags1 = 0;	// Initialize Flags1 flags
-	val->type = vm(th)->defEncTypes[ArrEnc]; // Assume default type
-	return (Value) val;
+	val->type = type;
+	return *dest = (Value) val;
 }
 
 /* Return 1 if the value is an Array, otherwise 0 */

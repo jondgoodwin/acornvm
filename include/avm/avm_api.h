@@ -46,7 +46,7 @@ AVM_API int isStr(Value str);
  */
 AVM_API const char* toStr(Value sym);
 /** Return 1 if the symbol or string value's characters match the zero-terminated c-string, otherwise 0. */
-AVM_API int strEq(Value val, const char* str);
+AVM_API int isEqStr(Value val, const char* str);
 /** Iterate to next symbol after key in symbol table (or first if key is NULL). Return Null if no more. 
  * This can be used to sequentially iterate through the symbol table.
  * Results may be inaccurate if the symbol table is changed during iteration.
@@ -62,8 +62,6 @@ AVM_API void strMakeRoom(Value th, Value val, AuintIdx len);
 AVM_API void strSub(Value th, Value val, AuintIdx pos, AuintIdx sz, const char *str, AuintIdx len);
 
 // Implemented in avm_array.cpp
-/** Return new array with allocated space for len Values. */
-AVM_API Value newArr(Value th, AuintIdx len);
 /** Return 1 if the value is an Array, otherwise 0 */
 AVM_API int isArr(Value sym);
 /** Ensure array has room for len Values, allocating memory as needed.
@@ -160,6 +158,8 @@ AVM_API Value pushSyml(Value th, const char *str, AuintIdx len);
 AVM_API Value pushCMethod(Value th, AcFuncp func);
 /** Push and return a new Type value */
 AVM_API Value pushType(Value th, Value type, AuintIdx size);
+/** Push and return a new List value */
+AVM_API Value pushList(Value th, AuintIdx size);
 /** Put the local stack's top value into the named member of the table found at the stack's specified index */
 AVM_API void popMember(Value th, AintIdx tblidx, const char *mbrnm);
 /** Push a copy of a stack's value at index onto the stack's top */

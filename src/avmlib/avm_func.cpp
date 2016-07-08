@@ -516,7 +516,7 @@ void funcRunBC(Value th) {
 
 		// Should never reach here
 		default:
-			assert(0);
+			assert(0 && "Invalid byte code");
 			break;
 	}
   }

@@ -46,13 +46,6 @@ AVM_API Value newVM(void) {
 	mem_init(vm); /* Initialize memory & garbage collection */
 	vm->marked = vm->currentwhite & WHITEBITS;
 
-	// Initialize safe default types for all value encodings (including Immediate)
-	// These will be overridden when the core Types are loaded.
-	Value* p = vm->defEncTypes = (Value*) mem_frealloc(NULL, NbrEnc*sizeof(Value));
-	int i = NbrEnc;
-	while (i--)
-		*p++ = aNull;
-
 	// Initialize main thread (allocated as part of VmInfo)
 	Value th = (Value) (vm->main_thread = &vm->main_thr);
 	((ThreadInfo*) th)->marked = vm->currentwhite & WHITEBITS;
@@ -76,7 +69,7 @@ AVM_API Value newVM(void) {
 	((ThreadInfo*) th)->global = vm->global; // For now, main thread needs global too
 	vm_litinit(th); // Load reserved and standard symbols into literal list
 	glo_init(th); // Load up global table and literal list with core types
-	setType(th, vm->global, vm(th)->defEncTypes[TblEnc]); // Fix up type info for global table
+	setType(th, vm->global, vmlit(TypeIndexm)); // Fix up type info for global table
 
 	// Initialize byte-code standard methods and the Acorn compiler
 	vm_stdinit(th);
@@ -96,7 +89,6 @@ void vm_close(Value th) {
 	mem_reallocvector(th, vm->stdsym, nStdSym, 0, Value);
 	sym_free(th);
 	thrFreeStacks(th);
-	mem_frealloc(vm(th)->defEncTypes, 0);
 	assert(vm(th)->totalbytes + vm(th)->gcdebt == sizeof(VmInfo));
 	mem_frealloc(vm(th), 0);  /* free main block */
 }
@@ -127,10 +119,6 @@ struct vmLitSymEntry {
 };
 
 const struct vmLitSymEntry vmLitSymTable[] = {
-	// Compiler symbols that are not methods
-	{SymNull, "null"},
-	{SymNot, "!"},
-
 	// Compiler symbols that are also methods
 	{SymNew, "new"},
 	{SymAppend, "<<"},
@@ -144,19 +132,15 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymNeg, "-@"},
 	{SymNext, "next"},
 
-	// Core type names
-
-	// Core types
-
 	// End of literal table
 	{0, NULL}
 };
 
 /** Initialize vm's literals. */
 void vm_litinit(Value th) {
-	// Allocate literal array
+	// Allocate untyped array for literal storage
 	VmInfo* vm = vm(th);
-	vm->literals = newArr(th, nVmLits);
+	newArr(th, &vm->literals, aNull, nVmLits);
 	Value *vmlits = arr_info(vm->literals)->arr;
 
 	// Load up literal symbols from table

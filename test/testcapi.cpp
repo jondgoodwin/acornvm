@@ -118,7 +118,7 @@ void testCapi(void) {
 	t(isSym(getLocal(th, true1)), "isSym('true1')");
 	t(!isSame(getLocal(th, true2), false), "'true'!='false'");
 	t(getSize(getLocal(th, true1))==4, "getSize('true')==4");
-	t(strEq(getLocal(th, false1),"false"), "strEq(sym'false','false')");
+	t(isEqStr(getLocal(th, false1),"false"), "isEqStr(sym'false','false')");
 	t(strcmp(toStr(getLocal(th, true2)),"true")==0, "toStr('true')=='true'");
 
 	// String API tests
@@ -130,22 +130,22 @@ void testCapi(void) {
 	t(!isSame(getLocal(th, string1),getLocal(th, string2)), "aStr('Happiness is hard-won')!=aStrl('Happiness is hard-won',21)");
 	t(isStr(getLocal(th, string1)), "isStr(aStr('Happiness is hard-won'))");
 	t(getSize(getLocal(th, string1))==21, "getSize('Happiness is hard-won')==21");
-	t(strEq(getLocal(th, string1),"Happiness is hard-won"), "strEq(aStr('Happiness is hard-won'),'Happiness is hard-won')");
+	t(isEqStr(getLocal(th, string1),"Happiness is hard-won"), "isEqStr(aStr('Happiness is hard-won'),'Happiness is hard-won')");
 	t(strcmp(toStr(getLocal(th, string3)),"True happiness requires work")==0, "toStr('True happiness requires work')=='True happiness requires work'");
 	strSub(th, getLocal(th, string2), 4, getSize(getLocal(th, string1))-4, NULL, 0); // Truncates size to 4
 	t(getSize(getLocal(th, string2))==4, "getSize(strResize(string2, 4))==4");
-	t(strEq(getLocal(th, string2),"Happ"), "strEq(strResize(string2, 4))=='Happ'");
+	t(isEqStr(getLocal(th, string2),"Happ"), "isEqStr(strResize(string2, 4))=='Happ'");
 	strSub(th, getLocal(th, string2), 4, 0, "y Birthday", 10); // Append
-	t(strEq(getLocal(th, string2),"Happy Birthday"), "string2=='Happy Birthday'");
+	t(isEqStr(getLocal(th, string2),"Happy Birthday"), "string2=='Happy Birthday'");
 	strSub(th, getLocal(th, string2), 6, 0, "Pucking ", 8); // Insert
-	t(strEq(getLocal(th, string2),"Happy Pucking Birthday"), "string2=='Happy Pucking Birthday'");
+	t(isEqStr(getLocal(th, string2),"Happy Pucking Birthday"), "string2=='Happy Pucking Birthday'");
 	strSub(th, getLocal(th, string2), 6, 2, "Fri", 3); // Replace & grow
-	t(strEq(getLocal(th, string2), "Happy Fricking Birthday"), "string2=='Happy Fricking Birthday'");
+	t(isEqStr(getLocal(th, string2), "Happy Fricking Birthday"), "string2=='Happy Fricking Birthday'");
 	strSub(th, getLocal(th, string2), 6, 9, NULL, 0); // Delete
-	t(strEq(getLocal(th, string2), "Happy Birthday"), "string2=='Happy Birthday'");
+	t(isEqStr(getLocal(th, string2), "Happy Birthday"), "string2=='Happy Birthday'");
 
 	// Array API tests
-	pushValue(th, newArr(th, 10)); // array1
+	pushList(th, 10); // array1
 	t(!isArr(getLocal(th, string1)), "!isArr('a string')");
 	t(isArr(getLocal(th, array1)), "isArr(array1)");
 	t(getSize(getLocal(th, array1))==0, "getSize(array1)==0");
@@ -167,7 +167,7 @@ void testCapi(void) {
 	arrSub(th, getLocal(th, array1), 2, 0, getLocal(th, array1), 2, 1); // Insert from self
 	t(getSize(getLocal(th, array1))==4, "getSize(array1)==4");
 	t(arrGet(th, getLocal(th, array1), 3)==aTrue, "arrGet(th, array1, 3)==aTrue");
-	pushValue(th, newArr(th,4)); // array2
+	pushList(th, 4); // array2
 	arrRpt(th, getLocal(th, array2), 4, 5, getLocal(th, string1));
 	t(getSize(getLocal(th, array2))==9, "getSize(array2)==9");
 	arrSub(th, getLocal(th, array1), 1, 2, getLocal(th, array2), 2, 4);
