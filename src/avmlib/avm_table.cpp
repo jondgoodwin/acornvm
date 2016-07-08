@@ -386,19 +386,6 @@ void tblSet(Value th, Value tbl, Value key, Value val) {
 
 }
 
-/* Inserts, alters or deletes the table's 'key' entry with value. 
- * - Deletes 'key' when value is null.
- * - Inserts 'key' if key is not already there
- * - Otherwise, it changes 'key' value 
- * This C API version is safer than tblSet from accidental garbage 
- * collection when key and val are both new values. */
-void tblSetc(Value th, Value tbl, const char* key, Value val) {
-	pushValue(th, val); // To ensure val is not collected when creating key symbol
-	Value k = aSym(th, key);
-	tblSet(th, tbl, k, val);
-	setTop(th, -1);
-}
-
 #ifdef __cplusplus
 } // extern "C"
 } // namespace avm

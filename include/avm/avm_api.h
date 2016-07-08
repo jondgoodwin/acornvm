@@ -32,10 +32,6 @@ AVM_API Value getProperty(Value th, Value self, Value methsym);
 AVM_API Auint getSize(Value val);
 
 // Implemented in avm_string.cpp and avm_symbol.cpp
-/** Return symbol for a c-string. */
-AVM_API Value aSym(Value th, const char *str);
-/** Return symbol for a byte-sequence. */
-AVM_API Value aSyml(Value th, const char *str, AuintIdx len);
 /** Return string value for a c-string. */
 AVM_API Value newStr(Value th, const char *str);
 /** Return string value for a byte-sequence. str may be NULL (to reserve space for empty string). */
@@ -111,13 +107,6 @@ AVM_API Value tblGet(Value th, Value tbl, Value key);
  * - Inserts 'key' if key is not already there
  * - Otherwise, it changes 'key' value */
 AVM_API void tblSet(Value th, Value tbl, Value key, Value val);
-/** Inserts, alters or deletes the table's 'key' entry with value. 
- * - Deletes 'key' when value is null.
- * - Inserts 'key' if key is not already there
- * - Otherwise, it changes 'key' value 
- * This C API version is safer than tblSet from accidental garbage 
- * collection when key and val are both new values. */
-AVM_API void tblSetc(Value th, Value tbl, const char* key, Value val);
 /** Get the next sequential key/value pair in table after 'key'.
  * To sequentially traverse the table, start with 'key' of 'null'.
  * Each time called, the next key/value pair is returned.

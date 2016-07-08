@@ -38,6 +38,7 @@ extern "C" {
 
 		struct SymTable sym_table;	//!< global symbol table
 		AuintIdx hashseed;			//!< randomized seed for hashing strings
+		Value literals;				//!< array of all built-in symbol and type literals 
 		Value stdidx;				//!< Table to convert std symbol to index
 		Value *stdsym;				//!< c-array to convert index to std symbol
 
@@ -74,19 +75,22 @@ extern "C" {
 	#define vmMark(th, v) \
 		{mem_markobj(th, (v)->main_thread); \
 		mem_markobj(th, (v)->global); \
+		mem_markobj(th, (v)->literals); \
 		mem_markobj(th, (v)->stdidx); \
 		vm(th)->gcmemtrav += sizeof(VmInfo);}
 
 	/** Point to standard symbol from index */
-	#define ss(th,idx) (vm(th)->stdsym[idx])
+	#define vmStdSym(th,idx) (vm(th)->stdsym[idx])
+	#define nStdSym 256
 
-	/** C index values for standard symbols used by bytecode and parser */
-	enum StdSymbols {
+	/** C index values for all VM literal values used throughout the code
+	    for common symbols and core types. They are forever immune from garbage collection
+		by being anchored to the VM. */
+	enum VmLiterals {
 		// Byte-code (and parser) standard methods
-		SymParGet,		//!< '()'
-		SymParSet,		//!< '()='
+		SymParGet,	//!< '()'
 		SymNew,		//!< 'new'
-		SymAppend,		//!< '+='
+		SymAppend,	//!< '+='
 		SymNext,	//!< 'next'
 		SymPlus,	//!< '+'
 		SymMinus,	//!< '-'
@@ -98,8 +102,11 @@ extern "C" {
 		SymNull,	//!< 'null'
 		SymNot,		//!< '!'
 
-		nStdSyms
+		nVmLits
 	};
+
+	/** The value for the indexed literal */
+	#define vmlit(lit) arr_info(vm(th)->literals)->arr[lit]
 
 	/** Lock the Vm */
 	void vm_lock(Value th);

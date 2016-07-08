@@ -82,6 +82,10 @@ void sym_free(Value th);
 /** Resize the symbol table */
 void sym_resize_tbl(Value th, Auint newsize);
 
+/** If symbol exists in symbol table, reuse it. Otherwise, add it. 
+   Anchor (store) symbol value in dest and return it. */
+Value newSym(Value th, Value *dest, const char *str, AuintIdx len);
+
 #ifdef __cplusplus
 } // end "C"
 } // end namespace

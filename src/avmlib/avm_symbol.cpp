@@ -69,8 +69,9 @@ void sym_free(Value th) {
 	mem_freearray(th, vm(th)->sym_table.symArray, vm(th)->sym_table.nbrAvail);
 }
 
-/* If symbol exists in symbol table, reuse it. Otherwise, add it. Return symbol value. */
-Value aSyml(Value th, const char *str, AuintIdx len) {
+/* If symbol exists in symbol table, reuse it. Otherwise, add it. 
+   Anchor (store) symbol value in dest and return it. */
+Value newSym(Value th, Value *dest, const char *str, AuintIdx len) {
 	SymInfo *sym;
 	SymTable* sym_tbl = &vm(th)->sym_table;
 	unsigned int hash = tblCalcStrHash(str, len, th(th)->vm->hashseed);
@@ -81,7 +82,7 @@ Value aSyml(Value th, const char *str, AuintIdx len) {
 				len == sym->size &&
 				(memcmp(str, sym_cstr(sym), len) == 0)) {
 			mem_keepalive(th, (MemInfo*) sym); // Keep it alive, if it had been marked for deletion
-			return (Value) sym;
+			return *dest = (Value) sym;
 		}
 	}
 
@@ -97,12 +98,7 @@ Value aSyml(Value th, const char *str, AuintIdx len) {
 	memcpy(sym_cstr(sym), str, len);
 	(sym_cstr(sym))[len] = '\0';
 	sym_tbl->nbrUsed++;
-	return (Value) sym;
-}
-
-/* Calculate length of c-string, then use aSyml(). */
-Value aSym(Value th, const char *str) {
-	return aSyml(th,str,strlen(str));
+	return *dest = (Value) sym;
 }
 
 /* Return 1 if the value is a Symbol, otherwise 0 */

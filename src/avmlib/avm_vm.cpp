@@ -18,7 +18,8 @@ extern "C" {
 #endif
 
 void acn_init(Value th); // Initializer for Acorn compile
-void vmStdInit(Value th); // Initializer for standard symbols
+void vm_litinit(Value th); // Initializer for literals
+void vm_stdinit(Value th); // Initializer for standard symbols
 
 /** Used by vm_init to build random seed */
 #define memcpy_Auint(i,val) \
@@ -59,12 +60,8 @@ AVM_API Value newVM(void) {
 	((ThreadInfo*) th)->next = NULL;
 	thrInit(&vm->main_thr, vm, STACK_NEWSIZE);
 
-	// Initialize vm's built-in global hash table
-	vm->global = newTbl(th, aNull, GLOBAL_NEWSIZE);
-	((ThreadInfo*) th)->global = vm->global;
-
 	// Compute a randomized seed, using address space layout to increaase randomness
-	// Seed is used to help hash symbols
+	// Seed is used to help calculate randomly distributed symbol hashes
 	char seedstr[4 * sizeof(Auint)];
 	time_t timehash = time(NULL);
 	memcpy_Auint(0, vm)			// heap pointe
@@ -73,15 +70,16 @@ AVM_API Value newVM(void) {
 	memcpy_Auint(3, &newVM)		// public function
 	vm->hashseed = tblCalcStrHash(seedstr, sizeof(seedstr), (AuintIdx) timehash);
 
-	// Initialize vm-wide symbol table
-	sym_init(th);
-	vmStdInit(th);
+	// Initialize vm-wide symbol table, global table and literals
+	sym_init(th); // Initialize hash table for symbols
+	vm->global = newTbl(th, aNull, GLOBAL_NEWSIZE); // Create global hash table
+	((ThreadInfo*) th)->global = vm->global; // For now, main thread needs global too
+	vm_litinit(th); // Load reserved and standard symbols into literal list
+	glo_init(th); // Load up global table and literal list with core types
+	setType(th, vm->global, vm(th)->defEncTypes[TblEnc]); // Fix up type info for global table
 
-	// Initialize all global variables: types and environment
-	glo_init(th);
-	setType(th, vm->global, vm(th)->defEncTypes[TblEnc]);
-
-	// Initialize the Acorn compile
+	// Initialize byte-code standard methods and the Acorn compiler
+	vm_stdinit(th);
 	acn_init(th);
 
 	// Start garbage collection
@@ -95,7 +93,7 @@ void vm_close(Value th) {
 	th = vm(th)->main_thread;
 	VmInfo* vm = vm(th);
 	mem_freeAll(th);  /* collect all objects */
-	mem_reallocvector(th, vm->stdsym, nStdSyms, 0, Value);
+	mem_reallocvector(th, vm->stdsym, nStdSym, 0, Value);
 	sym_free(th);
 	thrFreeStacks(th);
 	mem_frealloc(vm(th)->defEncTypes, 0);
@@ -123,34 +121,85 @@ void vm_outofstack(void) {
 	exit(1);
 }
 
-/** Macro for generating standard symbol mappings both ways */
-#define newstd(idx, str) \
-	tblSet(th, stdidx, sym = aSym(th, (str)), anInt(idx)); \
-	vm->stdsym[idx] = sym;
+struct vmLitSymEntry {
+	int litindex;
+	const char *symnm;
+};
+
+const struct vmLitSymEntry vmLitSymTable[] = {
+	// Compiler symbols that are not methods
+	{SymNull, "null"},
+	{SymNot, "!"},
+
+	// Compiler symbols that are also methods
+	{SymNew, "new"},
+	{SymAppend, "<<"},
+	{SymPlus, "+"},
+	{SymMinus, "-"},
+	{SymMult, "*"},
+	{SymDiv, "/"},
+
+	// Methods that are not compiler symbols
+	{SymParGet, "()"},
+	{SymNeg, "-@"},
+	{SymNext, "next"},
+
+	// Core type names
+
+	// Core types
+
+	// End of literal table
+	{0, NULL}
+};
+
+/** Initialize vm's literals. */
+void vm_litinit(Value th) {
+	// Allocate literal array
+	VmInfo* vm = vm(th);
+	vm->literals = newArr(th, nVmLits);
+	Value *vmlits = arr_info(vm->literals)->arr;
+
+	// Load up literal symbols from table
+	const struct vmLitSymEntry *vmlittblp = &vmLitSymTable[0];
+	while (vmlittblp->symnm) {
+		newSym(th, &vmlits[vmlittblp->litindex], vmlittblp->symnm, strlen(vmlittblp->symnm));
+		vmlittblp++;
+	}
+}
+
+// Map byte-code's standard symbols to VM's literals (max. number at 256)
+const int stdTblMap[] = {
+	// Commonly-called methods
+	SymNew,		// 'new'
+	SymParGet,	// '()'
+	SymAppend,	// '<<'
+	SymPlus,	// '+'
+	SymMinus,	// '-'
+	SymMult,	// '*'
+	SymDiv,		// '/'
+	SymNeg,		// '-@'
+
+	SymNext,	// 'next'
+	-1
+};
 
 /** Initialize vm's standard symbols */
-void vmStdInit(Value th) {
+void vm_stdinit(Value th) {
 	// Allocate mapping tables
-	Value sym;
 	VmInfo* vm = vm(th);
-	Value stdidx = vm->stdidx = newTbl(th, aNull, sizeof(StdSymbols));
+	Value stdidx = vm->stdidx = newTbl(th, aNull, nStdSym);
 	vm->stdsym = NULL;
-	mem_reallocvector(th, vm->stdsym, 0, nStdSyms, Value);
-	
-	// Add standard symbols
-	newstd(SymParGet, "()");
-	newstd(SymParSet, "()=");
-	newstd(SymNew, "New");
-	newstd(SymAppend, "<<");
-	newstd(SymNext, "next");
-	newstd(SymPlus, "+");
-	newstd(SymMinus, "-");
-	newstd(SymMult, "*");
-	newstd(SymDiv, "/");
-	newstd(SymNeg, "-@");
+	mem_reallocvector(th, vm->stdsym, 0, nStdSym, Value);
 
-	newstd(SymNull, "null");
-	newstd(SymNot, "!");
+	// Populate the mapping tables with the corresponding VM literals
+	const int *mapp = &stdTblMap[0];
+	int idx = 0;
+	while (*mapp >= 0 && idx<nStdSym) {
+		tblSet(th, stdidx, vmlit(*mapp), anInt(idx));
+		vm->stdsym[idx] = vmlit(*mapp);
+		idx++;
+		mapp++;
+	}
 }
 
 #ifdef __cplusplus

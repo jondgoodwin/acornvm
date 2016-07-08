@@ -95,13 +95,13 @@ Value pushValue(Value th, Value val) {
 /* Push and return the corresponding Symbol value for a 0-terminated c-string */
 Value pushSym(Value th, const char *str) {
 	stkCanIncTop(th); /* Check if there is room */
-	return *th(th)->stk_top++ = aSyml(th, str, strlen(str));
+	return newSym(th, th(th)->stk_top++, str, strlen(str));
 }
 
 /* Push and return the corresponding Symbol value for a byte sequence of specified length */
 Value pushSyml(Value th, const char *str, AuintIdx len) {
 	stkCanIncTop(th); /* Check if there is room */
-	return *th(th)->stk_top++ = aSyml(th, str, len);
+	return newSym(th, th(th)->stk_top++, str, len);
 }
 
 /* Push and return a new Type value */
@@ -121,7 +121,7 @@ void popMember(Value th, AintIdx tblidx, const char *mbrnm) {
 	assert(stkSz(th)>0); // Must be at least one value to remove!
 	Value tbl = *stkAt(th, tblidx);
 	assert(isTbl(tbl));
-	*th(th)->stk_top++ = aSyml(th, mbrnm, strlen(mbrnm));
+	newSym(th, th(th)->stk_top++, mbrnm, strlen(mbrnm));
 	tblSet(th, tbl, *(th(th)->stk_top-1), *(th(th)->stk_top-2));
 	th(th)->stk_top -= 2; // Pop key & value after value is safely in table
 }
@@ -184,7 +184,7 @@ void setTop(Value th, AintIdx idx) {
 Value pushGlobal(Value th, const char *var) {
 	stkCanIncTop(th); /* Check if there is room */
 	assert(isTbl(th(th)->global));
-	Value val = *th(th)->stk_top++ = aSyml(th, var, strlen(var));
+	Value val = newSym(th, th(th)->stk_top++, var, strlen(var));
 	mem_markChk(th, th, val); /* Mark it if needed */
 	return *(th(th)->stk_top-1) = tblGet(th, th(th)->global, val);
 }
@@ -193,7 +193,7 @@ Value pushGlobal(Value th, const char *var) {
 void popGlobal(Value th, const char *var) {
 	assert(stkSz(th)>0); // Must be at least one value to remove!
 	assert(isTbl(th(th)->global));
-	Value val = *th(th)->stk_top++ = aSyml(th, var, strlen(var));
+	Value val = newSym(th, th(th)->stk_top++, var, strlen(var));
 	tblSet(th, th(th)->global, *(th(th)->stk_top-1), *(th(th)->stk_top-2));
 	th(th)->stk_top -= 2; // Pop key & value after value is safely in Global
 }

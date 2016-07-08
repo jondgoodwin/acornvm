@@ -33,6 +33,9 @@ void acn_init(Value th) {
 	// popGlobal(th, "Acorn");
 }
 
+// Get index for a standard symbol identified using its VM literal name
+#define ss(lit) (toAint(tblGet(th, vm(th)->stdidx, vmlit(lit))))
+
 /** Generate bytecode test programs */
 Value genTestPgm(Value th, int pgm) {
 	int saveip = 0;
@@ -77,11 +80,11 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 2, 1, 0));
 		genAddInstr(ac, BCINS_AJ(OpJLe, 0, 10));
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 3, 2, 0));
-		genAddInstr(ac, BCINS_ABC(OpLoadStd, 4, 1, SymPlus));
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 4, 1, ss(SymPlus)));
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 6, 2, 0));
 		genAddInstr(ac, BCINS_ABC(OpCall, 4, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpLoadRegs, 1, 3, 2));
-		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 0, SymMinus));
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 0, ss(SymMinus)));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 5, genAddLit(ac, anInt(1))));
 		genAddInstr(ac, BCINS_ABC(OpCall, 3, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 0, 3, 0));
@@ -99,10 +102,10 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_AJ(OpJGt, 0, 1));
 		genAddInstr(ac, BCINS_ABC(OpReturn, 1, 1, 0));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 2, genAddLit(ac, fact)));
-		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 0, SymMinus));
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 0, ss(SymMinus)));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 5, genAddLit(ac, anInt(1))));
 		genAddInstr(ac, BCINS_ABC(OpCall, 3, 2, 1));
-		genAddInstr(ac, BCINS_ABC(OpLoadStd, 4, 0, SymMult));
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 4, 0, ss(SymMult)));
 		genAddInstr(ac, BCINS_AJ(OpJFalse, 1, 2));
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 6, 1, 0));
 		genAddInstr(ac, BCINS_AJ(OpJump, 0, 1));
@@ -122,7 +125,7 @@ Value genTestPgm(Value th, int pgm) {
 		Value list = pushSym(th, "List");
 		genAddParm(ac, self);
 		genMaxStack(ac, 9);
-		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 0, SymNew));
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 0, ss(SymNew)));
 		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 4, genAddLit(ac, list)));
 		genAddInstr(ac, BCINS_ABC(OpCall, 3, 1, 1));
 		genAddInstr(ac, BCINS_ABC(OpRptPrep, 2, 3, SymAppend));
@@ -133,11 +136,11 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 4, genAddLit(ac, anInt(8))));
 		genAddInstr(ac, BCINS_ABC(OpRptCall, 2, 2, 0));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 1, genAddLit(ac, anInt(0))));
-		genAddInstr(ac, BCINS_ABC(OpForPrep, 2, 3, SymNext));
+		genAddInstr(ac, BCINS_ABC(OpForPrep, 2, 3, ss(SymNext)));
 		genAddInstr(ac, BCINS_ABC(OpRptCall, 2, 2, 2));
 		saveip = ac->ip; // Save loc of jump
 		genAddInstr(ac, BCINS_AJ(OpJNull, 4, BCNO_JMP)); // Will calculate to 5
-		genAddInstr(ac, BCINS_ABC(OpLoadStd, 6, 1, SymPlus));
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 6, 1, ss(SymPlus)));
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 8, 5, 0));
 		genAddInstr(ac, BCINS_ABC(OpCall, 6, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 1, 6, 0));
@@ -154,10 +157,10 @@ Value genTestPgm(Value th, int pgm) {
 		Value get = pushSym(th, "get");
 		Value testacn = pushValue(th, newStr(th, "test.acn"));
 		genAddParm(ac, self);
-		genAddInstr(ac, BCINS_ABC(OpLoadStd, 1, 2, SymAppend));
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 1, 2, ss(SymAppend)));
 		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 2, genAddLit(ac, str)));
-		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 4, SymParGet));
-		genAddInstr(ac, BCINS_ABC(OpLoadStd, 4, 5, SymParGet));
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 4, ss(SymParGet)));
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 4, 5, ss(SymParGet)));
 		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 5, genAddLit(ac, fil)));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 6, genAddLit(ac, get)));
 		genAddInstr(ac, BCINS_ABC(OpCall, 4, 2, 1));

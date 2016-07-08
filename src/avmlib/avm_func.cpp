@@ -378,20 +378,20 @@ void funcRunBC(Value th) {
 		// LoadStd: R(A+1) := R(B); R(A) = StdMeth(C)
 		case OpLoadStd:
 			*(rega+1) = *(stkbeg + bc_b(i));
-			*rega = ss(th, bc_c(i));
+			*rega = vmStdSym(th, bc_c(i));
 			break;
 
 		// OpForPrep: R(A+1) := R(B); R(A) = R(A+1).StdMeth(C); R(A+2):=null
 		case OpForPrep:
 			*(rega+1) = *(stkbeg + bc_b(i));
-			*rega = getProperty(th, *(rega+1), ss(th, bc_c(i)));
+			*rega = getProperty(th, *(rega+1), vmStdSym(th, bc_c(i)));
 			*(rega+2) = aNull;
 			break;
 
 		// OpRptPrep: R(A+1) := R(B); R(A) = R(A+1).StdMeth(C)
 		case OpRptPrep:
 			*(rega+1) = *(stkbeg + bc_b(i));
-			*rega = getProperty(th, *(rega+1), ss(th, bc_c(i)));
+			*rega = getProperty(th, *(rega+1), vmStdSym(th, bc_c(i)));
 			break;
 
 		// OpCall: R(A .. A+C-1) := R(A+1).R(A)(R(A+1) .. A+B-1))

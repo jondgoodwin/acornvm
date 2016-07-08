@@ -81,7 +81,7 @@ int typ_list_next(Value th) {
 Value typ_list_init(Value th) {
 	Value typ = pushType(th, vm(th)->defEncTypes[TypeEnc], 3);
 		pushCMethod(th, typ_list_new);
-		popMember(th, 0, "New");
+		popMember(th, 0, "new");
 		pushCMethod(th, typ_list_add);
 		popMember(th, 0, "<<");
 		pushCMethod(th, typ_list_next);
