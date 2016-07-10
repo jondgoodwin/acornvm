@@ -175,7 +175,7 @@ void testCapi(void) {
 	t(getSize(arrGet(th, getLocal(th, array1), 4))==21, "getSize(arrGet(th, array1, 5))==21");
 
 	// Table API tests
-	pushValue(th, newTbl(th, aNull, 0)); // tbl1
+	pushTbl(th, aNull, 0); // tbl1
 	pushSym(th, "name"); // name
 	pushSym(th, "George"); // george
 	pushSym(th, "Peter"); // peter
@@ -183,8 +183,10 @@ void testCapi(void) {
 	t(!isTbl(getLocal(th, string1)), "!isTbl('a string')");
 	t(isTbl(getLocal(th, tbl1)), "isTbl(hash1)");
 	t(getSize(getLocal(th, tbl1))==0, "getSize(tbl1)==0");
+	t(!tblHas(th, getLocal(th, tbl1), getLocal(th, name)), "!tblHas(tbl1, 'name')");
 	tblSet(th, getLocal(th, tbl1), getLocal(th, name),  getLocal(th, george)); // This will trigger table index growth
 	t(getSize(getLocal(th, tbl1))==1, "getSize(tbl1)==1");
+	t(tblHas(th, getLocal(th, tbl1), getLocal(th, name)), "tblHas(tbl1, 'name')");
 	t(tblGet(th, getLocal(th, tbl1), getLocal(th, name))==getLocal(th, george), "tblGet(th, tbl1, 'name')=='George'");
 	tblSet(th, getLocal(th, tbl1), getLocal(th, name), getLocal(th, peter));
 	t(getSize(getLocal(th, tbl1))==1, "getSize(tbl1)==1");
@@ -206,9 +208,12 @@ void testCapi(void) {
 	arrSet(th, getLocal(th, array1), 6, aTrue); // Modify array, should still work as table key
 	t(isStr(tblGet(th, getLocal(th, tbl1), getLocal(th, array1))), "isStr(tblGet(th, tbl1, array1))");
 	t(getSize(getLocal(th, tbl1))==5, "getSize(tbl1)==5"); // table has doubled 4 times: 0->1->2->4->8
-	tblSet(th, getLocal(th, tbl1), getLocal(th, name), aNull); // Delete 'name' entry
-	t(tblGet(th, getLocal(th, tbl1), getLocal(th, name))==aNull, "tblGet(th, tbl1, 'name')==aNull"); // not found
-	t(getSize(getLocal(th, tbl1))==4, "getSize(tbl1)==4");
+	tblSet(th, getLocal(th, tbl1), getLocal(th, name), aNull); // Assign 'name' to null
+	t(tblGet(th, getLocal(th, tbl1), getLocal(th, name))==aNull, "tblGet(th, tbl1, 'name')==aNull"); // worked
+	t(getSize(getLocal(th, tbl1))==5, "getSize(tbl1)==5"); // Still have 5 entries
+	tblRemove(th, getLocal(th, tbl1), getLocal(th, name)); // Delete 'name'
+	t(!tblHas(th, getLocal(th, tbl1), getLocal(th, name)), "!tblHas(tbl1, 'name')");
+	t(getSize(getLocal(th, tbl1))==4, "getSize(tbl1)==4"); // Now have 4 entries
 
 	// Thread tests - global namespace
 	pushLocal(th, array1);

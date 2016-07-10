@@ -151,13 +151,13 @@ Value genTestPgm(Value th, int pgm) {
 
 	// Test File and URL stuff
 	case 5: {
-		Value str = pushSym(th, "$stream");
+		Value stream = pushSym(th, "$stream");
 		Value fil = pushSym(th, "File");
 		Value get = pushSym(th, "get");
 		Value testacn = pushValue(th, newStr(th, "test.acn"));
 		genAddParm(ac, self);
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 1, 2, ss(SymAppend)));
-		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 2, genAddLit(ac, str)));
+		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 2, genAddLit(ac, stream)));
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 4, ss(SymParGet)));
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 4, 5, ss(SymParGet)));
 		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 5, genAddLit(ac, fil)));

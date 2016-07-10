@@ -90,21 +90,24 @@ AVM_API void arrIns(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val);
 AVM_API void arrSub(Value th, Value arr, AuintIdx pos, AuintIdx n, Value arr2, AuintIdx pos2, AuintIdx n2);
 
 // Implemented in avm_table.cpp
-/** Create and initialize a new hash table with room for size entries */
-AVM_API Value newTbl(Value th, Value type, AuintIdx size);
-/** Return 1 if the value is a Hash, otherwise 0 */
+/** Return 1 if the value is a Hash Table, otherwise 0 */
 AVM_API int isTbl(Value val);
-/** Return 1 if the value is a Type table, otherwise 0 */
+/** Return 1 if the value is a Type, otherwise 0 */
 AVM_API int isType(Value val);
+/* Return 1 if the value is a Prototype, otherwise 0 */
+AVM_API int isPrototype(Value val);
 /** Resize a table for more/fewer elements (cannot be less than used size) */
 AVM_API void tblResize(Value th, Value tbl, AuintIdx newsize);
+/** Return 1 if table has an entry at key, 0 if not */
+AVM_API int tblHas(Value th, Value tbl, Value key);
 /** Return the value paired with 'key', or 'null' if not found */
 AVM_API Value tblGet(Value th, Value tbl, Value key);
-/** Inserts, alters or deletes the table's 'key' entry with value. 
- * - Deletes 'key' when value is null.
+/** Inserts or alters the table's 'key' entry with value. 
  * - Inserts 'key' if key is not already there
  * - Otherwise, it changes 'key' value */
 AVM_API void tblSet(Value th, Value tbl, Value key, Value val);
+/** Delete a key from hash table, if found. */
+AVM_API void tblRemove(Value th, Value tbl, Value key);
 /** Get the next sequential key/value pair in table after 'key'.
  * To sequentially traverse the table, start with 'key' of 'null'.
  * Each time called, the next key/value pair is returned.
@@ -112,6 +115,8 @@ AVM_API void tblSet(Value th, Value tbl, Value key, Value val);
  * Warning: Accurate traversal requires the table remains unchanged.
 */
 AVM_API Value tblNext(Value tbl, Value key);
+/** For types, add mixin to top of list of types found at inheritype (and type)*/
+AVM_API void addMixin(Value th, Value type, Value mixin);
 
 // Implemented in avm_func.cpp
 /** Build a new c-function value, pointing to a function written in C */
@@ -156,8 +161,12 @@ AVM_API Value pushSym(Value th, const char *str);
 AVM_API Value pushSyml(Value th, const char *str, AuintIdx len);
 /** Push and return the value for a method written in C */
 AVM_API Value pushCMethod(Value th, AcFuncp func);
+/** Push and return a new Table value */
+AVM_API Value pushTbl(Value th, Value type, AuintIdx size);
 /** Push and return a new Type value */
 AVM_API Value pushType(Value th, Value type, AuintIdx size);
+/* Push and return a new Mixin value */
+AVM_API Value pushMixin(Value th, Value type, Value inheritype, AuintIdx size);
 /** Push and return a new List value */
 AVM_API Value pushList(Value th, AuintIdx size);
 /** Put the local stack's top value into the named member of the table found at the stack's specified index */

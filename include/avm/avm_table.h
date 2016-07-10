@@ -2,20 +2,19 @@
  *
  * Like an Array, a Table holds an arbitray number of Values.
  * However, Table values are not ordered, but are indexed using a key.
- * The key may be any type of value, but the results vary:
+ * The key may be any type of value (except null), but the results vary:
  * - Symbols are the preferred key, as they are expressive, yet hash and compare quickly.
  *   The symbol's hash is calculated at creation based on its character contents.
- * - String keys are always converted to symbols, to ensure the same text
- *   in a string and symbol match. This is a big performance hit over using symbols.
- *   Only use strings as keys when one needs to dynamically generate the key each time.
- * - Null is never really a key. It always returns Null as its value.
  * - Integers, floats, and true/false are valid keys whose hash is based on their contents.
  *   (0.f, -0.f, -INF, +INF, and Nan are all valid, separate float keys).
  * - All other values are valid keys, but the hash is based on the 'object', not its contents.
  *   So, the object can change its contents and still have the same hash index.
+ *   Two different strings with the same contents will not match.
  *
- * Any type of value can be stored in a Table, other than Null. 
- * Storing Null using an already-existing key effectively deletes the entry.
+ * Any type of value can be stored in a Table. 
+ *
+ * If get returns 'null' it could mean the key was not found or the value at that key is null.
+ * The 'has' function can be used to determine whether the key exists.
  *
  * The Table's key-value pair is essentially a property. 
  * The Table structure is critical for storing methods & global variables.
@@ -58,17 +57,20 @@ typedef struct TblInfo {
 	MemCommonInfoT;				//!< Common header for typed value
 	struct Node *nodes;			//!< Pointer to allocated table index
 	struct Node *lastfree;		//!< any free node in index is before this position
+	Value inheritype;			//!< pointer to more properties for users of this type
 } TblInfo;
 
 /** flags2 holds log2 of available number of nodes in 'node' buffer */
 #define lAvailNodes flags2
 
-#define TypeTbl 0x80	//!< Set in flags2 if table is for a Type (members are properties)
+#define TypeTbl 0x80	//!< Flags1 bit, if table is for a Type (members are properties)
+#define ProtoType 0x40	//!< Flags1 bit, if uses own properties and inheritype == type
 
 /** Mark all in-use table values for garbage collection 
  * Increments how much allocated memory the table uses. */
 #define tblMark(th, t) \
 	{mem_markobj(th, (t)->type); \
+	mem_markobj(th, (t)->inheritype); \
 	for (Node *n = &(t)->nodes[(1<<(t)->lAvailNodes)-1]; n >= (t)->nodes; n--) \
 		if (n->key != aNull) { \
 			assert(n->val != aNull); \
@@ -94,10 +96,19 @@ typedef struct TblInfo {
 
 extern const struct Node emptyNode;
 
+/** Create and initialize a new hash table with room for size entries */
+Value newTbl(Value th, Value *dest, Value type, AuintIdx size);
+
 /** Create and initialize a new Type (a table where members are properties) */
-Value newType(Value th, Value type, AuintIdx size);
+Value newType(Value th, Value *dest, Value type, AuintIdx size);
+
+/** Create and initialize a new Mixin type */
+Value newMixin(Value th, Value *dest, Value type, Value inheritype, AuintIdx size);
 
 AuintIdx tblCalcStrHash(const char *str, Auint len, AuintIdx seed);
+
+/** Return a pointer to the value in the table at key, or NULL if not found. */
+Value *tblGetp(Value tbl, Value key);
 
 #ifdef __cplusplus
 } // end "C"

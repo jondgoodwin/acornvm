@@ -104,10 +104,22 @@ Value pushSyml(Value th, const char *str, AuintIdx len) {
 	return newSym(th, th(th)->stk_top++, str, len);
 }
 
+/* Push and return a new hashed table value */
+Value pushTbl(Value th, Value type, AuintIdx size) {
+	stkCanIncTop(th); /* Check if there is room */
+	return newTbl(th, th(th)->stk_top++, type, size);
+}
+
 /* Push and return a new Type value */
 Value pushType(Value th, Value type, AuintIdx size) {
 	stkCanIncTop(th); /* Check if there is room */
-	return *th(th)->stk_top++ = newType(th, type, size);
+	return newType(th, th(th)->stk_top++, type, size);
+}
+
+/* Push and return a new Mixin value */
+Value pushMixin(Value th, Value type, Value inheritype, AuintIdx size) {
+	stkCanIncTop(th); /* Check if there is room */
+	return newMixin(th, th(th)->stk_top++, type, inheritype, size);
 }
 
 /* Push and return the value for a method written in C */

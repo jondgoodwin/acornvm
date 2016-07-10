@@ -65,7 +65,7 @@ AVM_API Value newVM(void) {
 
 	// Initialize vm-wide symbol table, global table and literals
 	sym_init(th); // Initialize hash table for symbols
-	vm->global = newTbl(th, aNull, GLOBAL_NEWSIZE); // Create global hash table
+	newTbl(th, &vm->global, aNull, GLOBAL_NEWSIZE); // Create global hash table
 	((ThreadInfo*) th)->global = vm->global; // For now, main thread needs global too
 	vm_litinit(th); // Load reserved and standard symbols into literal list
 	glo_init(th); // Load up global table and literal list with core types
@@ -171,7 +171,7 @@ const int stdTblMap[] = {
 void vm_stdinit(Value th) {
 	// Allocate mapping tables
 	VmInfo* vm = vm(th);
-	Value stdidx = vm->stdidx = newTbl(th, aNull, nStdSym);
+	Value stdidx =  newTbl(th, &vm->stdidx, aNull, nStdSym);
 	vm->stdsym = NULL;
 	mem_reallocvector(th, vm->stdsym, 0, nStdSym, Value);
 

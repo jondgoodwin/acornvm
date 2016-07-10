@@ -45,14 +45,14 @@ int typ_int_mult(Value th) {
 /** Initialize the Integer type */
 void typ_int_init(Value th) {
 	vmlit(TypeIntc) = pushType(th, vmlit(TypeType), 2);
-		vmlit(TypeIntm) = pushType(th, vmlit(TypeType), 3);
+		vmlit(TypeIntm) = pushMixin(th, vmlit(TypeType), aNull, 3);
 			pushCMethod(th, typ_int_plus);
 			popMember(th, 1, "+");
 			pushCMethod(th, typ_int_minus);
 			popMember(th, 1, "-");
 			pushCMethod(th, typ_int_mult);
 			popMember(th, 1, "*");
-		popMember(th, 0, "mixin");
+		popMember(th, 0, "newtype");
 	popGlobal(th, "Integer");
 	return;
 }
@@ -82,12 +82,12 @@ int typ_list_next(Value th) {
 /** Initialize the List type */
 void typ_list_init(Value th) {
 	vmlit(TypeListc) = pushType(th, vmlit(TypeType), 2);
-		vmlit(TypeListm) = pushType(th, vmlit(TypeType), 2);
+		vmlit(TypeListm) = pushMixin(th, vmlit(TypeType), aNull, 2);
 			pushCMethod(th, typ_list_add);
 			popMember(th, 1, "<<");
 			pushCMethod(th, typ_list_next);
 			popMember(th, 1, "next");
-		popMember(th, 0, "mixin");
+		popMember(th, 0, "newtype");
 		pushCMethod(th, typ_list_new);
 		popMember(th, 0, "new");
 	popGlobal(th, "List");
@@ -100,13 +100,13 @@ int typ_meth_get(Value th) {
 	return getTop(th);
 }
 
-/** Initialize the Type type, used to create other types */
+/** Initialize the Method type, used to create other types */
 void typ_meth_init(Value th) {
 	vmlit(TypeMethc) = pushType(th, vmlit(TypeType), 1);
-		vmlit(TypeMethm) = pushType(th, vmlit(TypeType), 1);
+		vmlit(TypeMethm) = pushMixin(th, vmlit(TypeType), aNull, 1);
 			pushCMethod(th, typ_meth_get);
 			popMember(th, 1, "()");
-		popMember(th, 0, "mixin");
+		popMember(th, 0, "newtype");
 	popGlobal(th, "Method");
 	return;
 }

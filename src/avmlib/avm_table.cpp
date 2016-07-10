@@ -10,6 +10,8 @@
  * to it), then the colliding element is in its own main position.
  * Hence even when the load factor reaches 100%, performance remains good.
  *
+ * See avm_table.h for usage notes about keys.
+ *
  * @file
  *
  * This source file is part of avm - Acorn Virtual Machine.
@@ -114,6 +116,21 @@ Node *tblFind(Value tbl, Value key) {
 	return NULL;
 }
 
+/* Return a pointer to the value in the table at key, or NULL if not found. */
+Value *tblGetp(Value tbl, Value key) {
+	if (!isTbl(tbl) || key==aNull)
+		return NULL;
+
+	// Look for the 'key' in the linked chain
+	Node *n = tblKey2Node(tbl, key);
+	do {
+		if (n->key == key)
+			return &n->val;  // Found it
+		n = n->next;
+	} while (n);
+	return NULL;
+}
+
 /* Get the next sequential key/value pair in table after 'key'.
  * To sequentially traverse the table, start with 'key' of 'null'.
  * Each time called, the next key/value pair is returned.
@@ -127,7 +144,7 @@ Value tblNext(Value tbl, Value key) {
 	Node *last = &tbl_info(tbl)->nodes[1 << tbl_info(tbl)->lAvailNodes];
 	if (n) {
 		for (n++; n < last; n++)  
-			if (n->val != aNull)
+			if (n->key != aNull)
 				return n->key;
 	}
 	return aNull;
@@ -154,7 +171,7 @@ void tblAdd(Value th, Value tbl, Value key, Value val) {
 
 	// Handle when calculated position is not available
 	mp = tblKey2Node(tbl, key);
-	if (mp->val != aNull || tbl_info(tbl)->nodes == &emptyNode) {
+	if (mp->key != aNull || tbl_info(tbl)->nodes == &emptyNode) {
 		Node *othern;
 		Node *n = tblLastFreeNode(tbl_info(tbl));  /* get a free place */
 		if (n == NULL) {  // cannot find a free place?
@@ -186,14 +203,18 @@ void tblAdd(Value th, Value tbl, Value key, Value val) {
 	tbl_info(tbl)->size++;
 }
 
-/** Delete a key from hash table, if found. 
+/* Delete a key from hash table, if found. 
  * Deletion is fortunately rare, as it is a bit slower and involved because
  * we have to clean up any post-chained nodes by reinserting them into the table.
  * If we don't do this, the empty nodes accumulate unused.
  * This could shrink the table, if we want to ... */
 void tblRemove(Value th, Value tbl, Value key) {
-	assert(isTbl(tbl) && key!=aNull);
+	assert(isTbl(tbl));
 	Value val;
+
+	// Null is never a key
+	if (key==aNull)
+		return;
 
 	// Find the 'key' in the linked chain
 	Node *prevp = NULL; // previous node that chains to key's node
@@ -298,7 +319,7 @@ void tblResize(Value th, Value tbl, AuintIdx newsize) {
 
 	// re-insert elements from old index
 	for (nodep = &oldnodes[oldsize - 1]; nodep >= oldnodes; nodep--) {
-		if (nodep->val != aNull) {
+		if (nodep->key != aNull) {
 			tblAdd(th, tbl, nodep->key, nodep->val);
 		}
 	}
@@ -308,8 +329,8 @@ void tblResize(Value th, Value tbl, AuintIdx newsize) {
 		mem_gcrealloc(th, oldnodes, oldsize*sizeof(Node), 0); 
 }
 
-/* Create and initialize a new Table */
-Value newTbl(Value th, Value type, AuintIdx size) {
+/* Create and initialize a new hashed Table */
+Value newTbl(Value th, Value *dest, Value type, AuintIdx size) {
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 	TblInfo *t = (TblInfo*) mem_new(th, TblEnc, sizeof(TblInfo), NULL, 0);
 	t->flags1 = 0;
@@ -317,19 +338,32 @@ Value newTbl(Value th, Value type, AuintIdx size) {
 	t->size = 0;
 
 	tblAllocnodes(th, t, size);
-	return (Value) t;
+	return *dest = (Value) t;
 }
 
 /* Create and initialize a new Type (a table where members are properties) */
-Value newType(Value th, Value type, AuintIdx size) {
+Value newType(Value th, Value *dest, Value type, AuintIdx size) {
+	mem_gccheck(th);	// Incremental GC before memory allocation events
+	TblInfo *t = (TblInfo*) mem_new(th, TblEnc, sizeof(TblInfo), NULL, 0);
+	t->flags1 = TypeTbl | ProtoType;
+	t->type = t->inheritype = type;
+	t->size = 0;
+
+	tblAllocnodes(th, t, size);
+	return *dest = (Value) t;
+}
+
+/* Create and initialize a new Mixin type */
+Value newMixin(Value th, Value *dest, Value type, Value inheritype, AuintIdx size) {
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 	TblInfo *t = (TblInfo*) mem_new(th, TblEnc, sizeof(TblInfo), NULL, 0);
 	t->flags1 = TypeTbl;
 	t->type = type;
+	t->inheritype = inheritype;
 	t->size = 0;
 
 	tblAllocnodes(th, t, size);
-	return (Value) t;
+	return *dest = (Value) t;
 }
 
 /* Return 1 if the value is a Table, otherwise 0 */
@@ -340,6 +374,24 @@ int isTbl(Value val) {
 /* Return 1 if the value is a Type table, otherwise 0 */
 int isType(Value val) {
 	return isEnc(val, TblEnc) && tbl_info(val)->flags1 & TypeTbl;
+}
+
+/* Return 1 if the value is a Type table, otherwise 0 */
+int isPrototype(Value val) {
+	return isEnc(val, TblEnc) && tbl_info(val)->flags1 & (TypeTbl | ProtoType);
+}
+
+/* Return 1 if table has an entry at key, 0 if not */
+int tblHas(Value th, Value tbl, Value key) {
+	assert(isTbl(tbl));
+
+	// Null is never a key
+	if (key==aNull)
+		return 0;
+
+	// Find key, and return what we find (or not)
+	Node *n = tblFind(tbl, key);
+	return (n)? 1 : 0;
 }
 
 /* Return the value paired with 'key', or 'null' if not found */
@@ -355,8 +407,7 @@ Value tblGet(Value th, Value tbl, Value key) {
 	return (n)? n->val : aNull;
 }
 
-/* Inserts, alters or deletes the table's 'key' entry with value. 
- * - Deletes 'key' when value is null.
+/* Inserts or alters the table's 'key' entry with value. 
  * - Inserts 'key' if key is not already there
  * - Otherwise, it changes 'key' value */
 void tblSet(Value th, Value tbl, Value key, Value val) {
@@ -365,12 +416,6 @@ void tblSet(Value th, Value tbl, Value key, Value val) {
 	// Null is never a key
 	if (key==aNull)
 		return;
-
-	// When val is Null, key is deleted
-	if (val==aNull) {
-		tblRemove(th, tbl, key);
-		return;
-	}
 
 	// Look for key. If found, replace value. Otherwise, insert key/value pair
 	Node *n = tblFind(tbl, key);
@@ -383,7 +428,34 @@ void tblSet(Value th, Value tbl, Value key, Value val) {
 		mem_markChk(th, tbl, key);
 		mem_markChk(th, tbl, val);
 	}
+}
 
+/* Add mixin to top of list of types found at inheritype */
+void addMixin(Value th, Value type, Value mixin) {
+	// Can only add mixins to prototypes and mixins
+	if (!isType(type))
+		return;
+	TblInfo *typp = tbl_info(type);
+
+	// If field is empty, give it the mixin as a value
+	if (typp->inheritype == aNull)
+		typp->inheritype = mixin;
+
+	// If field is a list already, add to top
+	else if (isArr(typp->inheritype))
+		arrIns(th, typp->inheritype, 0, 1, mixin);
+
+	// Field is a type; turn into an array
+	else {
+		Value arr = pushList(th, 2);
+		arrSet(th, arr, 0, mixin);
+		arrSet(th, arr, 1, typp->inheritype);
+		typp->inheritype = popValue(th);
+	}
+
+	// If this is a prototype, sync change to type as well
+	if (typp->flags1 && ProtoType)
+		typp->type = typp->inheritype;
 }
 
 #ifdef __cplusplus

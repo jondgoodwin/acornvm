@@ -71,43 +71,50 @@ Value getType(Value th, Value val) {
 }
 
 /** Find method in part's methods or mixins. Return aNull if not found */
-Value getPropR(Value th, Value type, Value methsym) {
-	Value meth;
+Value *getPropR(Value type, Value methsym) {
+	Value *meth;
 
-	// If this is a Type table, check its members
+	// If this is a Type table, check its properties
 	if (isType(type)) {
-		return tblGet(th, type, methsym);
+		if (NULL != (meth = tblGetp(type, methsym)))
+			return meth;
+		// Or else try inherited properties
+		if (NULL != (meth = getPropR(tbl_info(type)->inheritype, methsym)))
+			return meth;
 	}
 	
 	// Recursively examine each type in an array
-	if (isArr(type)) {
+	else if (isArr(type)) {
 		Value *types = arr_info(type)->arr;
 		AuintIdx ntypes = arr_size(type);
 		while (ntypes--)
-			if (aNull != (meth = tblGet(th, *types++, methsym)))
+			if (NULL != (meth = tblGetp(*types++, methsym)))
 				return meth;
-	}
-
-	return aNull;
-}
-
-/* Find method in self or its type. Return aNull if not found */
-Value getProperty(Value th, Value self, Value methsym) {
-	Value meth;
-
-	// If this is a Type table, search first among its members
-	if (isType(self)) {
-		if (aNull != (meth = tblGet(th, self, methsym)))
+		// Or else try inherited properties
+		if (NULL != (meth = getPropR(tbl_info(type)->inheritype, methsym)))
 			return meth;
 	}
 
+	return NULL;
+}
+
+/* Find value's property in self or from its type. Return aNull if not found */
+Value getProperty(Value th, Value self, Value methsym) {
+	Value *meth;
+
+	// If this is a ProtoType table, search first among its value's own properties
+	if (isPrototype(self)) {
+		if (NULL != (meth = tblGetp(self, methsym)))
+			return *meth;
+	}
+
 	// Next, look for the method in the value's type
-	if (aNull != (meth = getPropR(th, getType(th, self), methsym)))
-		return meth;
+	if (NULL != (meth = getPropR(getType(th, self), methsym)))
+		return *meth;
 
 	// As a last resort, look for the method in the All type
-	if (aNull != (meth = tblGet(th, vmlit(TypeAll), methsym)))
-		return meth;
+	if (NULL != (meth = tblGetp(vmlit(TypeAll), methsym)))
+		return *meth;
 
 	return aNull;
 }
