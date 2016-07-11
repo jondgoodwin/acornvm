@@ -2,7 +2,7 @@
  *
  * This defines all API functions that can be used by any C/C++ program that embeds
  * and runs the Acorn Virtual Machine, or by any C/C++ library that extends
- * the global environment, built-in types, methods or functions.
+ * the global environment, built-in types, or methods.
  *
  * The C-code implementation of these API function is scattered across
  * various .cpp files, as indicated.
@@ -118,14 +118,12 @@ AVM_API Value tblNext(Value tbl, Value key);
 /** For types, add mixin to top of list of types found at inheritype (and type)*/
 AVM_API void addMixin(Value th, Value type, Value mixin);
 
-// Implemented in avm_func.cpp
-/** Build a new c-function value, pointing to a function written in C */
-AVM_API Value aCFunc(Value th, AcFuncp func, const char* name, const char* src);
-/** Build a new c-method value, pointing to a function written in C */
-AVM_API Value aCMethod(Value th, AcFuncp func, const char* name, const char* src);
-/** Call a method or function value placed on stack (with nparms above it). 
+// Implemented in avm_method.cpp
+/** Build a new c-method value, pointing to a method written in C */
+AVM_API Value aCMethod(Value th, AcMethodp method, const char* name, const char* src);
+/** Call a method value placed on stack (with nparms above it). 
  * Indicate how many return values to expect to find on stack. */
-AVM_API void funcCall(Value th, int nparms, int nexpected);
+AVM_API void methodCall(Value th, int nparms, int nexpected);
 
 // Implemented in avm_thread.cpp
 /** Return a new Thread with a starter namespace and stack. */
@@ -160,7 +158,7 @@ AVM_API Value pushSym(Value th, const char *str);
 /** Push and return the corresponding Symbol value for a byte sequence of specified length */
 AVM_API Value pushSyml(Value th, const char *str, AuintIdx len);
 /** Push and return the value for a method written in C */
-AVM_API Value pushCMethod(Value th, AcFuncp func);
+AVM_API Value pushCMethod(Value th, AcMethodp func);
 /** Push and return a new Table value */
 AVM_API Value pushTbl(Value th, Value type, AuintIdx size);
 /** Push and return a new Type value */
@@ -179,9 +177,9 @@ AVM_API Value popValue(Value th);
 AVM_API void popLocal(Value th, AintIdx idx);
 /** Obtain value "from top" index , where 0=top, 1 is next */
 AVM_API Value getFromTop(Value th, AintIdx fromtop);
-/** Return number of values on the current function's stack */
+/** Return number of values on the current method's stack */
 AVM_API AuintIdx getTop(Value th);
-/** When index is positive, this indicates how many Values are on the function's stack.
+/** When index is positive, this indicates how many Values are on the method's stack.
  *	This can shrink the stack or grow it (padding with 'null's).
  *	A negative index removes that number of values off the top. */
 AVM_API void setTop(Value th, AintIdx idx);

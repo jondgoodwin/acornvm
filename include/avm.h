@@ -2,7 +2,7 @@
  * @file
  *
  * This source file is part of avm - Acorn Virtual Machine.
- * Copyright (C) 2015  Jonathan Goodwin
+ * Copyright (C) 2016  Jonathan Goodwin
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public

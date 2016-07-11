@@ -37,7 +37,7 @@ typedef size_t Auint;
 typedef ptrdiff_float Afloat;
 
 /** A fixed-sized, self-typed encoded value which holds any kind of data.
- * It can be passed to or returned from Acorn or C-functions.
+ * It can be passed to or returned from Acorn or C-methods.
  * Never manipulate a Value directly; always use an AcornVM api function.
  *
  * Its size is that of a full address-space pointer (32- or 64-bits). 
@@ -46,10 +46,10 @@ typedef ptrdiff_float Afloat;
  */
 typedef void *Value;
 
-/** Prototype for a C function callable by the VM.
+/** Prototype for a C method callable by the VM.
 	It is passed the thread, through which it obtains parameters via the data stack. 
 	When done, it returns how many return values it has placed on the stack. */
-typedef int (*AcFuncp)(Value th);
+typedef int (*AcMethodp)(Value th);
 
 /** Quick, exact equivalence check between two values ('===')
  * Great for null, false, true, integers and symbols.

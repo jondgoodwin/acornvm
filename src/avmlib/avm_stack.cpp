@@ -2,13 +2,13 @@
  * A thread has one data stack which is an allocated array of Values, initialized to 'null'.
  *
  * The stack implementation is optimized for lean performance first, as its functions 
- * are called several times for every function or method call. Therefore, stack indices are not checked for
+ * are called several times for every method call. Therefore, stack indices are not checked for
  * validity (except when running in debug mode, where invalid indices generate exceptions).
  *
  * A current method's area of the data stack is bounded by pointers:
- * - th(th)->curfn->begin points to the bottom (at 0 index)
+ * - th(th)->curmethod->begin points to the bottom (at 0 index)
  * - th(th)->stk_top points just above the last (top) value
- * - th(th)->curfn->end points just above last allocated value on stack for method
+ * - th(th)->curmethod->end points just above last allocated value on stack for method
  *
  * @file
  *
@@ -29,16 +29,16 @@ extern "C" {
    HELPER MACROS
    ***************************************/
 
-/** Size of the function's stack area: base to top */
-#define stkSz(th) (th(th)->stk_top - th(th)->curfn->begin)
+/** Size of the method's stack area: base to top */
+#define stkSz(th) (th(th)->stk_top - th(th)->curmethod->begin)
 
 /** Is there room to increment stack top up by 1 */
-#define stkCanIncTop(th) assert((th(th)->stk_top+1 <= th(th)->curfn->end) && "stack top overflow")
+#define stkCanIncTop(th) assert((th(th)->stk_top+1 <= th(th)->curmethod->end) && "stack top overflow")
 
-/** Point to current function's stack value at position i.
+/** Point to current method's stack value at position i.
  * For a method: i=0 is self, i=1 is first parameter, etc. */
 #define stkAt(th,i) (assert_exp((i)>=0 && (i)<stkSz(th) && "invalid stack index", \
-	&th(th)->curfn->begin[i]))
+	&th(th)->curmethod->begin[i]))
 
 
 /* ****************************************
@@ -123,9 +123,9 @@ Value pushMixin(Value th, Value type, Value inheritype, AuintIdx size) {
 }
 
 /* Push and return the value for a method written in C */
-Value pushCMethod(Value th, AcFuncp func) {
+Value pushCMethod(Value th, AcMethodp meth) {
 	stkCanIncTop(th); /* Check if there is room */
-	return *th(th)->stk_top++ = newCMethod(th, func);
+	return *th(th)->stk_top++ = newCMethod(th, meth);
 }
 
 /* Push and return a new List value */
@@ -169,16 +169,16 @@ Value getFromTop(Value th, AintIdx idx) {
 	return *stkAt(th, stkSz(th) - idx - 1);
 }
 
-/* Return number of values on the current function's stack */
+/* Return number of values on the current method's stack */
 AuintIdx getTop(Value th) {
 	return (AuintIdx) (stkSz(th));
 }
 
-/* When index is positive, this indicates how many Values are on the function's stack.
+/* When index is positive, this indicates how many Values are on the method's stack.
  * This can shrink the stack or grow it (padding with 'null's).
  * A negative index removes that number of values off the top. */
 void setTop(Value th, AintIdx idx) {
-	Value *base = th(th)->curfn->begin;
+	Value *base = th(th)->curmethod->begin;
 
 	// If positive, idx is the index of top value on stack
 	if (idx >= 0) {
@@ -250,9 +250,9 @@ void stkRealloc(Value th, int newsize) {
 		CallInfo *ci;
 		AintIdx shift = th(th)->stack - oldstack;
 		th(th)->stk_top = th(th)->stk_top + shift;
-		for (ci = th(th)->curfn; ci != NULL; ci = ci->previous) {
+		for (ci = th(th)->curmethod; ci != NULL; ci = ci->previous) {
 			ci->end += shift;
-			ci->funcbase += shift;
+			ci->methodbase += shift;
 			ci->retTo += shift;
 			ci->begin += shift;
 		}
@@ -290,7 +290,7 @@ void stkGrow(Value th, AuintIdx extra) {
  */
 int needMoreLocal(Value th, AuintIdx needed) {
 	int success;
-	CallInfo *ci = th(th)->curfn;
+	CallInfo *ci = th(th)->curmethod;
 	vm_lock(th);
 
 	// Check if we already have enough allocated room on stack for more values
@@ -306,7 +306,7 @@ int needMoreLocal(Value th, AuintIdx needed) {
 		}
 	}
 
-	// adjust function's last allowed value upwards, as needed
+	// adjust method's last allowed value upwards, as needed
 	if (success && ci->end < th(th)->stk_top + needed)
 		ci->end = th(th)->stk_top + needed;
 

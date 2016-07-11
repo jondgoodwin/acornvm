@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 // ***********
-// Non-API C-Function functions
+// Non-API C-Method functions
 // ***********
 
 /** A temporary function for generating byte-code test programs */

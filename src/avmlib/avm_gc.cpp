@@ -146,20 +146,20 @@ void mem_markobjraw(Value th, MemInfo *mem) {
 	white2gray(mem);
 	switch (mem->enctyp) {
 
-	// Mark to black all symbols, strings, and functions (which have no embedded Values).
+	// Mark to black all symbols (which have no embedded Values).
 	// size is used to update gcmemtrav is size of black-marked mrmory areas.
 	case SymEnc: {
 		size = sym_memsize(sym_size(mem));
 		break;
 	}
 
-    // We mark too gray the collections have have embedded values
+    // We mark to gray the collections that have have embedded values
     // Push it on top of gray list for later handling by mem_marktopgray()
 	case StrEnc:
 	case ArrEnc:
 	case TblEnc: 
 	case PartEnc:
-	case FuncEnc:
+	case MethEnc:
 	case ThrEnc:
 	case VmEnc:
 	{
@@ -197,7 +197,7 @@ void mem_marktopgray(Value th) {
 	case StrEnc: strMark(th, (StrInfo*) o); return;
 	case ArrEnc: arrMark(th, (ArrInfo*) o);	return;
 	case TblEnc: tblMark(th, (TblInfo*)o); return;
-	case FuncEnc: funcMark(th, (FuncInfo *)o); return;
+	case MethEnc: methodMark(th, (MethodInfo *)o); return;
 	case ThrEnc: thrMark(th, (ThreadInfo *)o); return;
 	case VmEnc: vmMark(th, (VmInfo *)o); return;
 
@@ -263,7 +263,7 @@ void mem_sweepfree(Value th, MemInfo *mb) {
 	case StrEnc: strFree(th, (StrInfo*)mb); break;
 	case ArrEnc: arrFree(th, (ArrInfo *)mb); break;
 	case TblEnc: tblFree(th, (TblInfo *)mb); break;
-	case FuncEnc: funcFree(th, (FuncInfo*)mb); break;
+	case MethEnc: methodFree(th, (MethodInfo*)mb); break;
 	case ThrEnc: thrFree(th, (ThreadInfo *)mb); break;
 	default: assert(0);
 	}

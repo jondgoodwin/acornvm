@@ -13,45 +13,45 @@ namespace avm {
 extern "C" {
 #endif
 
-/* Create a new bytecode function/method value. */
-void genNew(Acorn* ac, int ismeth, Value name, Value src) {
+/* Create a new bytecode method value. */
+void genNew(Acorn* ac, Value name, Value src) {
 	mem_gccheck(ac->th);	// Incremental GC before memory allocation events
-	BFuncInfo *fn = (BFuncInfo*) mem_new(ac->th, FuncEnc, sizeof(BFuncInfo), NULL, 0);
-	funcFlags(fn) = (ismeth)? FUNC_FLG_METHOD : 0;
-	funcNParms(fn) = 0;
+	BMethodInfo *meth = (BMethodInfo*) mem_new(ac->th, MethEnc, sizeof(BMethodInfo), NULL, 0);
+	methodFlags(meth) = 0;
+	methodNParms(meth) = 0;
 
-	fn->name = name;
-	fn->source = src;
-	fn->code = NULL;
-	fn->maxstacksize = 20;
-	fn->size = 0;
-	fn->lits = NULL;
-	fn->litsz = 0;
-	fn->nbrlits = 0;
-	fn->locals = NULL;
-	fn->localsz = 0;
-	fn->nbrlocals = 0;
+	meth->name = name;
+	meth->source = src;
+	meth->code = NULL;
+	meth->maxstacksize = 20;
+	meth->size = 0;
+	meth->lits = NULL;
+	meth->litsz = 0;
+	meth->nbrlits = 0;
+	meth->locals = NULL;
+	meth->localsz = 0;
+	meth->nbrlocals = 0;
 
-	ac->func = fn;
+	ac->method = meth;
 	ac->ip = 0;
 	ac->reg_top = 0;
 }
 
 /* Put new instruction in code array */
 void genPutInstr(Acorn *ac, AuintIdx loc, Instruction i) {
-	mem_growvector(ac->th, ac->func->code, loc, ac->func->size, Instruction, INT_MAX);
-	ac->func->code[loc] = i;
+	mem_growvector(ac->th, ac->method->code, loc, ac->method->size, Instruction, INT_MAX);
+	ac->method->code[loc] = i;
 }
 
 /* Append new instruction to code array */
 void genAddInstr(Acorn *ac, Instruction i) {
-	mem_growvector(ac->th, ac->func->code, ac->ip, ac->func->size, Instruction, INT_MAX);
-	ac->func->code[ac->ip++] = i;
+	mem_growvector(ac->th, ac->method->code, ac->ip, ac->method->size, Instruction, INT_MAX);
+	ac->method->code[ac->ip++] = i;
 }
 
 /* Add a literal and return its index */
 int genAddLit(Acorn *ac, Value val) {
-	BFuncInfo* f = ac->func;
+	BMethodInfo* f = ac->method;
 
 	// See if we already have it
 	int i = f->nbrlits;
@@ -67,7 +67,7 @@ int genAddLit(Acorn *ac, Value val) {
 
 /* Look in reverse order for local variable, returning its register. Add if not found. */
 int genLocalVar(Acorn *ac, Value varnm) {
-	BFuncInfo* f = ac->func;
+	BMethodInfo* f = ac->method;
 	assert(isSym(varnm));
 
 	// Look to see if local variable already defined
@@ -87,24 +87,24 @@ int genLocalVar(Acorn *ac, Value varnm) {
 
 /* Add a parameter */
 void genAddParm(Acorn *ac, Value varnm) {
-	funcNParms(ac->func)++;
+	methodNParms(ac->method)++;
 	genLocalVar(ac, varnm);
 }
 
-/* Indicate the function has a variable number of parameters */
+/* Indicate the method has a variable number of parameters */
 void genVarParms(Acorn *ac) {
-	funcFlags(ac->func) = FUNC_FLG_VARPARM;
+	methodFlags(ac->method) = METHOD_FLG_VARPARM;
 }
 
-/* Raise function's max stack size if register is above it */
+/* Raise method's max stack size if register is above it */
 void genMaxStack(Acorn *ac, AuintIdx reg) {
-	if (ac->func->maxstacksize < reg)
-		ac->func->maxstacksize = reg+1;
+	if (ac->method->maxstacksize < reg)
+		ac->method->maxstacksize = reg+1;
 }
 
 /** Get the destination where Jump is going */
 int genGetJump (Acorn *ac, int ip) {
-	int offset = bc_j(ac->func->code[ip]);
+	int offset = bc_j(ac->method->code[ip]);
 	if (offset == BCNO_JMP)  /* point to itself represents end of list */
 		return BCNO_JMP;  /* end of list */
 	else
@@ -113,7 +113,7 @@ int genGetJump (Acorn *ac, int ip) {
 
 /** Set the Jump instruction at ip to jump to dest instruction */
 void genSetJump (Acorn *ac, int ip, int dest) {
-	Instruction *jmp = &ac->func->code[ip];
+	Instruction *jmp = &ac->method->code[ip];
 	int offset = dest-(ip+1);
 	assert(dest != BCNO_JMP);
 	if (((offset+BCBIAS_J) >> 16)!=0)

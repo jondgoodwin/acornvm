@@ -41,15 +41,15 @@ void thrInit(ThreadInfo* thr, VmInfo* vm, AuintIdx stksz) {
 	thr->stk_top = thr->stack;
 
 	// initialize call stack
-	CallInfo *ci = &thr->entryfn; // Initial callinfo struct is already allocated
+	CallInfo *ci = &thr->entrymethod; // Initial callinfo struct is already allocated
 	ci->next = ci->previous = NULL;
 	// ci->callstatus = 0;
 	ci->nresults = 0;
-	ci->funcbase = ci->retTo = thr->stk_top;
+	ci->methodbase = ci->retTo = thr->stk_top;
 	*thr->stk_top++ = aNull;  // Place for non-existent function
 	ci->begin = thr->stk_top;
 	ci->end = thr->stk_top + STACK_MINSIZE;
-	thr->curfn = ci;
+	thr->curmethod = ci;
 
 	thr->global = aNull;
 }
@@ -62,16 +62,16 @@ int isThread(Value th) {
 /** Internal routine to allocate and append a new CallInfo structure to end of call stack */
 CallInfo *thrGrowCI(Value th) {
 	CallInfo *ci = (CallInfo *) mem_gcrealloc(th, NULL, 0, sizeof(CallInfo));
-	assert(th(th)->curfn->next == NULL);
-	th(th)->curfn->next = ci;
-	ci->previous = th(th)->curfn;
+	assert(th(th)->curmethod->next == NULL);
+	th(th)->curmethod->next = ci;
+	ci->previous = th(th)->curmethod;
 	ci->next = NULL;
 	return ci;
 }
 
 /** Free all allocated CallInfo blocks in thread */
 void thrFreeCI(Value th) {
-	CallInfo *ci = th(th)->curfn;
+	CallInfo *ci = th(th)->curmethod;
 	CallInfo *next = ci->next;
 	ci->next = NULL;
 	while ((ci = next) != NULL) {
@@ -85,7 +85,7 @@ void thrFreeStacks(Value th) {
 	if (th(th)->stack == NULL)
 		return;  /* stack not completely built yet */
 	// Free call stack
-	th(th)->curfn = &th(th)->entryfn;
+	th(th)->curmethod = &th(th)->entrymethod;
 	thrFreeCI(th);
 	// Free data stack
 	mem_freearray(th, th(th)->stack, th(th)->size);  /* free stack array */

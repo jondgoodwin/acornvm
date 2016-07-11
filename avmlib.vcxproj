@@ -18,7 +18,7 @@
     <ClInclude Include="include\avmlib.h" />
     <ClInclude Include="include\avm\avm_api.h" />
     <ClInclude Include="include\avm\avm_array.h" />
-    <ClInclude Include="include\avm\avm_func.h" />
+    <ClInclude Include="include\avm\avm_method.h" />
     <ClInclude Include="include\avm\avm_table.h" />
     <ClInclude Include="include\avm\avm_memory.h" />
     <ClInclude Include="include\avm\avm_string.h" />
@@ -33,7 +33,7 @@
     <ClCompile Include="src\acorn\acn_gen.cpp" />
     <ClCompile Include="src\acorn\acn_main.cpp" />
     <ClCompile Include="src\avmlib\avm_array.cpp" />
-    <ClCompile Include="src\avmlib\avm_func.cpp" />
+    <ClCompile Include="src\avmlib\avm_method.cpp" />
     <ClCompile Include="src\avmlib\avm_gc.cpp" />
     <ClCompile Include="src\avmlib\avm_stack.cpp" />
     <ClCompile Include="src\avmlib\avm_table.cpp" />

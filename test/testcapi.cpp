@@ -22,7 +22,7 @@ void t(int test, const char *text) {
 	}
 }
 
-int test_cfunc(Value th) {
+int test_cmeth(Value th) {
 	t(getTop(th)==1, "getTop(th)==1");
 	t(getLocal(th, 0)==aTrue, "getLocal(th, 0)==aTrue");
 
@@ -223,20 +223,20 @@ void testCapi(void) {
 	pushGlobal(th, "$p");
 	t(popValue(th)==aNull, "popValue(th)==aNull"); // unknown global variable
 
-	// C-function and Thread call stack tests
+	// C-method and Thread call stack tests
 	i = getTop(th);
-	Value testcfn = aCFunc(th, test_cfunc, "test_cfunc", __FILE__);
-	pushValue(th, testcfn);
+	Value testcmeth = aCMethod(th, test_cmeth, "test_cmeth", __FILE__);
+	pushValue(th, testcmeth);
 	pushValue(th, aTrue); // Pass parameter
-	funcCall(th, 1, 1);
-	t(popValue(th)==aFalse, "c-function return success: popValue(th)==aFalse");
+	methodCall(th, 1, 1);
+	t(popValue(th)==aFalse, "c-method return success: popValue(th)==aFalse");
 	t(getTop(th)==i, "getTop(th)==0");
 
 	// Type API tests - makes use of built-in types, which use the API to create types and its methods
 	pushSym(th, "+");
 	pushValue(th, anInt(50));
 	pushValue(th, anInt(40));
-	funcCall(th, 2, 1);
+	methodCall(th, 2, 1);
 	t(popValue(th)==anInt(90), "popValue(th)==anInt(90)"); // Yay - first successful O-O request!
 	pushGlobal(th, "Integer");
 	t(isType(popValue(th)), "pushGlobal(th, 'Integer'); isType(popValue(th))");

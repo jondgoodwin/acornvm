@@ -40,8 +40,8 @@ void acn_init(Value th) {
 Value genTestPgm(Value th, int pgm) {
 	int saveip = 0;
 	Acorn* ac = &vm(th)->acornProgram;
-	genNew(ac, 0, aNull, aNull);
-	pushValue(th, ac->func);
+	genNew(ac, aNull, aNull);
+	pushValue(th, ac->method);
 	Value self = pushSym(th, "self");
 	switch (pgm) {
 
@@ -113,7 +113,7 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_ABC(OpCall, 4, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpTailCall, 2, 2, BCVARRET));
 
-		tblSet(th, vmlit(TypeIntm), fact, ac->func);
+		tblSet(th, vmlit(TypeIntm), fact, ac->method);
 
 		popValue(th);
 		popValue(th);
@@ -178,7 +178,7 @@ Value genTestPgm(Value th, int pgm) {
 	}
 	popValue(th);
 	popValue(th);
-	return ac->func;
+	return ac->method;
 }
 
 #ifdef __cplusplus

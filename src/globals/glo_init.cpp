@@ -96,7 +96,7 @@ void typ_list_init(Value th) {
 
 /** Call the method, passing its parameters */
 int typ_meth_get(Value th) {
-	funcCall(th, getTop(th)-1, BCVARRET);
+	methodCall(th, getTop(th)-1, BCVARRET);
 	return getTop(th);
 }
 

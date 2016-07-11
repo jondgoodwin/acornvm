@@ -34,9 +34,9 @@
  * The default is 200, which means that the collector runs at "twice" the speed of memory allocation. */
 #define AVM_GCMUL	200 /* GC runs 'twice the speed' of memory allocation */
 
-/** Minimum expected room on data stack c-functions */
+/** Minimum expected room on data stack for c-methods */
 #define STACK_MINSIZE 20
-/** Extra just-in-case room on stack, to provide safety in case a function goes too far */
+/** Extra just-in-case room on stack, to provide safety in case a method goes too far */
 #define STACK_EXTRA 5
 /** Initial size of a stack for a new thread */
 #define STACK_NEWSIZE 256

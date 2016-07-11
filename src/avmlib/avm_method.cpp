@@ -1,4 +1,4 @@
-/** Implements c-functions and c-methods.
+/** Implements c-methods.
  *
  * @file
  *
@@ -14,102 +14,86 @@ namespace avm {
 extern "C" {
 #endif
 
-/* Build a new c-function value, pointing to a function written in C */
-Value aCFunc(Value th, AcFuncp func, const char* name, const char* src) {
+/* Build a new c-method value, pointing to a method written in C */
+Value aCMethod(Value th, AcMethodp method, const char* name, const char* src) {
 	// Put on stack to keep safe from GC
 	pushValue(th, newStr(th, name));
 	pushValue(th, newStr(th, src));
 
 	mem_gccheck(th);	// Incremental GC before memory allocation events
-	CFuncInfo *fn = (CFuncInfo*) mem_new(th, FuncEnc, sizeof(CFuncInfo), NULL, 0);
-	funcFlags(fn) = FUNC_FLG_C;
-	fn->funcp = func;
-	fn->source = popValue(th);
-	fn->name = popValue(th);
+	CMethodInfo *meth = (CMethodInfo*) mem_new(th, MethEnc, sizeof(CMethodInfo), NULL, 0);
+	methodFlags(meth) = METHOD_FLG_C;
+	meth->methodp = method;
+	meth->source = popValue(th);
+	meth->name = popValue(th);
 
-	return fn;
+	return meth;
 }
 
-/* Build a new c-method value, pointing to a function written in C */
-Value aCMethod(Value th, AcFuncp func, const char* name, const char* src) {
-	// Put on stack to keep safe from GC
-	pushValue(th, newStr(th, name));
-	pushValue(th, newStr(th, src));
-
+/* Build a new c-method value, pointing to a method written in C */
+Value newCMethod(Value th, AcMethodp method) {
 	mem_gccheck(th);	// Incremental GC before memory allocation events
-	CFuncInfo *fn = (CFuncInfo*) mem_new(th, FuncEnc, sizeof(CFuncInfo), NULL, 0);
-	funcFlags(fn) = FUNC_FLG_C | FUNC_FLG_METHOD;
-	fn->funcp = func;
-	fn->source = popValue(th);
-	fn->name = popValue(th);
-
-	return fn;
+	CMethodInfo *meth = (CMethodInfo*) mem_new(th, MethEnc, sizeof(CMethodInfo), NULL, 0);
+	methodFlags(meth) = METHOD_FLG_C;
+	meth->methodp = method;
+	return meth;
 }
 
-/* Build a new c-method value, pointing to a function written in C */
-Value newCMethod(Value th, AcFuncp func) {
-	mem_gccheck(th);	// Incremental GC before memory allocation events
-	CFuncInfo *fn = (CFuncInfo*) mem_new(th, FuncEnc, sizeof(CFuncInfo), NULL, 0);
-	funcFlags(fn) = FUNC_FLG_C | FUNC_FLG_METHOD;
-	fn->funcp = func;
-	return fn;
-}
-
-/** Return codes from funcCallPrep */
-enum FuncTypes {
-	FuncBad,	//!< Not a valid function (probably unknown method)
-	FuncBC,		//!< Byte-code function
-	FuncC		//!< C-function
+/** Return codes from methodCallPrep */
+enum MethodTypes {
+	MethodBad,	//!< Not a valid method (probably unknown method)
+	MethodBC,		//!< Byte-code method
+	MethodC		//!< C-method
 };
 
-/** Prepare call to method or function value on stack (with parms above it). 
+/** Prepare call to method value on stack (with parms above it). 
  * Specify how many return values to expect to find on stack.
- * Returns 0 if bad function, 1 if bytecode, 2 if C-function
+ * Returns 0 if bad method, 1 if bytecode, 2 if C-method
  *
- * For c-functions, all parameters are passed, reserving 20 slots of stack space.
+ * For c-methods, all parameters are passed, reserving 20 slots of stack space.
  *
  * For byte code, parameters are massaged to ensure the expected number of
  * fixed parameters and establish a holding place for the variable parameters.
  */
-FuncTypes funcCallPrep(Value th, Value *funcval, int nexpected) {
+MethodTypes methodCallPrep(Value th, Value *methodval, int nexpected) {
 
-	// Return if we do not have a valid function to call
-	if (!isFunc(*funcval))
-		return FuncBad;
+	// Return if we do not have a valid method to call
+	if (!isMethod(*methodval))
+		return MethodBad;
 
 	// Start and initialize a new CallInfo block
-	CallInfo * ci = th(th)->curfn = th(th)->curfn->next ? th(th)->curfn->next : thrGrowCI(th);
+	CallInfo * ci = th(th)->curmethod = th(th)->curmethod->next ? th(th)->curmethod->next : thrGrowCI(th);
 	ci->nresults = nexpected;
-	ci->retTo = ci->funcbase = funcval;  // Address of function value, varargs and return values
-	ci->begin = ci->end = funcval + 1; // Parameter values are right after function value
+	ci->retTo = ci->methodbase = methodval;  // Address of method value, varargs and return values
+	ci->begin = ci->end = methodval + 1; // Parameter values are right after method value
 
-	// C-function call - Does the whole thing: setup, call and stack clean up after return
-	if (isCFunc(*funcval)) {
+	// C-method call - Does the whole thing: setup, call and stack clean up after return
+	if (isCMethod(*methodval)) {
 		// ci->callstatus=0;
 
 		// Allocate room for local variables, no parm adjustments needed
 		needMoreLocal(th, STACK_MINSIZE);
 
-		return FuncC; // C-function return
+		return MethodC; // C-method return
 	}
 
-	// Bytecode function call - Only does set-up, call done by caller
+	// Bytecode method call - Only does set-up, call done by caller
 	else {
-		int nparms = th(th)->stk_top - funcval - 1; // Actual number of parameters pushed
-		BFuncInfo *bfunc = (BFuncInfo*) *funcval; // Capture it now before it moves
+		int nparms = th(th)->stk_top - methodval - 1; // Actual number of parameters pushed
+		BMethodInfo *bmethod = (BMethodInfo*) *methodval; // Capture it now before it moves
 
 		// Initialize byte-code's call info
-		ci->ip = bfunc->code; // Start with first instruction
+		ci->ip = bmethod->code; // Start with first instruction
 
 		// Ensure sufficient data stack space.
-		needMoreLocal(th, bfunc->maxstacksize); // funcval may no longer be reliable
+		needMoreLocal(th, bmethod->maxstacksize); // methodval may no longer be reliable
 
 		// If we do not have enough fixed parameters then add in nulls
-		for (; nparms < funcNParms(bfunc); nparms++)
+		for (; nparms < methodNParms(bmethod); nparms++)
 			*th(th)->stk_top++ = aNull;
 
 		// If we expected variable number of parameters, tidy them
-		if (isVarParm(bfunc)) {
+		if (isVarParm(bmethod)) {
 			int i;
 
 			// Reset where fixed parms start (where we are about to put them)
@@ -117,7 +101,7 @@ FuncTypes funcCallPrep(Value th, Value *funcval, int nexpected) {
 			ci->begin = th(th)->stk_top;
 
 			// Copy fixed parms up into new frame start
-			for (i=0; i<funcNParms(bfunc); i++) {
+			for (i=0; i<methodNParms(bmethod); i++) {
 				*th(th)->stk_top++ = *from;
 				*from++ = aNull;  // we don't want dupes that might confuse garbage collector
 			}
@@ -126,60 +110,60 @@ FuncTypes funcCallPrep(Value th, Value *funcval, int nexpected) {
 		// Bytecode rarely uses stk_top; put it above local frame stack.
 		th(th)->stk_top = ci->end;
 
-		return FuncBC; // byte-code function return
+		return MethodBC; // byte-code method return
 	}
 }
 
-/** Prepare tailcall to method or function value on stack (with parms above it). 
+/** Prepare tailcall to method value on stack (with parms above it). 
  * Specify how many return values to expect to find on stack.
- * Returns 0 if bad function, 1 if bytecode, 2 if C-function
+ * Returns 0 if bad method, 1 if bytecode, 2 if C-method
  *
- * For c-functions, all parameters are passed, reserving 20 slots of stack space.
+ * For c-methods, all parameters are passed, reserving 20 slots of stack space.
  *
  * For byte code, parameters are massaged to ensure the expected number of
  * fixed parameters and establish a holding place for the variable parameters.
  */
-FuncTypes funcTailCallPrep(Value th, Value *funcval, int nexpected) {
+MethodTypes methodTailCallPrep(Value th, Value *methodval, int nexpected) {
 
-	// Return if we do not have a valid function to call
-	if (!isFunc(*funcval))
-		return FuncBad;
+	// Return if we do not have a valid method to call
+	if (!isMethod(*methodval))
+		return MethodBad;
 
 	// Re-initialize current CallInfo frame
-	CallInfo * ci = th(th)->curfn;
-	int nparms = th(th)->stk_top - funcval - 1;
-	memmove(ci->funcbase, funcval, (nparms+1)*sizeof(Value)); // Move down parms
-	th(th)->stk_top = ci->funcbase + nparms + 1;
+	CallInfo * ci = th(th)->curmethod;
+	int nparms = th(th)->stk_top - methodval - 1;
+	memmove(ci->methodbase, methodval, (nparms+1)*sizeof(Value)); // Move down parms
+	th(th)->stk_top = ci->methodbase + nparms + 1;
 	ci->nresults = nexpected;
-	ci->retTo = ci->funcbase;  // Address of function value, varargs and return values
-	ci->begin = ci->end = ci->funcbase + 1; // Parameter values are right after function value
+	ci->retTo = ci->methodbase;  // Address of method value, varargs and return values
+	ci->begin = ci->end = ci->methodbase + 1; // Parameter values are right after method value
 
-	// C-function call - Does the whole thing: setup, call and stack clean up after return
-	if (isCFunc(*funcval)) {
+	// C-method call - Does the whole thing: setup, call and stack clean up after return
+	if (isCMethod(*methodval)) {
 		// ci->callstatus=0;
 
 		// Allocate room for local variables, no parm adjustments needed
 		needMoreLocal(th, STACK_MINSIZE);
 
-		return FuncC; // C-function return
+		return MethodC; // C-method return
 	}
 
-	// Bytecode function call - Only does set-up, call done by caller
+	// Bytecode method call - Only does set-up, call done by caller
 	else {
-		BFuncInfo *bfunc = (BFuncInfo*) *ci->funcbase; // Capture it now before it moves
+		BMethodInfo *bmethod = (BMethodInfo*) *ci->methodbase; // Capture it now before it moves
 
 		// Initialize byte-code's call info
-		ci->ip = bfunc->code; // Start with first instruction
+		ci->ip = bmethod->code; // Start with first instruction
 
 		// Ensure sufficient data stack space.
-		needMoreLocal(th, bfunc->maxstacksize); // funcval may no longer be reliable
+		needMoreLocal(th, bmethod->maxstacksize); // methodval may no longer be reliable
 
 		// If we do not have enough fixed parameters then add in nulls
-		for (; nparms < funcNParms(bfunc); nparms++)
+		for (; nparms < methodNParms(bmethod); nparms++)
 			*th(th)->stk_top++ = aNull;
 
 		// If we expected variable number of parameters, tidy them
-		if (isVarParm(bfunc)) {
+		if (isVarParm(bmethod)) {
 			int i;
 
 			// Reset where fixed parms start (where we are about to put them)
@@ -187,7 +171,7 @@ FuncTypes funcTailCallPrep(Value th, Value *funcval, int nexpected) {
 			ci->begin = th(th)->stk_top;
 
 			// Copy fixed parms up into new frame start
-			for (i=0; i<funcNParms(bfunc); i++) {
+			for (i=0; i<methodNParms(bmethod); i++) {
 				*th(th)->stk_top++ = *from;
 				*from++ = aNull;  // we don't want dupes that might confuse garbage collector
 			}
@@ -196,15 +180,15 @@ FuncTypes funcTailCallPrep(Value th, Value *funcval, int nexpected) {
 		// Bytecode rarely uses stk_top; put it above local frame stack.
 		th(th)->stk_top = ci->end;
 
-		return FuncBC; // byte-code function return
+		return MethodBC; // byte-code method return
 	}
 }
 
-/** Return nulls instead of doing an invalid function call */
-void funcRetNulls(Value th) {
+/** Return nulls instead of doing an invalid method call */
+void methodRetNulls(Value th) {
 
 	// Copy the desired number of return values (nulls) where indicated
-	CallInfo *ci =th(th)->curfn;
+	CallInfo *ci =th(th)->curmethod;
 	Value* to = ci->retTo;
 	AintIdx want = ci->nresults; // how many caller wants
 	while (want--)
@@ -212,13 +196,13 @@ void funcRetNulls(Value th) {
 	return;
 }
 
-/** Execute C function (and do return) at thread's current call frame 
- * Call and data stack already set up by funcCallPrep. */
-void funcRunC(Value th) {
-	CallInfo *ci =th(th)->curfn;
+/** Execute C method (and do return) at thread's current call frame 
+ * Call and data stack already set up by methodCallPrep. */
+void methodRunC(Value th) {
+	CallInfo *ci =th(th)->curmethod;
 
-	// Perform C function, capturing number of return values
-	AintIdx have = (((CFuncInfo*)(*ci->funcbase))->funcp)(th);
+	// Perform C method, capturing number of return values
+	AintIdx have = (((CMethodInfo*)(*ci->methodbase))->methodp)(th);
 	
 	// Calculate how any we have to copy down and how many nulls for padding
 	Value *from = th(th)->stk_top-have;
@@ -238,15 +222,15 @@ void funcRunC(Value th) {
 
 	// Update thread's values
 	th(th)->stk_top = to; // Mark position of last returned
-	th(th)->curfn = ci->previous; // Back up a frame
+	th(th)->curmethod = ci->previous; // Back up a frame
 	return;
 }
 
-/** Execute byte-code function pointed at by thread's current call frame */
-void funcRunBC(Value th) {
-	CallInfo *ci = ((ThreadInfo*)th)->curfn;
-	BFuncInfo* func = (BFuncInfo*) (*ci->funcbase);
-	Value *lits = func->lits; 
+/** Execute byte-code method pointed at by thread's current call frame */
+void methodRunBC(Value th) {
+	CallInfo *ci = ((ThreadInfo*)th)->curmethod;
+	BMethodInfo* meth = (BMethodInfo*) (*ci->methodbase);
+	Value *lits = meth->lits; 
 	Value *stkbeg = ci->begin;
 
 	// main loop of interpreter
@@ -300,7 +284,7 @@ void funcRunBC(Value th) {
 		// OpLoadVararg: R(A), R(A+1), ..., R(A+B-1) := vararg
 		// if (B == 0xFF), use actual number of varargs and set top
 		case OpLoadVararg: {
-			AuintIdx nbrvar = stkbeg - ci->funcbase - funcNParms(func) - 1;
+			AuintIdx nbrvar = stkbeg - ci->methodbase - methodNParms(meth) - 1;
 			AuintIdx cnt = bc_b(i);
 			if (cnt==BCVARRET) {
 				cnt = nbrvar;  /* get all var. arguments */
@@ -405,17 +389,17 @@ void funcRunBC(Value th) {
 
 			// Prepare call frame and stack, then perform the call
 			*rega = getProperty(th, *(rega+1), *rega);
-			switch (funcCallPrep(th, rega, bc_c(i))) {
-			case FuncBad: 
-				funcRetNulls(th); 
+			switch (methodCallPrep(th, rega, bc_c(i))) {
+			case MethodBad: 
+				methodRetNulls(th); 
 				break;
-			case FuncC:
-				funcRunC(th);
+			case MethodC:
+				methodRunC(th);
 				break;
-			case FuncBC:
-				ci = th(th)->curfn;
-				func = (BFuncInfo*) (*ci->funcbase);
-				lits = func->lits; // literals
+			case MethodBC:
+				ci = th(th)->curmethod;
+				meth = (BMethodInfo*) (*ci->methodbase);
+				lits = meth->lits; // literals
 				stkbeg = ci->begin;
 			} }
 			break;
@@ -431,17 +415,17 @@ void funcRunBC(Value th) {
 
 			// Prepare call frame and stack, then perform the call
 			*rega = getProperty(th, *(rega+1), *rega);
-			switch (funcTailCallPrep(th, rega, bc_c(i))) {
-			case FuncBad: 
-				funcRetNulls(th); 
+			switch (methodTailCallPrep(th, rega, bc_c(i))) {
+			case MethodBad: 
+				methodRetNulls(th); 
 				break;
-			case FuncC:
-				funcRunC(th);
+			case MethodC:
+				methodRunC(th);
 				break;
-			case FuncBC:
-				ci = th(th)->curfn;
-				func = (BFuncInfo*) (*ci->funcbase);
-				lits = func->lits; // literals
+			case MethodBC:
+				ci = th(th)->curmethod;
+				meth = (BMethodInfo*) (*ci->methodbase);
+				lits = meth->lits; // literals
 				stkbeg = ci->begin;
 			} }
 			break;
@@ -456,19 +440,19 @@ void funcRunBC(Value th) {
 				th(th)->stk_top = rega+b+1;
 
 			// Prepare call frame and stack, then perform the call
-			FuncTypes ftyp = funcCallPrep(th, rega, bc_c(i));
-			th(th)->curfn->retTo += 2;
+			MethodTypes ftyp = methodCallPrep(th, rega, bc_c(i));
+			th(th)->curmethod->retTo += 2;
 			switch (ftyp) {
-			case FuncBad: 
-				funcRetNulls(th); 
+			case MethodBad: 
+				methodRetNulls(th); 
 				break;
-			case FuncC:
-				funcRunC(th);
+			case MethodC:
+				methodRunC(th);
 				break;
-			case FuncBC:
-				ci = th(th)->curfn;
-				func = (BFuncInfo*) (*ci->funcbase);
-				lits = func->lits; // literals
+			case MethodBC:
+				ci = th(th)->curmethod;
+				meth = (BMethodInfo*) (*ci->methodbase);
+				lits = meth->lits; // literals
 				stkbeg = ci->begin;
 			} }
 			break;
@@ -480,11 +464,11 @@ void funcRunBC(Value th) {
 		case OpReturn:
 		{
 			// Calculate how any we have to copy down and how many nulls for padding
-			Value* to = th(th)->curfn->retTo;
+			Value* to = th(th)->curmethod->retTo;
 			AintIdx have = bc_b(i); // return values we have
 			if (have == BCVARRET) // have variable # of return values?
 				have = th(th)->stk_top - rega; // Get all up to top
-			AintIdx want = th(th)->curfn->nresults; // how many caller wants
+			AintIdx want = th(th)->curmethod->nresults; // how many caller wants
 			AintIdx nulls = 0; // how many nulls for padding
 			if (have != want && want!=BCVARRET) { // performance penalty only to mismatches
 				if (have > want) have = want; // cap down to what we want
@@ -499,17 +483,17 @@ void funcRunBC(Value th) {
 
 			// Update thread's values
 			th(th)->stk_top = to; // Mark position of last returned
-			ci = th(th)->curfn = ci->previous; // Back up a frame
+			ci = th(th)->curmethod = ci->previous; // Back up a frame
 
-			// Return to 'c' function caller, if we were called from there
-			if (!isFunc(*ci->funcbase) || isCFunc(*ci->funcbase))
+			// Return to 'c' method caller, if we were called from there
+			if (!isMethod(*ci->methodbase) || isCMethod(*ci->methodbase))
 				return;
 
 			// For bytecode, restore info from the previous call stack frame
 			if (want != BCVARRET) 
 				th(th)->stk_top = ci->end; // Restore top to end for known # of returns
-			func = (BFuncInfo*) (*ci->funcbase);
-			lits = func->lits; 
+			meth = (BMethodInfo*) (*ci->methodbase);
+			lits = meth->lits; 
 			stkbeg = ci->begin;
 			}
 			break;
@@ -522,25 +506,25 @@ void funcRunBC(Value th) {
   }
 }
 
-/* Call a method or function value placed on stack (with nparms above it). 
+/* Call a method value placed on stack (with nparms above it). 
  * Indicate how many return values to expect to find on stack. */
-void funcCall(Value th, int nparms, int nexpected) {
-	Value* funcpos = th(th)->stk_top - nparms - 1;
+void methodCall(Value th, int nparms, int nexpected) {
+	Value* methodpos = th(th)->stk_top - nparms - 1;
 
-	// If "function" is a symbol, treat it as a method to lookup
-	if (isSym(*funcpos))
-		*funcpos = getProperty(th, *(funcpos+1), *funcpos);
+	// If "method" is a symbol, treat it as a property to lookup
+	if (isSym(*methodpos))
+		*methodpos = getProperty(th, *(methodpos+1), *methodpos);
 
 	// Prepare call frame and stack, then perform the call
-	switch (funcCallPrep(th, funcpos, nexpected)) {
-	case FuncBad: 
-		funcRetNulls(th);
+	switch (methodCallPrep(th, methodpos, nexpected)) {
+	case MethodBad: 
+		methodRetNulls(th);
 		break;
-	case FuncC:
-		funcRunC(th);
+	case MethodC:
+		methodRunC(th);
 		break;
-	case FuncBC:
-		funcRunBC(th);
+	case MethodBC:
+		methodRunBC(th);
 		break;
 	}
 }

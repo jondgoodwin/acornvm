@@ -81,7 +81,7 @@ enum EncType {
 	SymEnc,		//!< Symbol
 	ThrEnc,		//!< Thread
 	VmEnc,		//!< Virtual Machine
-	FuncEnc,	//!< C or Bytecode function
+	MethEnc,	//!< C or Bytecode method
 
 	/* after this, all encodings use typed info header */
 	StrEnc,		//!< String (bytes)

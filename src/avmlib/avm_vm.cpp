@@ -109,7 +109,7 @@ void vm_outofmemory(void) {
 
 /* Call when we want to overflow max stack size */
 void vm_outofstack(void) {
-	puts("Acorn VM wants to overflow max stack size. Runaway recursive function?");
+	puts("Acorn VM wants to overflow max stack size. Runaway recursive method?");
 	exit(1);
 }
 

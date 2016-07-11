@@ -29,15 +29,15 @@ typedef struct CallInfo {
 	struct CallInfo *next;				//!< call stack chain next link
 
 	// Data stack pointers
-	Value *funcbase;					//!< Points to function value, just below varargs
+	Value *methodbase;					//!< Points to method value, just below varargs
 	Value *retTo;						//!< Where to place return values
-	Value *begin;						//!< Points to function's parameters and local vars 
-	Value *end;							//!< Points to highest allocated area for function
+	Value *begin;						//!< Points to method's parameters and local vars 
+	Value *end;							//!< Points to highest allocated area for method
 
 	// Bytecode only
 	Instruction *ip;					//!< Pointer to current instruction
 
-	short nresults;						//!< expected number of results from this function
+	short nresults;						//!< expected number of results from this method
 	// char callstatus;					//!< flags indicating call status for this frame
 } CallInfo;
 
@@ -56,8 +56,8 @@ typedef struct ThreadInfo {
 	Value *stk_last;	//!< Points to EXTRA slots below the highest stack value
 
 	// Call stack
-	CallInfo *curfn;	//!< Call info for current function
-	CallInfo entryfn;	//!< Call info for C-function that started this thread
+	CallInfo *curmethod;	//!< Call info for current method
+	CallInfo entrymethod;	//!< Call info for C-method that started this thread
 } ThreadInfo;
 
 /** Mark all in-use thread values for garbage collection 

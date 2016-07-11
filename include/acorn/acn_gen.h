@@ -35,11 +35,11 @@ extern "C" {
 #define BCINS_AJ(o, a, j)	BCINS_ABx(o, a, ((int16_t)(j)+BCBIAS_J)) //!< Build a jump instruction
 
 // ***********
-// Non-API C-Function functions
+// Non-API C-Method functions
 // ***********
 
-/** Create a new bytecode function/method value. */
-void genNew(Acorn *ac, int ismeth, Value name, Value src);
+/** Create a new bytecode method value. */
+void genNew(Acorn *ac, Value name, Value src);
 /** Put new byte-code instruction to code array */
 void genPutInstr(Acorn *ac, AuintIdx loc, Instruction i);
 /** Append new instruction to code array */
@@ -50,9 +50,9 @@ int genAddLit(Acorn *ac, Value val);
 int genLocalVar(Acorn *ac, Value varnm);
 /** Add a parameter */
 void genAddParm(Acorn *ac, Value sym);
-/** Indicate the function has a variable number of parameters */
+/** Indicate the method has a variable number of parameters */
 void genVarParms(Acorn *ac);
-/** Raise function's max stack size if register is above it */
+/** Raise method's max stack size if register is above it */
 void genMaxStack(Acorn *ac, AuintIdx reg);
 /** Set the jump instruction link chain starting at listip to jump to dest */
 void genSetJumpList(Acorn *ac, int listip, int dest);

@@ -55,7 +55,7 @@ Value getType(Value th, Value val) {
 		case SymEnc: return vmlit(TypeSymm);
 		case ThrEnc: return vmlit(TypeThrm);
 		case VmEnc: return vmlit(TypeVmm);
-		case FuncEnc: return vmlit(TypeMethm);
+		case MethEnc: return vmlit(TypeMethm);
 		// Otherwise, use the type the instance claims
 		default: return ((MemInfoT*)val)->type;
 		}
