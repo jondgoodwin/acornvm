@@ -39,7 +39,7 @@ extern "C" {
 // ***********
 
 /** Create a new bytecode method value. */
-void genNew(Acorn *ac, Value name, Value src);
+void genNew(Acorn *ac);
 /** Put new byte-code instruction to code array */
 void genPutInstr(Acorn *ac, AuintIdx loc, Instruction i);
 /** Append new instruction to code array */

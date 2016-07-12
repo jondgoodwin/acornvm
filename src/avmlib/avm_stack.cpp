@@ -104,10 +104,28 @@ Value pushSyml(Value th, const char *str, AuintIdx len) {
 	return newSym(th, th(th)->stk_top++, str, len);
 }
 
+/* Push and return a new String value */
+Value pushString(Value th, Value type, const char *str) {
+	stkCanIncTop(th); /* Check if there is room */
+	return newStr(th, th(th)->stk_top++, (type==aNull)? vmlit(TypeTextm) : type, str, strlen(str));
+}
+
+/* Push and return a new String value of size with a copy of str bytes */
+AVM_API Value pushStringl(Value th, Value type, const char *str, AuintIdx size) {
+	stkCanIncTop(th); /* Check if there is room */
+	return newStr(th, th(th)->stk_top++, (type==aNull)? vmlit(TypeTextm) : type, str, size);
+}
+
+/* Push and return a new Array value */
+Value pushArray(Value th, Value type, AuintIdx size) {
+	stkCanIncTop(th); /* Check if there is room */
+	return newArr(th, th(th)->stk_top++, (type==aNull)? vmlit(TypeListm) : type,  size);
+}
+
 /* Push and return a new hashed table value */
 Value pushTbl(Value th, Value type, AuintIdx size) {
 	stkCanIncTop(th); /* Check if there is room */
-	return newTbl(th, th(th)->stk_top++, type, size);
+	return newTbl(th, th(th)->stk_top++, (type==aNull)? vmlit(TypeIndexm) : type, size);
 }
 
 /* Push and return a new Type value */
@@ -125,13 +143,28 @@ Value pushMixin(Value th, Value type, Value inheritype, AuintIdx size) {
 /* Push and return the value for a method written in C */
 Value pushCMethod(Value th, AcMethodp meth) {
 	stkCanIncTop(th); /* Check if there is room */
-	return *th(th)->stk_top++ = newCMethod(th, meth);
+	return newCMethod(th, th(th)->stk_top++, meth);
 }
 
-/* Push and return a new List value */
-Value pushList(Value th, AuintIdx size) {
+/* Push and return a new Stack value */
+Value pushThread(Value th) {
 	stkCanIncTop(th); /* Check if there is room */
-	return newArr(th, th(th)->stk_top++, vmlit(TypeListm), size);
+	return newThread(th, th(th)->stk_top++, 200);
+}
+
+/* Push and return the VM's value */
+Value pushVM(Value th) {
+	stkCanIncTop(th); /* Check if there is room */
+	return *th(th)->stk_top++ = vm(th);
+}
+
+/* Push and return the value of the named member of the table found at the stack's specified index */
+Value pushMember(Value th, AintIdx tblidx, const char *mbrnm, Value val) {
+	stkCanIncTop(th); /* Check if there is room */
+	Value tbl = *stkAt(th, tblidx);
+	assert(isTbl(tbl));
+	newSym(th, th(th)->stk_top++, mbrnm, strlen(mbrnm));
+	return *(th(th)->stk_top-1) = tblGet(th, tbl, *(th(th)->stk_top-1));
 }
 
 /* Put the local stack's top value into the named member of the table found at the stack's specified index */
@@ -199,7 +232,7 @@ void setTop(Value th, AintIdx idx) {
    ***************************************/
 
 /* Push and return the symbolically-named global variable's value */
-Value pushGlobal(Value th, const char *var) {
+Value pushGloVar(Value th, const char *var) {
 	stkCanIncTop(th); /* Check if there is room */
 	assert(isTbl(th(th)->global));
 	Value val = newSym(th, th(th)->stk_top++, var, strlen(var));
@@ -208,7 +241,7 @@ Value pushGlobal(Value th, const char *var) {
 }
 
 /* Alter the symbolically-named global variable to have the value popped off the local stack */
-void popGlobal(Value th, const char *var) {
+void popGloVar(Value th, const char *var) {
 	assert(stkSz(th)>0); // Must be at least one value to remove!
 	assert(isTbl(th(th)->global));
 	Value val = newSym(th, th(th)->stk_top++, var, strlen(var));
@@ -217,7 +250,7 @@ void popGlobal(Value th, const char *var) {
 }
 
 /* Push the value of the current process thread's global variable table. */
-Value pushGlobalTbl(Value th) {
+Value pushGlobal(Value th) {
 	stkCanIncTop(th); /* Check if there is room */
 	return *th(th)->stk_top++ = th(th)->global;
 }

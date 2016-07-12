@@ -117,8 +117,8 @@ extern "C" {
 		TypeVmm,	//!< Vm mixin
 		TypeSymc,	//!< Symbol class
 		TypeSymm,	//!< Symbol mixin
-		TypeStrc,	//!< String class
-		TypeStrm,	//!< String mixin
+		TypeTextc,	//!< Text class
+		TypeTextm,	//!< Text mixin
 		TypeListc,	//!< List class
 		TypeListm,	//!< List mixin
 		TypeIndexc,	//!< Index class

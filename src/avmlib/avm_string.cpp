@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 /* Return a string value containing the byte sequence. */
-Value newStrl(Value th, const char *str, AuintIdx len) {
+Value newStr(Value th, Value *dest, Value type, const char *str, AuintIdx len) {
 	StrInfo *val;
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 
@@ -33,17 +33,12 @@ Value newStrl(Value th, const char *str, AuintIdx len) {
 	}
 	// If not provided, create null string
 	else {
-		val->str[0] = '\0';
-		val->size = 0;
+		val->str[0] = '\0'; // just in case
+		val->size = len;
 	}
 	val->str[len] = '\0'; // put guaranteed 0-terminator, just in case
-	val->type = vmlit(TypeStrm); // Assume default type
-	return (Value) val;
-}
-
-/* Calculate length of c-string, then use aStrl(). */
-Value newStr(Value th, const char *str) {
-	return newStrl(th,str,strlen(str));
+	val->type = type;
+	return *dest = (Value) val;
 }
 
 /* Return 1 if the value is a String, otherwise 0 */

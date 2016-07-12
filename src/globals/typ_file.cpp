@@ -14,7 +14,7 @@ namespace avm {
 extern "C" {
 #endif
 
-/** Get contents for passed filename string or Url */
+/** Get contents for passed filename string or url */
 int typ_file_get(Value th) {
 	Value fnval = getLocal(th,0);
 
@@ -35,8 +35,7 @@ int typ_file_get(Value th) {
 	fseek(file, 0, SEEK_SET);
 
 	// Create the string buffer (which will be returned)
-	Value strbuf;
-	pushValue(th, strbuf = newStrl(th, "", size));
+	Value strbuf = pushStringl(th, aNull, NULL, size);
 
 	// Load the data into an allocated buffer
 	fread(str_cstr(strbuf), 1, size, file);
@@ -51,7 +50,7 @@ Value typ_file_init(Value th) {
 	Value typ = pushType(th, vmlit(TypeType), 1);
 		pushCMethod(th, typ_file_get);
 		popMember(th, 0, "get");
-	popGlobal(th, "File");
+	popGloVar(th, "File");
 	return typ;
 }
 

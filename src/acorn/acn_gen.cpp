@@ -14,14 +14,12 @@ extern "C" {
 #endif
 
 /* Create a new bytecode method value. */
-void genNew(Acorn* ac, Value name, Value src) {
+void genNew(Acorn* ac) {
 	mem_gccheck(ac->th);	// Incremental GC before memory allocation events
 	BMethodInfo *meth = (BMethodInfo*) mem_new(ac->th, MethEnc, sizeof(BMethodInfo), NULL, 0);
 	methodFlags(meth) = 0;
 	methodNParms(meth) = 0;
 
-	meth->name = name;
-	meth->source = src;
 	meth->code = NULL;
 	meth->maxstacksize = 20;
 	meth->size = 0;

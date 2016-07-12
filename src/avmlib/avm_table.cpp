@@ -447,7 +447,7 @@ void addMixin(Value th, Value type, Value mixin) {
 
 	// Field is a type; turn into an array
 	else {
-		Value arr = pushList(th, 2);
+		Value arr = pushArray(th, aNull, 2);
 		arrSet(th, arr, 0, mixin);
 		arrSet(th, arr, 1, typp->inheritype);
 		typp->inheritype = popValue(th);

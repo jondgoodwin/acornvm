@@ -96,6 +96,9 @@ Value gloGet(Value th, Value var);
 /** Add or change a global variable */
 void gloSet(Value th, Value var, Value val);
 
+/** Create a new Thread with a starter stack. */
+Value newThread(Value th, Value *dest, AuintIdx stksz);
+
 #ifdef __cplusplus
 } // end "C"
 } // end namespace

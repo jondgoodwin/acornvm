@@ -1,6 +1,7 @@
-/** Implements methods, particularly those built in C.
+/** Implements methods built in C and Acorn (compiled to bytecode).
  *
- * Methods are callable procedures whose first implicit parameter is 'self'
+ * Methods are callable procedures whose first implicit parameter is 'self'.
+ * They always return at least one value.
  *
  * A method implemented in C is only passed the current thread (th).
  * Its actual parameters are placed on the thread's stack.
@@ -30,8 +31,6 @@ extern "C" {
 /** The common header fields for a method. */
 #define MemCommonInfoMeth \
 	MemCommonInfoGray; /**< Common info header */ \
-	Value name;		/**< Method's name (a string) */ \
-	Value source   /**< Method's source (Filename or Url) & anchor */
 
 /** The generic structure for method Values */
 typedef struct MethodInfo {
@@ -161,9 +160,7 @@ typedef struct BMethodInfo {
 /** Mark all Func values for garbage collection 
  * Increments how much allocated memory the func uses. */
 #define methodMark(th, m) \
-	{mem_markobj(th, (m)->name); \
-	mem_markobj(th, (m)->source); \
-	if (!isCMethod(m) && ((BMethodInfo*)m)->nbrlits>0) \
+	{if (!isCMethod(m) && ((BMethodInfo*)m)->nbrlits>0) \
 		for (AuintIdx i=0; i<((BMethodInfo*)m)->nbrlits; i++) \
 			mem_markobj(th, ((BMethodInfo*)m)->lits[i]); \
 	if (!isCMethod(m) && ((BMethodInfo*)m)->nbrlocals>0) \
@@ -197,7 +194,7 @@ typedef struct Acorn {
 // ***********
 
 /** Build a new c-method value, pointing to a method written in C */
-Value newCMethod(Value th, AcMethodp method);
+Value newCMethod(Value th, Value *dest, AcMethodp method);
 
 #ifdef __cplusplus
 } // end "C"

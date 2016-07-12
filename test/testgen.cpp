@@ -77,7 +77,7 @@ void testGen(void) {
 	t(popValue(th)==anInt(20), "popValue(th)==20");
 	t(getTop(th)==0, "getTop(th)==0");
 
-	// File, Url etc
+	// File, Resource etc
 	pushValue(th, genTestPgm(th,5));
 	methodCall(th, 0, 0);
 

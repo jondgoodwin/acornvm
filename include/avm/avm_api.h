@@ -32,10 +32,6 @@ AVM_API Value getProperty(Value th, Value self, Value methsym);
 AVM_API Auint getSize(Value val);
 
 // Implemented in avm_string.cpp and avm_symbol.cpp
-/** Return string value for a c-string. */
-AVM_API Value newStr(Value th, const char *str);
-/** Return string value for a byte-sequence. str may be NULL (to reserve space for empty string). */
-AVM_API Value newStrl(Value th, const char *str, AuintIdx len);
 /** Return 1 if the value is a Symbol, otherwise 0 */
 AVM_API int isSym(Value sym);
 /** Return 1 if the value is a String, otherwise 0 */
@@ -119,25 +115,21 @@ AVM_API Value tblNext(Value tbl, Value key);
 AVM_API void addMixin(Value th, Value type, Value mixin);
 
 // Implemented in avm_method.cpp
-/** Build a new c-method value, pointing to a method written in C */
-AVM_API Value aCMethod(Value th, AcMethodp method, const char* name, const char* src);
-/** Call a method value placed on stack (with nparms above it). 
- * Indicate how many return values to expect to find on stack. */
+/** Call a method whose property symbol is placed on stack (with nparms above it). 
+ * nexpected specifies how many return values to expect to find on stack.*/
 AVM_API void methodCall(Value th, int nparms, int nexpected);
 
 // Implemented in avm_thread.cpp
-/** Return a new Thread with a starter namespace and stack. */
-AVM_API Value newThread(Value th, Value ns, AuintIdx stksz);
 /** Return 1 if a Thread, else return 0 */
 AVM_API int isThread(Value th);
 
 // Implemented in avm_global.cpp
 /** Push and return the symbolically-named global variable's value */
-AVM_API Value pushGlobal(Value th, const char *var);
+AVM_API Value pushGloVar(Value th, const char *var);
 /** Alter the symbolically-named global variable to have the value popped off the local stack */
-AVM_API void popGlobal(Value th, const char *var);
+AVM_API void popGloVar(Value th, const char *var);
 /** Push the value of the current process thread's global variable table. */
-AVM_API Value pushGlobalTbl(Value th);
+AVM_API Value pushGlobal(Value th);
 
 // Implemented in avm_stack.cpp
 /** Retrieve the stack value at the index. Be sure 0<= idx < top.
@@ -159,14 +151,24 @@ AVM_API Value pushSym(Value th, const char *str);
 AVM_API Value pushSyml(Value th, const char *str, AuintIdx len);
 /** Push and return the value for a method written in C */
 AVM_API Value pushCMethod(Value th, AcMethodp func);
+/** Push and return a new String value */
+AVM_API Value pushString(Value th, Value type, const char *str);
+/** Push and return a new String value of size with a copy of str bytes */
+AVM_API Value pushStringl(Value th, Value type, const char *str, AuintIdx size);
+/** Push and return a new Array value */
+AVM_API Value pushArray(Value th, Value type, AuintIdx size);
 /** Push and return a new Table value */
 AVM_API Value pushTbl(Value th, Value type, AuintIdx size);
 /** Push and return a new Type value */
 AVM_API Value pushType(Value th, Value type, AuintIdx size);
 /* Push and return a new Mixin value */
 AVM_API Value pushMixin(Value th, Value type, Value inheritype, AuintIdx size);
-/** Push and return a new List value */
-AVM_API Value pushList(Value th, AuintIdx size);
+/** Push and return a new Stack value */
+AVM_API Value pushThread(Value th);
+/** Push and return the VM's value */
+AVM_API Value pushVM(Value th);
+/*( Push and return the value of the named member of the table found at the stack's specified index */
+AVM_API Value pushMember(Value th, AintIdx tblidx, const char *mbrnm, Value val);
 /** Put the local stack's top value into the named member of the table found at the stack's specified index */
 AVM_API void popMember(Value th, AintIdx tblidx, const char *mbrnm);
 /** Push a copy of a stack's value at index onto the stack's top */

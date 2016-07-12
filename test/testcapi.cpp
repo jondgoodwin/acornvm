@@ -124,9 +124,9 @@ void testCapi(void) {
 	// String API tests
 	t(!isStr(aNull), "!isSym(aNull)");
 	t(!isStr(aTrue), "!isSym(aTrue)");
-	pushValue(th, newStr(th, "Happiness is hard-won")); // string1
-	pushValue(th, newStrl(th, "Happiness is hard-won", 21)); // string2
-	pushValue(th, newStr(th, "True happiness requires work")); // string3
+	pushString(th, aNull, "Happiness is hard-won"); // string1
+	pushStringl(th, aNull, "Happiness is hard-won", 21); // string2
+	pushString(th, aNull, "True happiness requires work"); // string3
 	t(!isSame(getLocal(th, string1),getLocal(th, string2)), "aStr('Happiness is hard-won')!=aStrl('Happiness is hard-won',21)");
 	t(isStr(getLocal(th, string1)), "isStr(aStr('Happiness is hard-won'))");
 	t(getSize(getLocal(th, string1))==21, "getSize('Happiness is hard-won')==21");
@@ -145,7 +145,7 @@ void testCapi(void) {
 	t(isEqStr(getLocal(th, string2), "Happy Birthday"), "string2=='Happy Birthday'");
 
 	// Array API tests
-	pushList(th, 10); // array1
+	pushArray(th, aNull, 10); // array1
 	t(!isArr(getLocal(th, string1)), "!isArr('a string')");
 	t(isArr(getLocal(th, array1)), "isArr(array1)");
 	t(getSize(getLocal(th, array1))==0, "getSize(array1)==0");
@@ -167,7 +167,7 @@ void testCapi(void) {
 	arrSub(th, getLocal(th, array1), 2, 0, getLocal(th, array1), 2, 1); // Insert from self
 	t(getSize(getLocal(th, array1))==4, "getSize(array1)==4");
 	t(arrGet(th, getLocal(th, array1), 3)==aTrue, "arrGet(th, array1, 3)==aTrue");
-	pushList(th, 4); // array2
+	pushArray(th, aNull, 4); // array2
 	arrRpt(th, getLocal(th, array2), 4, 5, getLocal(th, string1));
 	t(getSize(getLocal(th, array2))==9, "getSize(array2)==9");
 	arrSub(th, getLocal(th, array1), 1, 2, getLocal(th, array2), 2, 4);
@@ -217,16 +217,15 @@ void testCapi(void) {
 
 	// Thread tests - global namespace
 	pushLocal(th, array1);
-	popGlobal(th, "$v");
-	pushGlobal(th, "$v");
+	popGloVar(th, "$v");
+	pushGloVar(th, "$v");
 	t(isArr(popValue(th)), "isArr(popValue(th))");
-	pushGlobal(th, "$p");
+	pushGloVar(th, "$p");
 	t(popValue(th)==aNull, "popValue(th)==aNull"); // unknown global variable
 
 	// C-method and Thread call stack tests
 	i = getTop(th);
-	Value testcmeth = aCMethod(th, test_cmeth, "test_cmeth", __FILE__);
-	pushValue(th, testcmeth);
+	pushCMethod(th, test_cmeth);
 	pushValue(th, aTrue); // Pass parameter
 	methodCall(th, 1, 1);
 	t(popValue(th)==aFalse, "c-method return success: popValue(th)==aFalse");
@@ -238,11 +237,11 @@ void testCapi(void) {
 	pushValue(th, anInt(40));
 	methodCall(th, 2, 1);
 	t(popValue(th)==anInt(90), "popValue(th)==anInt(90)"); // Yay - first successful O-O request!
-	pushGlobal(th, "Integer");
-	t(isType(popValue(th)), "pushGlobal(th, 'Integer'); isType(popValue(th))");
-	pushGlobal(th, "Type");
+	pushGloVar(th, "Integer");
+	t(isType(popValue(th)), "pushGloVar(th, 'Integer'); isType(popValue(th))");
+	pushGloVar(th, "Type");
 	Value typtyp = popValue(th);
-	pushGlobal(th, "Integer");
+	pushGloVar(th, "Integer");
 	t(getType(th, popValue(th))==typtyp, "isType(getType(th, Global(th, 'Integer'))==Global(th, 'Type'))");
 
 	vm_close(th);

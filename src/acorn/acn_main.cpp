@@ -15,7 +15,7 @@ extern "C" {
 
 /** Compile and run an Acorn resource */
 int acn_new(Value th) {
-	pushGlobal(th, "Acorn");
+	pushGloVar(th, "Acorn");
 	pushType(th, getFromTop(th, 0), 0);
 	return 1;
 }
@@ -30,7 +30,7 @@ void acn_init(Value th) {
 	// Create Acorn type, properties and methods
 	// Value typ = pushType(th);
 	// partAddProp(th, typ, pushSym(th, "run"), acn_new);
-	// popGlobal(th, "Acorn");
+	// popGloVar(th, "Acorn");
 }
 
 // Get index for a standard symbol identified using its VM literal name
@@ -40,7 +40,7 @@ void acn_init(Value th) {
 Value genTestPgm(Value th, int pgm) {
 	int saveip = 0;
 	Acorn* ac = &vm(th)->acornProgram;
-	genNew(ac, aNull, aNull);
+	genNew(ac);
 	pushValue(th, ac->method);
 	Value self = pushSym(th, "self");
 	switch (pgm) {
@@ -154,7 +154,7 @@ Value genTestPgm(Value th, int pgm) {
 		Value stream = pushSym(th, "$stream");
 		Value fil = pushSym(th, "File");
 		Value get = pushSym(th, "get");
-		Value testacn = pushValue(th, newStr(th, "test.acn"));
+		Value testacn = pushString(th, vmlit(TypeTextm), "test.acn");
 		genAddParm(ac, self);
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 1, 2, ss(SymAppend)));
 		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 2, genAddLit(ac, stream)));

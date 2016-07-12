@@ -53,13 +53,13 @@ void typ_int_init(Value th) {
 			pushCMethod(th, typ_int_mult);
 			popMember(th, 1, "*");
 		popMember(th, 0, "newtype");
-	popGlobal(th, "Integer");
+	popGloVar(th, "Integer");
 	return;
 }
 
 /** Create a new List */
 int typ_list_new(Value th) {
-	pushList(th, 0);
+	pushArray(th, vmlit(TypeListm), 0);
 	return 1;
 }
 
@@ -90,7 +90,7 @@ void typ_list_init(Value th) {
 		popMember(th, 0, "newtype");
 		pushCMethod(th, typ_list_new);
 		popMember(th, 0, "new");
-	popGlobal(th, "List");
+	popGloVar(th, "List");
 	return;
 }
 
@@ -107,7 +107,7 @@ void typ_meth_init(Value th) {
 			pushCMethod(th, typ_meth_get);
 			popMember(th, 1, "()");
 		popMember(th, 0, "newtype");
-	popGlobal(th, "Method");
+	popGloVar(th, "Method");
 	return;
 }
 
@@ -122,7 +122,7 @@ void typ_type_init(Value th) {
 	vmlit(TypeType) = pushType(th, aNull, 1);
 		pushCMethod(th, typ_type_get);
 		popMember(th, 0, "()");
-	popGlobal(th, "Type");
+	popGloVar(th, "Type");
 	return;
 }
 
@@ -135,7 +135,7 @@ void glo_init(Value th) {
 	typ_list_init(th);
 
 	vmlit(TypeAll) = pushType(th, aNull, 0);
-	popGlobal(th, "All");
+	popGloVar(th, "All");
 
 	typ_file_init(th);
 

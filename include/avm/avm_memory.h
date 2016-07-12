@@ -4,6 +4,11 @@
  * The mem_ macros and functions provide memory allocation, resizing,
  * and garbage collection needed by all variable sized values.
  *
+ * Warning, Warning, Will Robinson!!
+ * Allocated new objects are free radicals, with a political valence so unstable 
+ * that they are easily led astray by the Dread Pirate Roberts (no, not Ross: the sneaky Garbage Collector).
+ * To protect any new objects you create, store them immediately in a safe container such as the stack or global.
+ *
  * This source file is part of avm - Acorn Virtual Machine.
  * See Copyright Notice in avm.h
 */

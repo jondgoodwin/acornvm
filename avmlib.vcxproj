@@ -46,7 +46,7 @@
     <ClCompile Include="src\globals\env_stream.cpp" />
     <ClCompile Include="src\globals\typ_file.cpp" />
     <ClCompile Include="src\globals\glo_init.cpp" />
-    <ClCompile Include="src\globals\typ_url.cpp" />
+    <ClCompile Include="src\globals\typ_resource.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8B302A7E-1179-481B-8EBB-C599161470F1}</ProjectGuid>

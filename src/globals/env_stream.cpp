@@ -30,7 +30,7 @@ void env_stream_init(Value th) {
 	Value val = pushType(th, aNull, 1);
 		pushCMethod(th, env_stream_add);
 		popMember(th, 0, "<<");
-	popGlobal(th, "$stream");
+	popGloVar(th, "$stream");
 }
 
 #ifdef __cplusplus

@@ -14,17 +14,17 @@ namespace avm {
 extern "C" {
 #endif
 
-/** Create a new Url using a url string and Url context */
-int typ_url_new(Value th) {
+/** Create a new Resource using a url string and baseurl context */
+int typ_resource_new(Value th) {
 	return 1;
 }
 
 /** Initialize the File type */
-Value typ_url_init(Value th) {
+Value typ_resource_init(Value th) {
 	Value typ = pushType(th, vmlit(TypeType), 1);
-		pushCMethod(th, typ_url_new);
+		pushCMethod(th, typ_resource_new);
 		popMember(th, 0, "new");
-	popGlobal(th, "Url");
+	popGloVar(th, "Resource");
 	return typ;
 }
 

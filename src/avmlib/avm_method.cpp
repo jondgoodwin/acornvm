@@ -15,34 +15,18 @@ extern "C" {
 #endif
 
 /* Build a new c-method value, pointing to a method written in C */
-Value aCMethod(Value th, AcMethodp method, const char* name, const char* src) {
-	// Put on stack to keep safe from GC
-	pushValue(th, newStr(th, name));
-	pushValue(th, newStr(th, src));
-
+Value newCMethod(Value th, Value *dest, AcMethodp method) {
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 	CMethodInfo *meth = (CMethodInfo*) mem_new(th, MethEnc, sizeof(CMethodInfo), NULL, 0);
 	methodFlags(meth) = METHOD_FLG_C;
 	meth->methodp = method;
-	meth->source = popValue(th);
-	meth->name = popValue(th);
-
-	return meth;
-}
-
-/* Build a new c-method value, pointing to a method written in C */
-Value newCMethod(Value th, AcMethodp method) {
-	mem_gccheck(th);	// Incremental GC before memory allocation events
-	CMethodInfo *meth = (CMethodInfo*) mem_new(th, MethEnc, sizeof(CMethodInfo), NULL, 0);
-	methodFlags(meth) = METHOD_FLG_C;
-	meth->methodp = method;
-	return meth;
+	return *dest = (Value) meth;
 }
 
 /** Return codes from methodCallPrep */
 enum MethodTypes {
 	MethodBad,	//!< Not a valid method (probably unknown method)
-	MethodBC,		//!< Byte-code method
+	MethodBC,	//!< Byte-code method
 	MethodC		//!< C-method
 };
 
@@ -256,7 +240,7 @@ void methodRunBC(Value th) {
 			*rega = *(lits + bc_bx(i));
 			// Clone a string literal, as program might change it
 			if (isStr(*rega))
-				*rega = newStrl(th, str_cstr(*rega), str_size(*rega)); 
+				 newStr(th, rega, ((MemInfoT*)rega)->type, str_cstr(*rega), str_size(*rega)); 
 			break;
 
 		// OpLoadLitX: R(A) := Literals(extra arg) {+ EXTRAARG(Ax)}
@@ -265,7 +249,7 @@ void methodRunBC(Value th) {
 			*rega = *(lits + bc_ax(i));
 			// Clone a string literal, as program might change it
 			if (isStr(*rega))
-				*rega = newStrl(th, str_cstr(*rega), str_size(*rega));
+				newStr(th, rega, ((MemInfoT*)rega)->type, str_cstr(*rega), str_size(*rega));
 			break;
 
 		// OpLoadPrim: R(A) := B==0? null, B==1? false, B==2? true
@@ -416,9 +400,30 @@ void methodRunBC(Value th) {
 			// Prepare call frame and stack, then perform the call
 			*rega = getProperty(th, *(rega+1), *rega);
 			switch (methodTailCallPrep(th, rega, bc_c(i))) {
-			case MethodBad: 
-				methodRetNulls(th); 
-				break;
+			// Since tailcall is not to a valid method, just do a return of nulls
+			case MethodBad: {
+				// Copy the desired number of return values (nulls) where indicated
+				CallInfo *ci =th(th)->curmethod;
+				Value* to = ci->retTo;
+				AintIdx want = ci->nresults; // how many caller wants
+				while (want--)
+					*to++ = aNull;
+
+				// Update thread's values
+				th(th)->stk_top = to; // Mark position of last returned
+				ci = th(th)->curmethod = ci->previous; // Back up a frame
+
+				// Return to 'c' method caller, if we were called from there
+				if (!isMethod(*ci->methodbase) || isCMethod(*ci->methodbase))
+					return;
+
+				// For bytecode, restore info from the previous call stack frame
+				if (want != BCVARRET) 
+					th(th)->stk_top = ci->end; // Restore top to end for known # of returns
+				meth = (BMethodInfo*) (*ci->methodbase);
+				lits = meth->lits; 
+				stkbeg = ci->begin;
+				}break;
 			case MethodC:
 				methodRunC(th);
 				break;
@@ -506,8 +511,8 @@ void methodRunBC(Value th) {
   }
 }
 
-/* Call a method value placed on stack (with nparms above it). 
- * Indicate how many return values to expect to find on stack. */
+/* Call a method whose property symbol is placed on stack (with nparms above it). 
+ * nexpected specifies how many return values to expect to find on stack.*/
 void methodCall(Value th, int nparms, int nexpected) {
 	Value* methodpos = th(th)->stk_top - nparms - 1;
 

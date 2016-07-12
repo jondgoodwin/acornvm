@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 /* Return a new Thread with a starter namespace and stack. */
-Value newThread(Value th, Value glo, AuintIdx stksz) {
+Value newThread(Value th, Value *dest, AuintIdx stksz) {
 	ThreadInfo *newth;
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 
@@ -23,7 +23,7 @@ Value newThread(Value th, Value glo, AuintIdx stksz) {
 	MemInfo **linkp = NULL;
 	newth = (ThreadInfo *) mem_new(th, ThrEnc, sizeof(ThreadInfo), linkp, 0);
 	thrInit(newth, vm(th), stksz);
-	return (Value)newth;
+	return *dest = (Value)newth;
 }
 
 /* Initialize a thread.

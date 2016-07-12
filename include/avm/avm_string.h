@@ -65,6 +65,9 @@ typedef struct StrInfo {
 // Non-API String functions
 // ***********
 
+/** Return string value for a byte-sequence. str may be NULL (to reserve space for empty string). */
+Value newStr(Value th, Value *dest, Value type, const char *str, AuintIdx len);
+
 /** Calculate the hash value for a string */
 AuintIdx str_hash(Value th, Value val);
 
