@@ -60,6 +60,8 @@ AVM_API void strSub(Value th, Value val, AuintIdx pos, AuintIdx sz, const char *
 // Implemented in avm_array.cpp
 /** Return 1 if the value is an Array, otherwise 0 */
 AVM_API int isArr(Value sym);
+/** Return 1 if the value is an Closure, otherwise 0 */
+AVM_API int isClosure(Value val);
 /** Ensure array has room for len Values, allocating memory as needed.
  * Allocated space will not shrink. Changes nothing about array's contents. */
 AVM_API void arrMakeRoom(Value th, Value val, AuintIdx len);
@@ -115,9 +117,14 @@ AVM_API Value tblNext(Value tbl, Value key);
 AVM_API void addMixin(Value th, Value type, Value mixin);
 
 // Implemented in avm_method.cpp
+/** Return 1 if callable: a method or closure */
+AVM_API int isCallable(Value val);
 /** Call a method whose property symbol is placed on stack (with nparms above it). 
  * nexpected specifies how many return values to expect to find on stack.*/
 AVM_API void methodCall(Value th, int nparms, int nexpected);
+/** Call a 'set' method whose property symbol is placed on stack (with nparms above it). 
+ * nexpected specifies how many return values to expect to find on stack.*/
+AVM_API void methodSetCall(Value th, int nparms, int nexpected);
 
 // Implemented in avm_thread.cpp
 /** Return 1 if a Thread, else return 0 */
@@ -157,6 +164,13 @@ AVM_API Value pushString(Value th, Value type, const char *str);
 AVM_API Value pushStringl(Value th, Value type, const char *str, AuintIdx size);
 /** Push and return a new Array value */
 AVM_API Value pushArray(Value th, Value type, AuintIdx size);
+/** Push and return a new Closure value.
+   Size is get and set methods plus closure variables, all pushed on stack */
+AVM_API Value pushClosure(Value th, AintIdx size);
+/** Push a closure variable. */
+AVM_API Value pushCloVar(Value th, AuintIdx idx);
+/** Pop a value into a closure variable. */
+AVM_API void popCloVar(Value th, AuintIdx idx);
 /** Push and return a new Table value */
 AVM_API Value pushTbl(Value th, Value type, AuintIdx size);
 /** Push and return a new Type value */

@@ -158,8 +158,8 @@ Value genTestPgm(Value th, int pgm) {
 		genAddParm(ac, self);
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 1, 2, ss(SymAppend)));
 		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 2, genAddLit(ac, stream)));
-		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 4, ss(SymParGet)));
-		genAddInstr(ac, BCINS_ABC(OpLoadStd, 4, 5, ss(SymParGet)));
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 4, ss(SymParas)));
+		genAddInstr(ac, BCINS_ABC(OpLoadStd, 4, 5, ss(SymParas)));
 		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 5, genAddLit(ac, fil)));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 6, genAddLit(ac, get)));
 		genAddInstr(ac, BCINS_ABC(OpCall, 4, 2, 1));

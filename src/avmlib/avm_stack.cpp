@@ -122,6 +122,38 @@ Value pushArray(Value th, Value type, AuintIdx size) {
 	return newArr(th, th(th)->stk_top++, (type==aNull)? vmlit(TypeListm) : type,  size);
 }
 
+/* Push and return a new Closure value.
+   Size is get and set methods plus closure variables, all pushed on stack */
+Value pushClosure(Value th, AintIdx size) {
+	Value closure;
+	assert(size>=2 && stkSz(th)>=size); // All closure variables should be on stack
+	stkCanIncTop(th); /* Check if there is room */
+	closure = newClosure(th, th(th)->stk_top++, vmlit(TypeClom),  size);
+	// Copy closure variables into closure
+	for (int i=0; i<size; i++)
+		arrSet(th, closure, i, *(th(th)->stk_top-size-1+i));
+	*(th(th)->stk_top-size-1) = closure; // move created closure down
+	th(th)->stk_top -= size; // pop off closure variables
+	return closure;
+}
+
+/* Push a closure variable. */
+Value pushCloVar(Value th, AuintIdx idx) {
+	stkCanIncTop(th); /* Check if there is room */
+	Value closure = *th(th)->curmethod->methodbase;
+	return *th(th)->stk_top++ = (isArr(closure) && idx<getSize(closure))? arrGet(th, closure, idx) : aNull;
+}
+
+/* Pop a value into a closure variable. */
+void popCloVar(Value th, AuintIdx idx) {
+	assert(stkSz(th)>0); // Must be at least one value to remove!
+	Value closure = *th(th)->curmethod->methodbase;
+	if (isArr(closure) && idx<getSize(closure))
+		arrSet(th, closure, idx, *--th(th)->stk_top);
+	else
+		--th(th)->stk_top;
+}
+
 /* Push and return a new hashed table value */
 Value pushTbl(Value th, Value type, AuintIdx size) {
 	stkCanIncTop(th); /* Check if there is room */

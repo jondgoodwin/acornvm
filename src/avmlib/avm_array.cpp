@@ -33,9 +33,32 @@ Value newArr(Value th, Value *dest, Value type, AuintIdx len) {
 	return *dest = (Value) val;
 }
 
+/* Return a new Array, allocating len slots for Values. */
+Value newClosure(Value th, Value *dest, Value type, AuintIdx len) {
+	ArrInfo *val;
+	mem_gccheck(th);	// Incremental GC before memory allocation events
+
+	// Create an array object
+	MemInfo **linkp = NULL;
+	val = (ArrInfo *) mem_new(th, ArrEnc, sizeof(ArrInfo), linkp, 0);
+	val->avail = len;
+	val->size = 0;
+	val->arr = NULL;
+	if (len>0)
+		mem_reallocvector(th, val->arr, 0, len, Value);
+	val->flags1 = TypeClo;	// Initialize Flags1 flags
+	val->type = type;
+	return *dest = (Value) val;
+}
+
 /* Return 1 if the value is an Array, otherwise 0 */
 int isArr(Value val) {
 	return isEnc(val, ArrEnc);
+}
+
+/* Return 1 if the value is an Array, otherwise 0 */
+int isClosure(Value val) {
+	return isEnc(val, ArrEnc) && arr_info(val)->flags1&TypeClo;
 }
 
 /* Ensure array has room for len Values, allocating memory as needed.

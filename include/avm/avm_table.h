@@ -63,6 +63,7 @@ typedef struct TblInfo {
 /** flags2 holds log2 of available number of nodes in 'node' buffer */
 #define lAvailNodes flags2
 
+/* flags1 flags */
 #define TypeTbl 0x80	//!< Flags1 bit, if table is for a Type (members are properties)
 #define ProtoType 0x40	//!< Flags1 bit, if uses own properties and inheritype == type
 

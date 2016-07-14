@@ -95,7 +95,7 @@ extern "C" {
 
 		// Methods that are not compiler symbols
 		// Byte-code (and parser) standard methods
-		SymParGet,	//!< '()'
+		SymParas,	//!< '()'
 		SymNeg,		//!< '-@'
 		SymNext,	//!< 'next'
 
@@ -121,6 +121,8 @@ extern "C" {
 		TypeTextm,	//!< Text mixin
 		TypeListc,	//!< List class
 		TypeListm,	//!< List mixin
+		TypeCloc,	//!< Closure class
+		TypeClom,	//!< Closure mixin
 		TypeIndexc,	//!< Index class
 		TypeIndexm,	//!< Index mixin
 		TypeAll,	//!< All

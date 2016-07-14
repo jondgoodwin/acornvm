@@ -36,6 +36,9 @@ typedef struct ArrInfo {
 	AuintIdx avail;	//!< Allocated size of buffer
 } ArrInfo;
 
+/* flags1 flags */
+#define TypeClo 0x80	//!< Flags1 bit, if array is for a closure
+
 /** Mark all in-use array values for garbage collection 
  * Increments how much allocated memory the array uses. */
 #define arrMark(th, a) \
@@ -62,6 +65,9 @@ typedef struct ArrInfo {
 
 /** Return new array with allocated space for len Values. */
 Value newArr(Value th, Value *dest, Value type, AuintIdx len);
+
+/** Return a new Array, allocating len slots for Values. */
+Value newClosure(Value th, Value *dest, Value type, AuintIdx len);
 
 #ifdef __cplusplus
 } // end "C"

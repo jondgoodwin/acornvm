@@ -1,4 +1,4 @@
-/** Implements the Url type
+/** Implements the Resource type
  *
  * @file
  *

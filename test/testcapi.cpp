@@ -31,6 +31,20 @@ int test_cmeth(Value th) {
 	return 1;
 }
 
+// Closure get method test: return and increment closure variable
+int test_cloget(Value th) {
+	AintIdx val;
+	pushValue(th, anInt(toAint(pushCloVar(th,2)) + 1));
+	popCloVar(th,2);
+	return 1;
+}
+// Closure set method test: set closure variable
+int test_closet(Value th) {
+	pushLocal(th, 1);
+	popCloVar(th,2);
+	return 1;
+}
+
 enum stkit {
 	true1,
 	true2,
@@ -230,6 +244,31 @@ void testCapi(void) {
 	methodCall(th, 1, 1);
 	t(popValue(th)==aFalse, "c-method return success: popValue(th)==aFalse");
 	t(getTop(th)==i, "getTop(th)==0");
+
+	// Closure test
+	pushGloVar(th, "Type");
+	pushCMethod(th, test_cloget);
+	pushCMethod(th, test_closet);
+	pushValue(th, anInt(-905));
+	pushClosure(th, 3);
+	popMember(th, i, "closure");
+	popValue(th);
+	pushSym(th, "closure");
+	pushGloVar(th, "Type");
+	methodCall(th, 1, 1);
+	t(-905 == toAint(popValue(th)), "Closure: -905 == toAint(popValue(th))");
+	pushSym(th, "closure");
+	pushGloVar(th, "Type");
+	methodCall(th, 1, 1);
+	t(-904 == toAint(popValue(th)), "Closure: -904 == toAint(popValue(th))");
+	pushSym(th, "closure");
+	pushGloVar(th, "Type");
+	pushValue(th, anInt(25));
+	methodSetCall(th, 2, 1);
+	pushSym(th, "closure");
+	pushGloVar(th, "Type");
+	methodCall(th, 1, 1);
+	t(25 == toAint(popValue(th)), "Closure: 25 == toAint(popValue(th))");
 
 	// Type API tests - makes use of built-in types, which use the API to create types and its methods
 	pushSym(th, "+");

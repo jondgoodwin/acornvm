@@ -128,7 +128,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymDiv, "/"},
 
 	// Methods that are not compiler symbols
-	{SymParGet, "()"},
+	{SymParas, "()"},
 	{SymNeg, "-@"},
 	{SymNext, "next"},
 
@@ -155,7 +155,7 @@ void vm_litinit(Value th) {
 const int stdTblMap[] = {
 	// Commonly-called methods
 	SymNew,		// 'new'
-	SymParGet,	// '()'
+	SymParas,	// '()'
 	SymAppend,	// '<<'
 	SymPlus,	// '+'
 	SymMinus,	// '-'

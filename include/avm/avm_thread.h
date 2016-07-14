@@ -34,6 +34,8 @@ typedef struct CallInfo {
 	Value *begin;						//!< Points to method's parameters and local vars 
 	Value *end;							//!< Points to highest allocated area for method
 
+	Value method;						//!< The method being executed in this frame
+
 	// Bytecode only
 	Instruction *ip;					//!< Pointer to current instruction
 

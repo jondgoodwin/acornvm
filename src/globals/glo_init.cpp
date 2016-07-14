@@ -14,7 +14,7 @@ extern "C" {
 #endif
 
 Value typ_file_init(Value th);
-Value typ_url_init(Value th);
+Value typ_resource_init(Value th);
 
 void env_stream_init(Value th);
 
@@ -137,6 +137,7 @@ void glo_init(Value th) {
 	vmlit(TypeAll) = pushType(th, aNull, 0);
 	popGloVar(th, "All");
 
+	typ_resource_init(th);
 	typ_file_init(th);
 
 	env_stream_init(th);
