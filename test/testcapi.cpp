@@ -33,15 +33,27 @@ int test_cmeth(Value th) {
 
 // Closure get method test: return and increment closure variable
 int test_cloget(Value th) {
-	AintIdx val;
 	pushValue(th, anInt(toAint(pushCloVar(th,2)) + 1));
 	popCloVar(th,2);
 	return 1;
 }
+
 // Closure set method test: set closure variable
 int test_closet(Value th) {
 	pushLocal(th, 1);
 	popCloVar(th,2);
+	return 1;
+}
+
+// CData finalizer test. Called when cdata value is freed by GC
+struct cdatathing {
+	int nothing;
+};
+int cdatafin(Value cdata) {
+	// Demonstrates access to the data itself. Doesn't do anything interesting.
+	struct cdatathing *data = (struct cdatathing *)(toStr(cdata));
+	data->nothing = 4;
+	puts("CData finalizer was triggered successfully!");
 	return 1;
 }
 
@@ -157,6 +169,15 @@ void testCapi(void) {
 	t(isEqStr(getLocal(th, string2), "Happy Fricking Birthday"), "string2=='Happy Fricking Birthday'");
 	strSub(th, getLocal(th, string2), 6, 9, NULL, 0); // Delete
 	t(isEqStr(getLocal(th, string2), "Happy Birthday"), "string2=='Happy Birthday'");
+
+	// CData API tests - for finalizer, not triggered until the end.
+	i = getTop(th);
+	Value cdatamixin = pushMixin(th, aNull, aNull, 1);
+	pushCMethod(th, cdatafin);
+	popMember(th, i, "_finalizer");
+	pushCData(th, cdatamixin, 10);
+	popValue(th); // Will free and trigger finalizer at end, if not before
+	popValue(th);
 
 	// Array API tests
 	pushArray(th, aNull, 10); // array1

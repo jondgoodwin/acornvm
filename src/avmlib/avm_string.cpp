@@ -41,6 +41,26 @@ Value newStr(Value th, Value *dest, Value type, const char *str, AuintIdx len) {
 	return *dest = (Value) val;
 }
 
+/* Return a CData value containing C-data for C-methods.
+   Its type may have a _finalizer, called just before the GC frees the C-Data value. */
+Value newCData(Value th, Value *dest, Value type, AuintIdx len) {
+	StrInfo *val;
+	mem_gccheck(th);	// Incremental GC before memory allocation events
+
+	// Create a string object
+	MemInfo **linkp = NULL;
+	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo), linkp, 0);
+	val->avail = len;
+	val->str = (char*) mem_gcrealloc(th, NULL, 0, len+1); // an extra byte for 0-terminator
+	val->flags1 = CDataFlg;
+
+	val->str[0] = '\0'; // just in case
+	val->size = len;
+	val->str[len] = '\0'; // put guaranteed 0-terminator, just in case
+	val->type = type;
+	return *dest = (Value) val;
+}
+
 /* Return 1 if the value is a String, otherwise 0 */
 int isStr(Value str) {
 	return isEnc(str, StrEnc);

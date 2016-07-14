@@ -162,6 +162,8 @@ AVM_API Value pushCMethod(Value th, AcMethodp func);
 AVM_API Value pushString(Value th, Value type, const char *str);
 /** Push and return a new String value of size with a copy of str bytes */
 AVM_API Value pushStringl(Value th, Value type, const char *str, AuintIdx size);
+/** Push and return a new typed CData value of size */
+AVM_API Value pushCData(Value th, Value type, AuintIdx size);
 /** Push and return a new Array value */
 AVM_API Value pushArray(Value th, Value type, AuintIdx size);
 /** Push and return a new Closure value.

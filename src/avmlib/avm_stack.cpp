@@ -111,9 +111,15 @@ Value pushString(Value th, Value type, const char *str) {
 }
 
 /* Push and return a new String value of size with a copy of str bytes */
-AVM_API Value pushStringl(Value th, Value type, const char *str, AuintIdx size) {
+Value pushStringl(Value th, Value type, const char *str, AuintIdx size) {
 	stkCanIncTop(th); /* Check if there is room */
 	return newStr(th, th(th)->stk_top++, (type==aNull)? vmlit(TypeTextm) : type, str, size);
+}
+
+/* Push and return a new typed CData value of size */
+Value pushCData(Value th, Value type, AuintIdx size) {
+	stkCanIncTop(th); /* Check if there is room */
+	return newCData(th, th(th)->stk_top++, type, size);
 }
 
 /* Push and return a new Array value */

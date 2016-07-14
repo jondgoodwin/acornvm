@@ -10,6 +10,7 @@
  *
  * A string encoding may be the foundation for several Types, such as Acorn's
  * Bytes (1 byte per character) and Text (Unicode UTF-8 multi-byte characters) types.
+ * It is also the foundation for CData values, used by C-written Types.
  *
  * @file
  *
@@ -38,8 +39,15 @@ typedef struct StrInfo {
 	AuintIdx avail;	//!< Allocated size of character buffer
 } StrInfo;
 
-/** Free all of a string's allocated memory */
+/** Identifies string as a CData structure, possibly with a finalizer */
+#define CDataFlg 0x80
+
+/** Free all of a string's allocated memory.
+  This will run a CData's ._finalizer C-method, if its type has one. */
+typedef int (*CDataFinalizerFn)(Value o);
 #define strFree(th, s) \
+	if (str_info(s)->flags1 & CDataFlg) \
+		((CDataFinalizerFn) (((CMethodInfo*)(getProperty(th, s, vmlit(SymFinalizer))))->methodp))((Value)s); \
 	mem_gcrealloc(th, (s)->str, (s)->avail + 1, 0); \
 	mem_free(th, (s));
 
@@ -68,7 +76,11 @@ typedef struct StrInfo {
 /** Return string value for a byte-sequence. str may be NULL (to reserve space for empty string). */
 Value newStr(Value th, Value *dest, Value type, const char *str, AuintIdx len);
 
-/** Calculate the hash value for a string */
+/** Return a CData value containing C-data for C-methods.
+   Its type may have a _finalizer, called just before the GC frees the C-Data value. */
+Value newCData(Value th, Value *dest, Value type, AuintIdx len);
+
+	/** Calculate the hash value for a string */
 AuintIdx str_hash(Value th, Value val);
 
 #ifdef __cplusplus

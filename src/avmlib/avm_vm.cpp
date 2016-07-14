@@ -132,6 +132,8 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymNeg, "-@"},
 	{SymNext, "next"},
 
+	{SymFinalizer, "_finalizer"},
+
 	// End of literal table
 	{0, NULL}
 };

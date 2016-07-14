@@ -99,6 +99,8 @@ extern "C" {
 		SymNeg,		//!< '-@'
 		SymNext,	//!< 'next'
 
+		SymFinalizer, //!< '_finalizer' method for CData
+
 		// Core type type
 		TypeType,	//!< Type
 		TypeNullc,	//!< Null class
