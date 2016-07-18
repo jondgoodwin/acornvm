@@ -113,11 +113,13 @@ void vm_outofstack(void) {
 	exit(1);
 }
 
+/** Mapping structure correlating a VM literal symbol's number with its name */
 struct vmLitSymEntry {
-	int litindex;
-	const char *symnm;
+	int litindex;		//!< Literal symbol's number
+	const char *symnm;	//!< Literal symbol's string
 };
 
+/** Constant array that identifies and maps all VM literal symbols */
 const struct vmLitSymEntry vmLitSymTable[] = {
 	// Compiler symbols that are also methods
 	{SymNew, "new"},
@@ -153,7 +155,7 @@ void vm_litinit(Value th) {
 	}
 }
 
-// Map byte-code's standard symbols to VM's literals (max. number at 256)
+/** Map byte-code's standard symbols to VM's literals (max. number at 256) */
 const int stdTblMap[] = {
 	// Commonly-called methods
 	SymNew,		// 'new'

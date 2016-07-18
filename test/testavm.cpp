@@ -14,10 +14,12 @@ using namespace avm;
 
 void testCapi(void);
 void testGen(void);
+void testType(void);
 
 void testAll(void) {
 	testCapi();
 	testGen();
+	testType();
 }
 
 int main(int argc, char **argv) {

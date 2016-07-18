@@ -8,22 +8,28 @@
 
 #include "avmlib.h"
 #include <stdio.h>
+#include <string.h>
 
 #ifdef __cplusplus
 namespace avm {
 extern "C" {
 #endif
 
-/** Get contents for passed filename string or url */
+/** '()': Get contents for passed filename path string */
 int typ_file_get(Value th) {
-	Value fnval = getLocal(th,0);
-
-	// Assume fnval is a string for now
-	char *fn = isStr(fnval)? str_cstr(fnval) : NULL;
+	// Get string value of filename path
+	Value fnval;
+	if (getTop(th)<2 || (!isStr(fnval = getLocal(th,1)) && !isSym(fnval))) {
+		pushValue(th, aNull);
+		return 1;
+	}
+	const char *fn = toStr(fnval);
+	if (0==strncmp(fn, "file://", 7))
+		fn+=7;
 
 	// Open the file - return null on failure
 	FILE *file;
-	if (fn==NULL || !(file = fopen(fn, "rb"))) {
+	if (!(file = fopen(fn, "rb"))) {
 		pushValue(th, aNull);
 		return 1;
 	}
@@ -46,12 +52,19 @@ int typ_file_get(Value th) {
 }
 
 /** Initialize the File type */
-Value typ_file_init(Value th) {
+void typ_file_init(Value th) {
 	Value typ = pushType(th, vmlit(TypeType), 1);
 		pushCMethod(th, typ_file_get);
-		popMember(th, 0, "get");
+		popMember(th, 0, "()");
 	popGloVar(th, "File");
-	return typ;
+
+	// Register this type as Resource's 'file' scheme
+	pushGloVar(th, "Resource");
+		pushMember(th, getTop(th) - 1, "_schemes");
+			pushValue(th, typ);
+			popMember(th, getTop(th) - 2, "file");
+		popValue(th);
+	popValue(th);
 }
 
 #ifdef __cplusplus

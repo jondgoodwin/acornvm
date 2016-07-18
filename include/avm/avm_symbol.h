@@ -86,6 +86,9 @@ void sym_resize_tbl(Value th, Auint newsize);
    Anchor (store) symbol value in dest and return it. */
 Value newSym(Value th, Value *dest, const char *str, AuintIdx len);
 
+/** Return 1 if symbol starts with a uppercase letter or $ */
+int isGlobal(Value sym);
+
 #ifdef __cplusplus
 } // end "C"
 } // end namespace

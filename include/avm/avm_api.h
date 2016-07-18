@@ -92,7 +92,7 @@ AVM_API void arrSub(Value th, Value arr, AuintIdx pos, AuintIdx n, Value arr2, A
 AVM_API int isTbl(Value val);
 /** Return 1 if the value is a Type, otherwise 0 */
 AVM_API int isType(Value val);
-/* Return 1 if the value is a Prototype, otherwise 0 */
+/** Return 1 if the value is a Prototype, otherwise 0 */
 AVM_API int isPrototype(Value val);
 /** Resize a table for more/fewer elements (cannot be less than used size) */
 AVM_API void tblResize(Value th, Value tbl, AuintIdx newsize);
@@ -177,14 +177,14 @@ AVM_API void popCloVar(Value th, AuintIdx idx);
 AVM_API Value pushTbl(Value th, Value type, AuintIdx size);
 /** Push and return a new Type value */
 AVM_API Value pushType(Value th, Value type, AuintIdx size);
-/* Push and return a new Mixin value */
+/*^ Push and return a new Mixin value */
 AVM_API Value pushMixin(Value th, Value type, Value inheritype, AuintIdx size);
 /** Push and return a new Stack value */
 AVM_API Value pushThread(Value th);
 /** Push and return the VM's value */
 AVM_API Value pushVM(Value th);
-/*( Push and return the value of the named member of the table found at the stack's specified index */
-AVM_API Value pushMember(Value th, AintIdx tblidx, const char *mbrnm, Value val);
+/** Push and return the value of the named member of the table found at the stack's specified index */
+AVM_API Value pushMember(Value th, AintIdx tblidx, const char *mbrnm);
 /** Put the local stack's top value into the named member of the table found at the stack's specified index */
 AVM_API void popMember(Value th, AintIdx tblidx, const char *mbrnm);
 /** Push a copy of a stack's value at index onto the stack's top */

@@ -203,6 +203,11 @@ typedef struct Acorn {
 /** Build a new c-method value, pointing to a method written in C */
 Value newCMethod(Value th, Value *dest, AcMethodp method);
 
+/** Method to compile and run an Acorn resource.
+   Pass it a string containing the program source and a symbol for the baseurl.
+   It returns the value returned by running the program's compiled method. */
+int acn_new(Value th);
+
 #ifdef __cplusplus
 } // end "C"
 } // end namespace

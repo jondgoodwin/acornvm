@@ -197,7 +197,7 @@ Value pushVM(Value th) {
 }
 
 /* Push and return the value of the named member of the table found at the stack's specified index */
-Value pushMember(Value th, AintIdx tblidx, const char *mbrnm, Value val) {
+Value pushMember(Value th, AintIdx tblidx, const char *mbrnm) {
 	stkCanIncTop(th); /* Check if there is room */
 	Value tbl = *stkAt(th, tblidx);
 	assert(isTbl(tbl));

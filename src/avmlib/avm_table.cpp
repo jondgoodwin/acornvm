@@ -167,7 +167,7 @@ Node *tblLastFreeNode(TblInfo* t) {
  * Do not use this function if key is already in the table. */
 void tblAdd(Value th, Value tbl, Value key, Value val) {
 	Node *mp; // main position node for new key/value pair
-	assert(isTbl(tbl) && key!=aNull && val!=aNull);
+	assert(isTbl(tbl) && key!=aNull);
 
 	// Handle when calculated position is not available
 	mp = tblKey2Node(tbl, key);

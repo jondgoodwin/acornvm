@@ -13,9 +13,10 @@ namespace avm {
 extern "C" {
 #endif
 
-Value typ_file_init(Value th);
-Value typ_resource_init(Value th);
+void typ_resource_init(Value th); // Must define before Method, File etc.
+void typ_method_init(Value th);
 
+void typ_file_init(Value th);
 void env_stream_init(Value th);
 
 /** Add two integers */
@@ -94,23 +95,6 @@ void typ_list_init(Value th) {
 	return;
 }
 
-/** Call the method, passing its parameters */
-int typ_meth_get(Value th) {
-	methodCall(th, getTop(th)-1, BCVARRET);
-	return getTop(th);
-}
-
-/** Initialize the Method type, used to create other types */
-void typ_meth_init(Value th) {
-	vmlit(TypeMethc) = pushType(th, vmlit(TypeType), 1);
-		vmlit(TypeMethm) = pushMixin(th, vmlit(TypeType), aNull, 1);
-			pushCMethod(th, typ_meth_get);
-			popMember(th, 1, "()");
-		popMember(th, 0, "newtype");
-	popGloVar(th, "Method");
-	return;
-}
-
 /** Lookup a value from type's named property */
 int typ_type_get(Value th) {
 	pushValue(th, getTop(th)>=2? getProperty(th, getLocal(th,0), getLocal(th,1)) : aNull);
@@ -130,16 +114,16 @@ void typ_type_init(Value th) {
 void glo_init(Value th) {
 
 	typ_type_init(th); // Type must be first, so other types can use this as their type
-	typ_meth_init(th);
 	typ_int_init(th);
 	typ_list_init(th);
-
 	vmlit(TypeAll) = pushType(th, aNull, 0);
 	popGloVar(th, "All");
 
+	// Load resource before the types it uses
 	typ_resource_init(th);
-	typ_file_init(th);
+	typ_method_init(th);
 
+	typ_file_init(th);
 	env_stream_init(th);
 }
 

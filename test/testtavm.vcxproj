@@ -14,6 +14,7 @@
     <ClCompile Include="testavm.cpp" />
     <ClCompile Include="testcapi.cpp" />
     <ClCompile Include="testgen.cpp" />
+    <ClCompile Include="testtype.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{E1FA93C7-1A64-4AA0-AE65-570F12B2F863}</ProjectGuid>

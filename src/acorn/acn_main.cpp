@@ -13,27 +13,7 @@ namespace avm {
 extern "C" {
 #endif
 
-/** Compile and run an Acorn resource */
-int acn_new(Value th) {
-	pushGloVar(th, "Acorn");
-	pushType(th, getFromTop(th, 0), 0);
-	return 1;
-}
-
-/** Initialize all core types */
-void acn_init(Value th) {
-	// Initialize program compile state
-	Acorn* ac = &vm(th)->acornProgram;
-	ac->prev = ac->next = NULL;
-	ac->th = th;
-
-	// Create Acorn type, properties and methods
-	// Value typ = pushType(th);
-	// partAddProp(th, typ, pushSym(th, "run"), acn_new);
-	// popGloVar(th, "Acorn");
-}
-
-// Get index for a standard symbol identified using its VM literal name
+//! Get index for a standard symbol identified using its VM literal name
 #define ss(lit) (toAint(tblGet(th, vm(th)->stdidx, vmlit(lit))))
 
 /** Generate bytecode test programs */
@@ -151,23 +131,15 @@ Value genTestPgm(Value th, int pgm) {
 
 	// Test File and URL stuff
 	case 5: {
-		Value stream = pushSym(th, "$stream");
-		Value fil = pushSym(th, "File");
-		Value get = pushSym(th, "get");
-		Value testacn = pushString(th, vmlit(TypeTextm), "test.acn");
+		Value fil = pushSym(th, "Resource");
+		Value get = pushSym(th, "()");
+		Value testacn = pushString(th, vmlit(TypeTextm), "file://./test.acn");
 		genAddParm(ac, self);
-		genAddInstr(ac, BCINS_ABC(OpLoadStd, 1, 2, ss(SymAppend)));
-		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 2, genAddLit(ac, stream)));
-		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 4, ss(SymParas)));
-		genAddInstr(ac, BCINS_ABC(OpLoadStd, 4, 5, ss(SymParas)));
-		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 5, genAddLit(ac, fil)));
-		genAddInstr(ac, BCINS_ABx(OpLoadLit, 6, genAddLit(ac, get)));
-		genAddInstr(ac, BCINS_ABC(OpCall, 4, 2, 1));
+		genAddInstr(ac, BCINS_ABx(OpLoadLit, 3, genAddLit(ac, get)));
+		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 4, genAddLit(ac, fil)));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 5, genAddLit(ac, testacn)));
 		genAddInstr(ac, BCINS_ABC(OpCall, 3, 2, 1));
-		genAddInstr(ac, BCINS_ABC(OpCall, 1, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpReturn, 1, 1, 0));
-		popValue(th);
 		popValue(th);
 		popValue(th);
 		popValue(th);
@@ -179,6 +151,36 @@ Value genTestPgm(Value th, int pgm) {
 	popValue(th);
 	popValue(th);
 	return ac->method;
+}
+
+/** Initialize all core types */
+void acn_init(Value th) {
+	// Initialize program compile state
+	Acorn* ac = &vm(th)->acornProgram;
+	ac->prev = ac->next = NULL;
+	ac->th = th;
+}
+
+/* Method to compile and run an Acorn resource.
+   Pass it a string containing the program source and a symbol for the baseurl.
+   It returns the value returned by running the program's compiled method. */
+#include <stdio.h>
+int acn_new(Value th) {
+	// Retrieve pgmsrc and baseurl from parameters
+	Value pgmsrc, baseurl;
+	if (getTop(th)<2 || !isStr(pgmsrc = getLocal(th,1)))
+	{
+		pushValue(th, aNull);
+		return 1;
+	}
+	if (getTop(th)<3 || !isSym(baseurl = getLocal(th,1)))
+		baseurl = aNull;
+
+	puts("Method will now compile and run this program:");
+	puts(toStr(pgmsrc));
+
+	pushValue(th, aNull);
+	return 1;
 }
 
 #ifdef __cplusplus

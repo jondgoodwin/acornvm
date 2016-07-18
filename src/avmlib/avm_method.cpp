@@ -260,6 +260,7 @@ void methodRunC(Value th) {
 	return;
 }
 
+/** macro to make method calls consistent easier to read in methodRunBC */
 #define methCall(stkbeg, nexpected, flags) \
 	switch (methodCallPrep(th, stkbeg, nexpected, flags)) { \
 	case MethodBC: \

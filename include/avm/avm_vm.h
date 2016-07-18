@@ -127,9 +127,11 @@ extern "C" {
 		TypeClom,	//!< Closure mixin
 		TypeIndexc,	//!< Index class
 		TypeIndexm,	//!< Index mixin
+		TypeResc,	//!< Index class
+		TypeResm,	//!< Index mixin
 		TypeAll,	//!< All
 
-		// Number of literals
+		//! Number of literals
 		nVmLits
 	};
 

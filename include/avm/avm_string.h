@@ -42,9 +42,11 @@ typedef struct StrInfo {
 /** Identifies string as a CData structure, possibly with a finalizer */
 #define CDataFlg 0x80
 
+/** Define the prototype for a cdata finalizer*/
+typedef int (*CDataFinalizerFn)(Value o);
+
 /** Free all of a string's allocated memory.
   This will run a CData's ._finalizer C-method, if its type has one. */
-typedef int (*CDataFinalizerFn)(Value o);
 #define strFree(th, s) \
 	if (str_info(s)->flags1 & CDataFlg) \
 		((CDataFinalizerFn) (((CMethodInfo*)(getProperty(th, s, vmlit(SymFinalizer))))->methodp))((Value)s); \
