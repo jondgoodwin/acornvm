@@ -157,6 +157,7 @@ typedef struct BMethodInfo {
 	Instruction *code;		//!< Array of bytecode instructions (size is its size)
 	Value *lits;			//!< Array of literals used by this method
 	Value *locals;			//!< Array of local variables (& parms) used by method
+	AuintIdx nextInst;		//!< Number of instructions in method
 	AuintIdx litsz;			//!< Allocated size of literal list
 	AuintIdx nbrlits;		//!< Number of literals in lits
 	AuintIdx localsz;		//!< Allocated size of local list
@@ -192,7 +193,6 @@ typedef struct Acorn {
 	Acorn* next;	//!< Next compile state in chain
 	Value th;		//!< Current thread
 	BMethodInfo* method; //!< Method being built
-	AuintIdx ip;	//!< Instruction pointer into method->code
 	AuintIdx reg_top; //!< Top of method's data stack
 } Acorn;
 
@@ -207,6 +207,9 @@ Value newCMethod(Value th, Value *dest, AcMethodp method);
    Pass it a string containing the program source and a symbol for the baseurl.
    It returns the value returned by running the program's compiled method. */
 int acn_new(Value th);
+
+/** Serialize an method's bytecode contents to indented text */
+void methSerialize(Value th, Value str, int indent, Value arr);
 
 #ifdef __cplusplus
 } // end "C"

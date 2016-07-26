@@ -17,7 +17,7 @@
  */
 
 #include "avmlib.h"
-
+#include "stdlib.h"
 #include "string.h"
 
 #ifdef __cplusplus
@@ -169,13 +169,13 @@ Value pushTbl(Value th, Value type, AuintIdx size) {
 /* Push and return a new Type value */
 Value pushType(Value th, Value type, AuintIdx size) {
 	stkCanIncTop(th); /* Check if there is room */
-	return newType(th, th(th)->stk_top++, type, size);
+	return newType(th, th(th)->stk_top++, (type==aNull)? vmlit(TypeType) : type, size);
 }
 
 /* Push and return a new Mixin value */
 Value pushMixin(Value th, Value type, Value inheritype, AuintIdx size) {
 	stkCanIncTop(th); /* Check if there is room */
-	return newMixin(th, th(th)->stk_top++, type, inheritype, size);
+	return newMixin(th, th(th)->stk_top++, (type==aNull)? vmlit(TypeType) : type, inheritype, size);
 }
 
 /* Push and return the value for a method written in C */
@@ -196,6 +196,14 @@ Value pushVM(Value th) {
 	return *th(th)->stk_top++ = vm(th);
 }
 
+/* Push a value's serialized Text */
+Value pushSerialized(Value th, Value val) {
+	stkCanIncTop(th); /* Check if there is room */
+	pushStringl(th, aNull, NULL, 16);
+	serialize(th, getFromTop(th, 0), 0, val);
+	return getFromTop(th, 0);
+}
+
 /* Push and return the value of the named member of the table found at the stack's specified index */
 Value pushMember(Value th, AintIdx tblidx, const char *mbrnm) {
 	stkCanIncTop(th); /* Check if there is room */
@@ -213,6 +221,14 @@ void popMember(Value th, AintIdx tblidx, const char *mbrnm) {
 	newSym(th, th(th)->stk_top++, mbrnm, strlen(mbrnm));
 	tblSet(th, tbl, *(th(th)->stk_top-1), *(th(th)->stk_top-2));
 	th(th)->stk_top -= 2; // Pop key & value after value is safely in table
+}
+
+/* Push and return the raw value of the named property of the value found at the stack's specified index */
+Value pushProperty(Value th, AintIdx validx, const char *propnm) {
+	stkCanIncTop(th); /* Check if there is room */
+	Value val = *stkAt(th, validx);
+	newSym(th, th(th)->stk_top++, propnm, strlen(propnm));
+	return *(th(th)->stk_top-1) = getProperty(th, val, *(th(th)->stk_top-1));
 }
 
 /* Push a copy of a stack's value at index onto the stack's top */
@@ -336,7 +352,7 @@ void stkGrow(Value th, AuintIdx extra) {
 
 	// Already past max?  Abort!
 	if (th(th)->size > STACK_MAXSIZE) {
-		vm_outofstack();
+		logSevere("Acorn VM wants to overflow max stack size. Runaway recursive method?");
 		return;
 	}
 

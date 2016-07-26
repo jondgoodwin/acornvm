@@ -17,7 +17,6 @@ void typ_resource_init(Value th); // Must define before Method, File etc.
 void typ_method_init(Value th);
 
 void typ_file_init(Value th);
-void env_stream_init(Value th);
 
 /** Add two integers */
 int typ_int_plus(Value th) {
@@ -58,9 +57,15 @@ void typ_int_init(Value th) {
 	return;
 }
 
-/** Create a new List */
+/** Create a new List. Parameters fill the List */
 int typ_list_new(Value th) {
-	pushArray(th, vmlit(TypeListm), 0);
+	int arrsz = getTop(th)-1;
+	Value arr = pushArray(th, vmlit(TypeListm), arrsz);
+	int idx = 0;
+	while (arrsz--) {
+		arrSet(th, arr, idx, getLocal(th, idx+1));
+		idx++;
+	}
 	return 1;
 }
 
@@ -124,7 +129,6 @@ void glo_init(Value th) {
 	typ_method_init(th);
 
 	typ_file_init(th);
-	env_stream_init(th);
 }
 
 #ifdef __cplusplus

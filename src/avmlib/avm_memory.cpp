@@ -34,7 +34,7 @@ void *mem_gcrealloc(Value th, void *block, Auint osize, Auint nsize) {
 		mem_gcfull(th, 1);  // try to free some memory...
 		newblock = (Value) mem_frealloc(block, nsize);  // try again
 		if (newblock == NULL)
-			vm_outofmemory();
+			logSevere("Out of memory trying allocate or grow a memory block.");
 	}
 
 	// Make sure it worked, adjust GC debt and return address of new block
@@ -47,7 +47,7 @@ void* mem_gcreallocv(Value th, void *block, Auint osize, Auint nsize, Auint esiz
 	// Ensure we are not asking for more memory than available in address space
 	// If we do not do this, calculating the needed memory will overflow
 	if (nsize+1 > ~((Auint)0)/esize)
-		vm_outofmemory();
+		logSevere("Out of memory trying to ask for more memory than address space has.");
 	return mem_gcrealloc(th, block, osize*esize, nsize*esize);
 }
 
@@ -97,7 +97,7 @@ void *mem_growaux_(Value th, void *block, AuintIdx *size, AuintIdx size_elems,
 	AuintIdx newsize;
 	if (*size >= limit/2) {  /* cannot double it? */
 		if (*size >= limit)  /* cannot grow even a little? */
-			vm_outofmemory();
+			logSevere("Out of memory trying to grow a vector array.");
 		newsize = limit;  /* still have at least one free place */
 	}
 	else {

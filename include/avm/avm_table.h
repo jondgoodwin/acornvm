@@ -111,6 +111,9 @@ AuintIdx tblCalcStrHash(const char *str, Auint len, AuintIdx seed);
 /** Return a pointer to the value in the table at key, or NULL if not found. */
 Value *tblGetp(Value tbl, Value key);
 
+/** Serialize an table's contents to indented text */
+void tblSerialize(Value th, Value str, int indent, Value tbl);
+
 #ifdef __cplusplus
 } // end "C"
 } // end namespace

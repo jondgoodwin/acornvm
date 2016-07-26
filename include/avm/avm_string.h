@@ -48,8 +48,11 @@ typedef int (*CDataFinalizerFn)(Value o);
 /** Free all of a string's allocated memory.
   This will run a CData's ._finalizer C-method, if its type has one. */
 #define strFree(th, s) \
-	if (str_info(s)->flags1 & CDataFlg) \
-		((CDataFinalizerFn) (((CMethodInfo*)(getProperty(th, s, vmlit(SymFinalizer))))->methodp))((Value)s); \
+	if (str_info(s)->flags1&CDataFlg) { \
+		Value fin = getProperty(th, s, vmlit(SymFinalizer)); \
+		if (isMethod(fin) && isCMethod(fin)) \
+			((CDataFinalizerFn) (((CMethodInfo*)fin)->methodp))((Value)s); \
+	} \
 	mem_gcrealloc(th, (s)->str, (s)->avail + 1, 0); \
 	mem_free(th, (s));
 

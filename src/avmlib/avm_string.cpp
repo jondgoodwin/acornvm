@@ -34,7 +34,7 @@ Value newStr(Value th, Value *dest, Value type, const char *str, AuintIdx len) {
 	// If not provided, create null string
 	else {
 		val->str[0] = '\0'; // just in case
-		val->size = len;
+		val->size = 0;
 	}
 	val->str[len] = '\0'; // put guaranteed 0-terminator, just in case
 	val->type = type;
@@ -110,9 +110,34 @@ void strSub(Value th, Value val, AuintIdx pos, AuintIdx sz, const char *repstr, 
 	if (replen)
 		memcpy(&str->str[pos], repstr, replen);
 
-	/* Place 0-terminator as needed, and reset hash to uncalculated */
+	/* Adjust size and place 0-terminator */
 	str->size = len;
 	str->str[len] = '\0';
+}
+
+/*	Append characters to the end of a string. */
+void strAppend(Value th, Value val, const char *addstr, AuintIdx addstrlen) {
+	StrInfo* str = str_info(val);
+	AuintIdx newlen = str->size + addstrlen;
+
+	/* Return if nothing to add, or resulting string is greater than possible */
+	if (addstr==NULL || addstrlen==0 || newlen<str->size) 
+		return;
+
+	/* Expand available space, if needed */
+	if (newlen > str->avail) {
+		AuintIdx newavail = str->avail+str->avail; // try doubling
+		if (newavail < str->avail || newavail<newlen+1)
+			newavail = newlen+1;	// Ask for what we need
+		strMakeRoom(th, val, newavail);
+	}
+
+	// Append addstr
+	memcpy(&str->str[str->size], addstr, addstrlen);
+
+	/* Adjust size and place 0-terminator */
+	str->size = newlen;
+	str->str[newlen] = '\0';
 }
 
 /* Return a read-only pointer into a C-string encoded by a symbol or string-oriented Value. 

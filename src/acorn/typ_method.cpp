@@ -52,7 +52,7 @@ void typ_method_init(Value th) {
 
 	// Register this type as Resource's 'acn' extension
 	pushGloVar(th, "Resource");
-		pushMember(th, getTop(th) - 1, "_extensions");
+		pushMember(th, getTop(th) - 1, "extensions");
 			pushValue(th, vmlit(TypeMethc));
 			popMember(th, getTop(th) - 2, "acn");
 		popValue(th);

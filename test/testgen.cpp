@@ -79,6 +79,8 @@ void testGen(void) {
 
 	// File, Resource etc
 	pushValue(th, genTestPgm(th,5));
+	//pushSerialized(th, getFromTop(th, 0));
+	//puts(toStr(popValue(th)));
 	methodCall(th, 0, 0);
 
 	vm_close(th);

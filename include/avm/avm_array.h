@@ -69,6 +69,9 @@ Value newArr(Value th, Value *dest, Value type, AuintIdx len);
 /** Return a new Array, allocating len slots for Values. */
 Value newClosure(Value th, Value *dest, Value type, AuintIdx len);
 
+/** Serialize an array's contents to indented text */
+void arrSerialize(Value th, Value str, int indent, Value arr);
+
 #ifdef __cplusplus
 } // end "C"
 } // end namespace

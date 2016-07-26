@@ -458,6 +458,26 @@ void addMixin(Value th, Value type, Value mixin) {
 		typp->type = typp->inheritype;
 }
 
+/* Serialize an table's contents to indented text */
+void tblSerialize(Value th, Value str, int indent, Value tbl) {
+	Node *n = tbl_info(tbl)->nodes;
+	Node *last = &tbl_info(tbl)->nodes[1 << tbl_info(tbl)->lAvailNodes];
+	int ind;
+
+	strAppend(th, str, "+Index", 6);
+	for (; n < last; n++) {
+		if (n->key != aNull) {
+			strAppend(th, str, "\n", 1);
+			ind = indent+1;
+			while (ind--)
+				strAppend(th, str, "\t", 1);
+			serialize(th, str, indent+1, n->key);
+			strAppend(th, str, ": ", 2);
+			serialize(th, str, indent+1, n->val);
+		}
+	}
+}
+
 #ifdef __cplusplus
 } // extern "C"
 } // namespace avm

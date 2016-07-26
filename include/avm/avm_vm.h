@@ -143,10 +143,16 @@ extern "C" {
 	/** Unlock the Vm */
 	void vm_unlock(Value th);
 
-	/** Call when VM cannot allocate a new object */
-	void vm_outofmemory(void);
-	/** Call when we want to overflow max stack size */
-	void vm_outofstack(void);
+	/** Log a message to the logfile */
+	void vm_log(const char *msg, ...);
+	#define logSevere(msg, ...) {vm_log(msg, __VA_ARGS__); exit(1);}
+	#define logError(msg, ...) vm_log(msg, __VA_ARGS__)
+	#define logWarning(msg, ...) vm_log(msg, __VA_ARGS__)
+	#ifdef _DEBUG
+	#define logInfo(msg, ...) vm_log(msg, __VA_ARGS__)
+	#else
+	#define logInfo(msg, ...)
+	#endif
 
 #ifdef __cplusplus
 } // end "C"

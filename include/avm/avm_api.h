@@ -86,6 +86,8 @@ AVM_API void arrIns(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val);
 /** Copy n2 values from arr2 starting at pos2 into array, replacing the n values in first array starting at pos.
  * This can increase or decrease the size of the array. arr and arr2 may be the same array. */
 AVM_API void arrSub(Value th, Value arr, AuintIdx pos, AuintIdx n, Value arr2, AuintIdx pos2, AuintIdx n2);
+/**	Append characters to the end of a string. */
+AVM_API void strAppend(Value th, Value val, const char *addstr, AuintIdx addstrlen);
 
 // Implemented in avm_table.cpp
 /** Return 1 if the value is a Hash Table, otherwise 0 */
@@ -183,6 +185,10 @@ AVM_API Value pushMixin(Value th, Value type, Value inheritype, AuintIdx size);
 AVM_API Value pushThread(Value th);
 /** Push and return the VM's value */
 AVM_API Value pushVM(Value th);
+/** Push a value's serialized Text */
+AVM_API Value pushSerialized(Value th, Value val);
+/** Push and return the raw value of the named property of the value found at the stack's specified index */
+AVM_API Value pushProperty(Value th, AintIdx validx, const char *propnm);
 /** Push and return the value of the named member of the table found at the stack's specified index */
 AVM_API Value pushMember(Value th, AintIdx tblidx, const char *mbrnm);
 /** Put the local stack's top value into the named member of the table found at the stack's specified index */

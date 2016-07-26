@@ -5,7 +5,9 @@
  * See Copyright Notice in avm.h
 */
 
-#include <avmlib.h>
+#include "avmlib.h"
+#include <stdio.h>
+#include <string.h>
 
 #ifdef __cplusplus
 namespace avm {
@@ -68,6 +70,57 @@ Value getType(Value th, Value val) {
 		return vmlit(val==aNull? TypeNullm : TypeBoolm);
 	}
 	return aNull; // Should not ever get here
+}
+
+/* Append serialized val to end of str. */
+void serialize(Value th, Value str, int indent, Value val) {
+	// Decode the encoded Value
+	switch ((Auint)val & ValMask) {
+	case ValCons:
+		if (val==aNull) strAppend(th, str, "null", 4);
+		else if (val==aFalse) strAppend(th, str, "false", 5);
+		else if (val==aTrue) strAppend(th, str, "true", 4);
+		return;
+	case ValInt:
+		{char istr[15];
+		sprintf(istr, "%d", toAint(val));
+		strAppend(th, str, istr, strlen(istr)); 
+		return;
+		}
+	case ValFloat:
+		{char fstr[30];
+		sprintf(fstr, "%#.15g", toAfloat(val));
+		strAppend(th, str, fstr, strlen(fstr)); 
+		return;
+		}
+	case ValPtr:
+		switch (((MemInfo*)val)->enctyp) {
+		case SymEnc: 
+			{strAppend(th, str, "'", 1);
+			strAppend(th, str, sym_cstr(val), sym_size(val)); 
+			strAppend(th, str, "'", 1);
+			return;}
+		case StrEnc: 
+			{strAppend(th, str, "\"", 1);
+			strAppend(th, str, str_cstr(val), str_size(val)); 
+			strAppend(th, str, "\"", 1);
+			return;}
+		case ArrEnc: 
+			arrSerialize(th, str, indent, val);
+			return;
+		case TblEnc: 
+			tblSerialize(th, str, indent, val);
+			return;
+		case MethEnc: 
+			if (isCMethod(val))
+				{strAppend(th, str, "CMethod", 7); return;}
+			else
+				{methSerialize(th, str, indent, val); return;}
+		case ThrEnc: strAppend(th, str, "Thread", 6); return;
+		case VmEnc: strAppend(th, str, "Vm", 2); return;
+		}
+	}
+	return; // Should not ever get here
 }
 
 /** Find method in part's methods or mixins. Return aNull if not found */

@@ -44,7 +44,6 @@
     <ClCompile Include="src\avmlib\avm_thread.cpp" />
     <ClCompile Include="src\avmlib\avm_value.cpp" />
     <ClCompile Include="src\avmlib\avm_vm.cpp" />
-    <ClCompile Include="src\globals\env_stream.cpp" />
     <ClCompile Include="src\globals\typ_file.cpp" />
     <ClCompile Include="src\globals\glo_init.cpp" />
     <ClCompile Include="src\globals\typ_resource.cpp" />

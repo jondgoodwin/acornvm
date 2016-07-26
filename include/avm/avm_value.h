@@ -130,6 +130,11 @@ AVM_API Afloat toAfloat(Value v);
 /** Is value a pointer? */
 #define isPtr(v) (((Auint)v & ValMask)==ValPtr)
 
+
+
+/** Append serialized val to end of str. */
+void serialize(Value th, Value str, int indent, Value val);
+
 #ifdef __cplusplus
 } // end "C"
 } // end namespace

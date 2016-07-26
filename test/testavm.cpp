@@ -24,6 +24,8 @@ void testAll(void) {
 
 int main(int argc, char **argv) {
 
+	freopen("acornvm.log", "w", stderr);
+
 	printf("Testing %d-bit %s\n", AVM_ARCH, AVM_RELEASE);
 	testAll();
 	// testGen();

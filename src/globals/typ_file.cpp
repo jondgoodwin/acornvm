@@ -60,7 +60,7 @@ void typ_file_init(Value th) {
 
 	// Register this type as Resource's 'file' scheme
 	pushGloVar(th, "Resource");
-		pushMember(th, getTop(th) - 1, "_schemes");
+		pushMember(th, getTop(th) - 1, "schemes");
 			pushValue(th, typ);
 			popMember(th, getTop(th) - 2, "file");
 		popValue(th);

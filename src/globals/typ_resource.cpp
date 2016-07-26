@@ -161,17 +161,17 @@ void newResource(Value th, Value url, Value baseurl, Value *resarray) {
 			authl = basescanp - authp;
 	}
 
-	// **** Store the scheme type, mapped from _schemes
+	// **** Store the scheme type, mapped from schemes
 	if (schemel==0) {
 		schemep = authl? "http" : "file"; // default scheme
 		schemel = strlen(schemep);
 	}
-	pushMember(th, 0, "_schemes"); // Get table from Resource (self)
+	pushMember(th, 0, "schemes"); // Get table from Resource (self)
 	pushSyml(th, schemep, schemel);
 	resarray[ResSchemeType] = tblGet(th, getFromTop(th, 1), getFromTop(th, 0));
 	setTop(th, stktop); // reset stack
 
-	// *** Store the extension type, mapped from _extensions
+	// *** Store the extension type, mapped from extensions
 	if (lastdotp) {
 		extp = lastdotp+1;
 		extl = (queryp? queryp : fragp? fragp : urlscanp) - extp;
@@ -180,7 +180,7 @@ void newResource(Value th, Value url, Value baseurl, Value *resarray) {
 		extp = "acn";
 		extl = strlen(extp);
 	}
-	pushMember(th, 0, "_extensions"); // Get table from Resource (self)
+	pushMember(th, 0, "extensions"); // Get table from Resource (self)
 	pushSyml(th, extp, extl);
 	resarray[ResExtType] = tblGet(th, getFromTop(th, 1), getFromTop(th, 0));
 	setTop(th, stktop); // reset stack
@@ -248,7 +248,7 @@ void newResource(Value th, Value url, Value baseurl, Value *resarray) {
 void getResource(Value th, Value *resarray) {
 	// If it was retrieved already and is found in the cache, return it
 	pushGloVar(th, "Resource");
-	Value cache = pushMember(th, getTop(th)-1, "_cache");
+	Value cache = pushMember(th, getTop(th)-1, "cache");
 	popValue(th);
 	popValue(th);
 	Value resval = tblGet(th, cache, resarray[ResNormUrl]);
@@ -328,7 +328,7 @@ int typ_resource_inst_frag(Value th) {
 	return 1;
 }
 
-/** Initialize the File type */
+/** Initialize the Resource type */
 void typ_resource_init(Value th) {
 	vmlit(TypeResc) = pushType(th, vmlit(TypeType), 6);
 		vmlit(TypeResm) = pushMixin(th, vmlit(TypeType), aNull, 5);
@@ -344,11 +344,11 @@ void typ_resource_init(Value th) {
 		pushCMethod(th, typ_resource_get);
 		popMember(th, 0, "()");
 		pushTbl(th, vmlit(TypeIndexm), 10);
-		popMember(th, 0, "_schemes");
+		popMember(th, 0, "schemes");
 		pushTbl(th, vmlit(TypeIndexm), 10);
-		popMember(th, 0, "_extensions");
+		popMember(th, 0, "extensions");
 		pushTbl(th, vmlit(TypeIndexm), 10);
-		popMember(th, 0, "_cache");
+		popMember(th, 0, "cache");
 	popGloVar(th, "Resource");
 }
 

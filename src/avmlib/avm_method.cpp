@@ -350,12 +350,12 @@ void methodRunBC(Value th) {
 			gloSet(th, *(lits + bc_bx(i)), *rega);
 			break;
 
-		// OpGetGlobal: R(A) := Closure(D)
+		// OpGetClosure: R(A) := Closure(D)
 		case OpGetClosure:
 			*rega = arrGet(th, ci->methodbase, bc_bx(i));
 			break;
 
-		// OpSetGlobal: Closure(D) := R(A)
+		// OpSetClosure: Closure(D) := R(A)
 		case OpSetClosure:
 			arrSet(th, ci->methodbase, bc_bx(i), *rega);
 			break;
@@ -629,6 +629,90 @@ void methodSetCall(Value th, int nparms, int nexpected) {
 	case MethodBC:
 		methodRunBC(th);
 		break;
+	}
+}
+
+/** Serialize a,b,c for an op code */
+void methABCSerialize(Value th, Value str, const char *op, Instruction i) {
+	strAppend(th, str, op, strlen(op));
+	serialize(th, str, 0, anInt(bc_a(i)));
+	strAppend(th, str, ", ", 2);
+	serialize(th, str, 0, anInt(bc_b(i)));
+	strAppend(th, str, ", ", 2);
+	serialize(th, str, 0, anInt(bc_c(i)));
+}
+
+/** Serialize a+value for an op code */
+void methALSerialize(Value th, Value str, const char *op, Instruction i, Value lit) {
+	strAppend(th, str, op, strlen(op));
+	serialize(th, str, 0, anInt(bc_a(i)));
+	strAppend(th, str, ", ", 2);
+	serialize(th, str, 0, lit);
+}
+
+/** Serialize a,value,b for an op code */
+void methABSSerialize(Value th, Value str, const char *op, Instruction i, Value lit) {
+	strAppend(th, str, op, strlen(op));
+	serialize(th, str, 0, anInt(bc_a(i)));
+	strAppend(th, str, ", ", 2);
+	serialize(th, str, 0, lit);
+	strAppend(th, str, ", ", 2);
+	serialize(th, str, 0, anInt(bc_b(i)));
+}
+
+/* Serialize an method's bytecode contents to indented text */
+void methSerialize(Value th, Value str, int indent, Value method) {
+	BMethodInfo* meth = (BMethodInfo*) (method);
+	Value *lits = meth->lits;
+	int ind;
+	strAppend(th, str, "+Method", 7);
+	for (AuintIdx ip=0; ip<meth->nextInst; ip++) {
+		Instruction i = meth->code[ip];
+		strAppend(th, str, "\n", 1);
+		ind = indent+1;
+		while (ind--)
+			strAppend(th, str, "\t", 1);
+		serialize(th, str, indent+1, anInt(ip));
+		strAppend(th, str, ": ", 2);
+		switch (bc_op(i)) {
+		case OpLoadReg: methABCSerialize(th, str, "LoadReg ", i); break;
+		case OpLoadRegs: methABCSerialize(th, str, "LoadRegs ", i); break;
+		case OpLoadLit: methALSerialize(th, str, "LoadLit ", i, *(lits + bc_bx(i))); break;
+		case OpLoadLitx: methALSerialize(th, str, "LoadLitx ", i, *(lits + bc_ax(i))); ip++; break;
+		case OpLoadPrim: methALSerialize(th, str, "LoadPrim ", i, (Value)((((Auint)bc_b(i)) << ValShift) + ValCons)); break;
+		case OpLoadNulls: methABCSerialize(th, str, "LoadNulls ", i); break;
+		case OpLoadVararg: methABCSerialize(th, str, "LoadVararg ", i); break;
+		case OpGetGlobal: methALSerialize(th, str, "GetGlobal ", i, *(lits + bc_bx(i))); break;
+		case OpSetGlobal: methALSerialize(th, str, "SetGlobal ", i, *(lits + bc_bx(i))); break;
+		case OpGetClosure: methABCSerialize(th, str, "GetClosure ", i); break;
+		case OpSetClosure: methABCSerialize(th, str, "SetClosure ", i); break;
+		case OpJump: methALSerialize(th, str, "Jump ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJNull: methALSerialize(th, str, "JNull ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJNNull: methALSerialize(th, str, "JNNull ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJTrue: methALSerialize(th, str, "JTrue ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJFalse: methALSerialize(th, str, "JFalse ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJSame: methALSerialize(th, str, "JSame ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJDiff: methALSerialize(th, str, "JDiff ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJEq: methALSerialize(th, str, "JEq ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJNe: methALSerialize(th, str, "JNe ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJLt: methALSerialize(th, str, "JLt ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJLe: methALSerialize(th, str, "JLe ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJGt: methALSerialize(th, str, "JGt ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJGe: methALSerialize(th, str, "JGe ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpLoadStd: methABSSerialize(th, str, "LoadStd ", i, vmStdSym(th, bc_c(i))); break;
+		case OpForPrep: methABSSerialize(th, str, "ForPrep ", i, vmStdSym(th, bc_c(i))); break;
+		case OpRptPrep: methABSSerialize(th, str, "RptPrep ", i, vmStdSym(th, bc_c(i))); break;
+		case OpGetProp: methABCSerialize(th, str, "GetProp ", i); break;
+		case OpSetProp: methABCSerialize(th, str, "SetProp ", i); break;
+		case OpGetActProp:  methABCSerialize(th, str, "GetActProp ", i); break;
+		case OpSetActProp:  methABCSerialize(th, str, "SetActProp ", i); break;
+		case OpCall:  methABCSerialize(th, str, "Call ", i); break;
+		case OpSetCall:  methABCSerialize(th, str, "SetCall ", i); break;
+		case OpTailCall:  methABCSerialize(th, str, "TailCall ", i); break;
+		case OpRptCall:  methABCSerialize(th, str, "RptCall ", i); break;
+		case OpReturn: methABCSerialize(th, str, "Return ", i); break;
+		default: strAppend(th, str, "Unknown Opcode", 14);
+		}
 	}
 }
 

@@ -23,6 +23,7 @@ void genNew(Acorn* ac) {
 	meth->code = NULL;
 	meth->maxstacksize = 20;
 	meth->size = 0;
+	meth->nextInst = 0;
 	meth->lits = NULL;
 	meth->litsz = 0;
 	meth->nbrlits = 0;
@@ -31,7 +32,6 @@ void genNew(Acorn* ac) {
 	meth->nbrlocals = 0;
 
 	ac->method = meth;
-	ac->ip = 0;
 	ac->reg_top = 0;
 }
 
@@ -43,8 +43,8 @@ void genPutInstr(Acorn *ac, AuintIdx loc, Instruction i) {
 
 /* Append new instruction to code array */
 void genAddInstr(Acorn *ac, Instruction i) {
-	mem_growvector(ac->th, ac->method->code, ac->ip, ac->method->size, Instruction, INT_MAX);
-	ac->method->code[ac->ip++] = i;
+	mem_growvector(ac->th, ac->method->code, ac->method->nextInst, ac->method->size, Instruction, INT_MAX);
+	ac->method->code[ac->method->nextInst++] = i;
 }
 
 /* Add a literal and return its index */

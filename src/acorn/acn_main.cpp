@@ -117,14 +117,14 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 1, genAddLit(ac, anInt(0))));
 		genAddInstr(ac, BCINS_ABC(OpForPrep, 2, 3, ss(SymNext)));
 		genAddInstr(ac, BCINS_ABC(OpRptCall, 2, 2, 2));
-		saveip = ac->ip; // Save loc of jump
+		saveip = ac->method->nextInst; // Save loc of jump
 		genAddInstr(ac, BCINS_AJ(OpJNull, 4, BCNO_JMP)); // Will calculate to 5
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 6, 1, ss(SymPlus)));
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 8, 5, 0));
 		genAddInstr(ac, BCINS_ABC(OpCall, 6, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 1, 6, 0));
 		genAddInstr(ac, BCINS_AJ(OpJump, 0, -7));
-		genSetJumpList(ac, saveip, ac->ip); // Correct the jump to go to here
+		genSetJumpList(ac, saveip, ac->method->nextInst); // Correct the jump to go to here
 		genAddInstr(ac, BCINS_ABC(OpReturn, 1, 1, 0));
 		popValue(th);
 			} break;

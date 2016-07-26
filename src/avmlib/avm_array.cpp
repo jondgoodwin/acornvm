@@ -238,6 +238,22 @@ void arrSub(Value th, Value arr, AuintIdx pos, AuintIdx n, Value arr2, AuintIdx 
 	a->size += n2-n;
 }
 
+/* Serialize an array's contents to indented text */
+void arrSerialize(Value th, Value str, int indent, Value arr) {
+	ArrInfo *a = arr_info(arr);
+	AuintIdx sz = arr_size(arr);
+	int ind;
+
+	strAppend(th, str, "+List", 5);
+	for (AuintIdx i=0; i<sz; i++) {
+		strAppend(th, str, "\n", 1);
+		ind = indent+1;
+		while (ind--)
+			strAppend(th, str, "\t", 1);
+		serialize(th, str, indent+1, a->arr[i]);
+	}
+}
+
 #ifdef __cplusplus
 } // extern "C"
 } // namespace avm

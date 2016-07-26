@@ -208,6 +208,8 @@ void testCapi(void) {
 	arrSub(th, getLocal(th, array1), 1, 2, getLocal(th, array2), 2, 4);
 	t(getSize(getLocal(th, array1))==6, "getSize(array1)==6");
 	t(getSize(arrGet(th, getLocal(th, array1), 4))==21, "getSize(arrGet(th, array1, 5))==21");
+	// pushSerialized(th, getLocal(th, array1));
+	// puts(toStr(popValue(th)));
 
 	// Table API tests
 	pushTbl(th, aNull, 0); // tbl1
@@ -249,6 +251,12 @@ void testCapi(void) {
 	tblRemove(th, getLocal(th, tbl1), getLocal(th, name)); // Delete 'name'
 	t(!tblHas(th, getLocal(th, tbl1), getLocal(th, name)), "!tblHas(tbl1, 'name')");
 	t(getSize(getLocal(th, tbl1))==4, "getSize(tbl1)==4"); // Now have 4 entries
+	//pushSerialized(th, getLocal(th, tbl1));
+	//puts(toStr(popValue(th)));
+	//pushGloVar(th, "Resource");
+	//pushSerialized(th, getFromTop(th, 0));
+	//puts(toStr(popValue(th)));
+	//popValue(th);
 
 	// Thread tests - global namespace
 	pushLocal(th, array1);
@@ -303,6 +311,26 @@ void testCapi(void) {
 	Value typtyp = popValue(th);
 	pushGloVar(th, "Integer");
 	t(getType(th, popValue(th))==typtyp, "isType(getType(th, Global(th, 'Integer'))==Global(th, 'Type'))");
+
+	// Serialization
+	pushSerialized(th, aNull);
+	t(0==strcmp(toStr(popValue(th)),"null"), "Fail to serialize null");
+	pushSerialized(th, aTrue);
+	t(0==strcmp(toStr(popValue(th)),"true"), "Fail to serialize true");
+	pushSerialized(th, aFalse);
+	t(0==strcmp(toStr(popValue(th)),"false"), "Fail to serialize false");
+	pushSerialized(th, anInt(-4085760));
+	t(0==strcmp(toStr(popValue(th)),"-4085760"), "Fail to serialize -4085760");
+	//pushSerialized(th, aFloat(-3140.0235804));
+	//t(0==strcmp(toStr(popValue(th)),"-3140.0235804"), "Fail to serialize -3140.0235804");
+	pushSym(th, "symbol");
+	pushSerialized(th, getFromTop(th, 0));
+	t(0==strcmp(toStr(popValue(th)),"'symbol'"), "Fail to serialize 'symbol'");
+	popValue(th);
+	pushString(th, aNull, "A silly string");
+	pushSerialized(th, getFromTop(th, 0));
+	t(0==strcmp(toStr(popValue(th)),"\"A silly string\""), "Fail to serialize 'A silly string'");
+	popValue(th);
 
 	vm_close(th);
 	printf("All %ld C-API tests completed. %ld failed.\n", tests, fails);

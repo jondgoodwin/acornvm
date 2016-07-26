@@ -40,6 +40,8 @@ void vm_stdinit(Value th); // Initializer for standard symbols
  *   each encoding. This includes the resource types and Acorn compiler. */
 AVM_API Value newVM(void) {
 
+	logInfo(AVM_RELEASE " started.");
+
 	// Create VM info block and start up memory management
 	VmInfo *vm = (struct VmInfo*) mem_frealloc(NULL, sizeof(VmInfo));
 	vm->enctyp = VmEnc;
@@ -91,6 +93,7 @@ void vm_close(Value th) {
 	thrFreeStacks(th);
 	assert(vm(th)->totalbytes + vm(th)->gcdebt == sizeof(VmInfo));
 	mem_frealloc(vm(th), 0);  /* free main block */
+	logInfo(AVM_RELEASE " ended.");
 }
 
 /* Lock the Vm */
@@ -101,16 +104,25 @@ void vm_lock(Value th) {
 void vm_unlock(Value th) {
 }
 
-/* Handle when memory manager says we have no more memory to offer */
-void vm_outofmemory(void) {
-	puts("Acorn VM ran out of memory");
-	exit(1);
-}
+#include <stdarg.h>
+/* Log a message to the logfile */
+void vm_log(const char *msg, ...) {
+	// Start line with timestamp
+	time_t ltime;
+	char timestr[80];
+	ltime=time(NULL);
+	strftime (timestr, sizeof(timestr), "%X %x  ", localtime(&ltime));
+	fputs(timestr, stderr);
 
-/* Call when we want to overflow max stack size */
-void vm_outofstack(void) {
-	puts("Acorn VM wants to overflow max stack size. Runaway recursive method?");
-	exit(1);
+	// Do a formatted output, passing along all parms
+	va_list argptr;
+	va_start(argptr, msg);
+	vfprintf(stderr, msg, argptr);
+	va_end(argptr);
+	fputs("\n", stderr);
+
+	// Ensure log file gets it
+	fflush(stderr);
 }
 
 /** Mapping structure correlating a VM literal symbol's number with its name */
