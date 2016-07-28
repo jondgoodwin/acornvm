@@ -39,25 +39,33 @@ typedef struct StrInfo {
 	AuintIdx avail;	//!< Allocated size of character buffer
 } StrInfo;
 
-/** Identifies string as a CData structure, possibly with a finalizer */
-#define CDataFlg 0x80
+// Flags1 bits and helpers -->
+// 0x80 reserved for Locked
+/** String is a CData structure, possibly with a finalizer */
+#define StrCDataFlg		0x40
+#define StrExtraHdrMask 0x3C //!< How much bigger to allocate StrInfo (x4)
 
 /** Define the prototype for a cdata finalizer*/
 typedef int (*CDataFinalizerFn)(Value o);
 
+// Flags2 bits and helpers -->
+#define StrValByteSzMask 0x30 //!< Number of bytes in a value (1, 2, 4, 8)
+#define StrStructSzMask	0x0F //!< Number of values in a structure (1-16)
+
 /** Free all of a string's allocated memory.
   This will run a CData's ._finalizer C-method, if its type has one. */
 #define strFree(th, s) \
-	if (str_info(s)->flags1&CDataFlg) { \
+	if (str_info(s)->flags1&StrCDataFlg) { \
 		Value fin = getProperty(th, s, vmlit(SymFinalizer)); \
 		if (isMethod(fin) && isCMethod(fin)) \
 			((CDataFinalizerFn) (((CMethodInfo*)fin)->methodp))((Value)s); \
 	} \
-	mem_gcrealloc(th, (s)->str, (s)->avail + 1, 0); \
-	mem_free(th, (s));
+	if ((s)->str) \
+		mem_gcrealloc(th, (s)->str, (s)->avail + 1, 0); \
+	mem_gcrealloc(th, (s), sizeof(StrInfo) + ((s)->flags1&StrExtraHdrMask), 0) // mem_free(th, (s));
 
 /** The total amount of memory allocated for a specific string */
-#define str_memsize(val) (sizeof(StrInfo) + (str_info(val)->avail) + 1)
+#define str_memsize(val) (sizeof(StrInfo) + (str_info(val)->flags1&StrExtraHdrMask) + (str_info(val)->avail) + 1)
 
 /** Mark all in-use string values for garbage collection 
  * Increments how much allocated memory the string uses. */
@@ -83,9 +91,12 @@ Value newStr(Value th, Value *dest, Value type, const char *str, AuintIdx len);
 
 /** Return a CData value containing C-data for C-methods.
    Its type may have a _finalizer, called just before the GC frees the C-Data value. */
-Value newCData(Value th, Value *dest, Value type, AuintIdx len);
+Value newCData(Value th, Value *dest, Value type, AuintIdx len, unsigned int extrahdr);
 
-	/** Calculate the hash value for a string */
+/** Return a string value containing room for identically structured numbers. */
+Value newNumbers(Value th, Value *dest, Value type, AuintIdx nStructs, unsigned int nVals, unsigned int valSz, unsigned int extrahdr);
+
+/** Calculate the hash value for a string */
 AuintIdx str_hash(Value th, Value val);
 
 #ifdef __cplusplus

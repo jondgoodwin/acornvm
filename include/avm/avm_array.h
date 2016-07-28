@@ -37,7 +37,8 @@ typedef struct ArrInfo {
 } ArrInfo;
 
 /* flags1 flags */
-#define TypeClo 0x80	//!< Flags1 bit, if array is for a closure
+// 0x80 reserved for Locked
+#define TypeClo 0x40	//!< Flags1 bit, if array is for a closure
 
 /** Mark all in-use array values for garbage collection 
  * Increments how much allocated memory the array uses. */

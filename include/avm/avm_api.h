@@ -36,10 +36,10 @@ AVM_API Auint getSize(Value val);
 AVM_API int isSym(Value sym);
 /** Return 1 if the value is a String, otherwise 0 */
 AVM_API int isStr(Value str);
-/** Return a read-only pointer into a C-string encoded by a symbol or string Value. 
- * It is guaranteed to have a 0-terminating character just after its full length. 
- * Any other value type returns NULL.
- */
+/** Return a pointer to the small header extension allocated by a CData or Numbers creation */
+AVM_API const void *toHeader(Value str);
+/** Return a read-only pointer into the string's byte data. This pointer can be re-cast as needed.
+	If API functions are used, it will have a 0-terminating character just after its full length. */
 AVM_API const char* toStr(Value sym);
 /** Return 1 if the symbol or string value's characters match the zero-terminated c-string, otherwise 0. */
 AVM_API int isEqStr(Value val, const char* str);
@@ -56,6 +56,14 @@ AVM_API void strMakeRoom(Value th, Value val, AuintIdx len);
  *	The Acorn string will be resized automatically to accommodate excess characters.
  *	The operation will not be performed if resizing is not possible. */
 AVM_API void strSub(Value th, Value val, AuintIdx pos, AuintIdx sz, const char *str, AuintIdx len);
+/**	Append characters to the end of a string, growing its allocated block as needed. */
+AVM_API void strAppend(Value th, Value val, const char *addstr, AuintIdx addstrlen);
+/** Return size of every number in an Numbers block */
+AVM_API AuintIdx getValSz(Value str);
+/** Return number of values in a Numbers block structure */
+AVM_API AuintIdx getNVals(Value str);
+/** Return number of structures in a Numbers block */
+AVM_API AuintIdx getNStructs(Value str);
 
 // Implemented in avm_array.cpp
 /** Return 1 if the value is an Array, otherwise 0 */
@@ -86,8 +94,6 @@ AVM_API void arrIns(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val);
 /** Copy n2 values from arr2 starting at pos2 into array, replacing the n values in first array starting at pos.
  * This can increase or decrease the size of the array. arr and arr2 may be the same array. */
 AVM_API void arrSub(Value th, Value arr, AuintIdx pos, AuintIdx n, Value arr2, AuintIdx pos2, AuintIdx n2);
-/**	Append characters to the end of a string. */
-AVM_API void strAppend(Value th, Value val, const char *addstr, AuintIdx addstrlen);
 
 // Implemented in avm_table.cpp
 /** Return 1 if the value is a Hash Table, otherwise 0 */
@@ -160,12 +166,27 @@ AVM_API Value pushSym(Value th, const char *str);
 AVM_API Value pushSyml(Value th, const char *str, AuintIdx len);
 /** Push and return the value for a method written in C */
 AVM_API Value pushCMethod(Value th, AcMethodp func);
-/** Push and return a new String value */
+/** Push and return a new typed string for the specified, 0-terminated c-string (whose contents are copied over).
+	Specifying a type of aNull is changed to Text.newtype. */
 AVM_API Value pushString(Value th, Value type, const char *str);
-/** Push and return a new String value of size with a copy of str bytes */
+/** Push and return a new typed string whose allocated block is len+1 bytes.
+	If a non-NULL str is specified, its contents for len bytes are copied over, making len the string's size.
+	If NULL is given for str, the string's size is set to 0 (and nothing is copied over).
+	Specifying a type of aNull is changed to Text.newtype. */
 AVM_API Value pushStringl(Value th, Value type, const char *str, AuintIdx size);
-/** Push and return a new typed CData value of size */
-AVM_API Value pushCData(Value th, Value type, AuintIdx size);
+/** Push and return a new typed C-data string that contains size bytes for c-data.
+	It may hold pointers and handles, but never Values. 
+	The extrahdr indicates the size of the header extension for a small (&lt;= 60 bytes), fixed-size data area
+	(it can be used instead of the data area by setting len to 0, which avoids allocating the cdata block).
+	Use a re-cast toStr() to initialize, access or alter the cdata contents (which can be resized if needed).
+	Its type (a mixin) may have a _finalizer c-method for de-allocating any resources
+	before the garbage collector frees a no-longer needed c-data value. */
+AVM_API Value pushCData(Value th, Value type, AuintIdx size, unsigned int extrahdr);
+/** Push and return a new "numbers" string allocated to hold nStructs*nVals numbers, each occupying valSz bytes.
+	If nStructs>1, it starts off empty (size is 0). Otherwise, it is considered full.
+	The extrahdr indicates the size of the header extension for a small (&lt;= 60 bytes), fixed-size data area
+	(it can be used for metadata - such as specifying the dimensions of a 2- or 3-dimensional array). */
+AVM_API Value pushNumbers(Value th, Value type, AuintIdx nStructs, unsigned int nVals, unsigned int valSz, unsigned int extrahdr);
 /** Push and return a new Array value */
 AVM_API Value pushArray(Value th, Value type, AuintIdx size);
 /** Push and return a new Closure value.
@@ -185,7 +206,8 @@ AVM_API Value pushMixin(Value th, Value type, Value inheritype, AuintIdx size);
 AVM_API Value pushThread(Value th);
 /** Push and return the VM's value */
 AVM_API Value pushVM(Value th);
-/** Push a value's serialized Text */
+/** Push a value's serialized Text, an abridged, human-readable view of the contents of a value,
+	as well as recursively all values it contains. */
 AVM_API Value pushSerialized(Value th, Value val);
 /** Push and return the raw value of the named property of the value found at the stack's specified index */
 AVM_API Value pushProperty(Value th, AintIdx validx, const char *propnm);

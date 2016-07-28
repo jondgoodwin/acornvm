@@ -666,7 +666,7 @@ void methSerialize(Value th, Value str, int indent, Value method) {
 	Value *lits = meth->lits;
 	int ind;
 	strAppend(th, str, "+Method", 7);
-	for (AuintIdx ip=0; ip<meth->nextInst; ip++) {
+	for (AuintIdx ip=0; ip<meth->size; ip++) {
 		Instruction i = meth->code[ip];
 		strAppend(th, str, "\n", 1);
 		ind = indent+1;

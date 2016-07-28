@@ -20,12 +20,15 @@ Value newStr(Value th, Value *dest, Value type, const char *str, AuintIdx len) {
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 
 	// Create a string object
+	unsigned int extrahdr = 0; // No extra header for strings
 	MemInfo **linkp = NULL;
-	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo), linkp, 0);
+	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo)+extrahdr, linkp, 0);
+	val->flags1 = 0;
+	val->flags2 = 0;
+	val->type = type;
+
 	val->avail = len;
 	val->str = (char*) mem_gcrealloc(th, NULL, 0, len+1); // an extra byte for 0-terminator
-	val->flags1 = 0;
-
 	// Copy string's contents over, if provided.
 	if (str) {
 		memcpy(val->str, str, len);
@@ -37,33 +40,97 @@ Value newStr(Value th, Value *dest, Value type, const char *str, AuintIdx len) {
 		val->size = 0;
 	}
 	val->str[len] = '\0'; // put guaranteed 0-terminator, just in case
-	val->type = type;
 	return *dest = (Value) val;
 }
 
-/* Return a CData value containing C-data for C-methods.
+/* Return a string value containing C-data for C-methods.
    Its type may have a _finalizer, called just before the GC frees the C-Data value. */
-Value newCData(Value th, Value *dest, Value type, AuintIdx len) {
+Value newCData(Value th, Value *dest, Value type, AuintIdx len, unsigned int extrahdr) {
 	StrInfo *val;
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 
 	// Create a string object
 	MemInfo **linkp = NULL;
-	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo), linkp, 0);
-	val->avail = len;
-	val->str = (char*) mem_gcrealloc(th, NULL, 0, len+1); // an extra byte for 0-terminator
-	val->flags1 = CDataFlg;
-
-	val->str[0] = '\0'; // just in case
-	val->size = len;
-	val->str[len] = '\0'; // put guaranteed 0-terminator, just in case
+	// we only have four bits to represent size of extrahdr (in multiples of four)
+	extrahdr = extrahdr>=60? 60 : (extrahdr&3)? (extrahdr&StrExtraHdrMask)+4 : extrahdr;
+	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo) + extrahdr, linkp, 0);
+	val->flags1 = StrCDataFlg | extrahdr;
+	val->flags2 = 0;
 	val->type = type;
+
+	val->avail = val->size = len;
+	if (len>0) {
+		val->str = (char*) mem_gcrealloc(th, NULL, 0, len+1); // an extra byte for 0-terminator
+		val->str[0] = val->str[len] = '\0'; // put in guaranteed 0-terminators, just in case
+	}
+	else
+		val->str = NULL;
+	return *dest = (Value) val;
+}
+
+/* Return a string value containing room for identically structured numbers. */
+Value newNumbers(Value th, Value *dest, Value type, AuintIdx nStructs, unsigned int nVals, unsigned int valSz, unsigned int extrahdr) {
+	StrInfo *val;
+	mem_gccheck(th);	// Incremental GC before memory allocation events
+
+	// Create a string object metadata header (StrInfo)
+	MemInfo **linkp = NULL;
+	// we only have four bits to represent size of extrahdr (in multiples of four)
+	extrahdr = extrahdr>=60? 60 : (extrahdr&3)? (extrahdr&StrExtraHdrMask)+4 : extrahdr;
+	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo) + extrahdr, linkp, 0);
+	val->type = type;
+	val->flags1 = extrahdr;
+
+	// Store information about number organization, hardcoding into the flags
+	if (valSz>4)		{ valSz=8; val->flags2=0x30; } // StrValByteSzMask 0x30
+	else if (valSz>2)	{ valSz=4; val->flags2=0x20; }
+	else if (valSz>1)	{ valSz=2; val->flags2=0x10; }
+	else				{ valSz=1; val->flags2=0x00; }
+	if (nVals>16) nVals=16;
+	else if (nVals==0) nVals=1;
+	val->flags2 |= (nVals-1); // StrStructSzMask 0x0F
+	AuintIdx len = nStructs * nVals * valSz;
+
+	// Allocate block for number values
+	val->avail = len;
+	val->size = (nStructs==1)? len : 0; // Assume it is full if only one structure, but empty if a collection
+	val->str = (char*) mem_gcrealloc(th, NULL, 0, len+1); // an extra byte for 0-terminator
+	val->str[0] = val->str[len] = '\0'; // put guaranteed 0-terminators, just in case
 	return *dest = (Value) val;
 }
 
 /* Return 1 if the value is a String, otherwise 0 */
 int isStr(Value str) {
 	return isEnc(str, StrEnc);
+}
+
+/* Return a pointer to the small header extension allocated by a CData or Numbers creation */
+const void *toHeader(Value str) {
+	assert(isStr(str));
+	return (void*) (str_info(str)+1);
+}
+
+/* Return size of every number in an Numbers block */
+AuintIdx getValSz(Value str) {
+	if (!isStr(str))
+		return 1;
+	switch ((((StrInfo*)str)->flags2 & StrValByteSzMask)>>4) {
+	case 0: return 1;
+	case 1: return 2;
+	case 2: return 4;
+	case 3: return 8;
+	}
+	return 1;
+}
+
+/* Return number of values in a Numbers block structure */
+AuintIdx getNVals(Value str) {
+	return isStr(str)? (((StrInfo*)str)->flags2 & StrStructSzMask)+1 : 1;
+}
+
+/* Return number of structures in a Numbers block */
+AuintIdx getNStructs(Value str) {
+	return isStr(str)? ((StrInfo*)str)->size/getNVals(str)/getValSz(str) : 0;
 }
 
 /* Ensure string has room for len Values, allocating memory as needed.

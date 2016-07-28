@@ -43,8 +43,9 @@ typedef struct MethodInfo {
 /** Flags1 is for a method's flags - can use as lval or rval */
 #define methodFlags(val) (((MethodInfo*)val)->flags1)
 
-#define METHOD_FLG_C			0x80 //!< The method is coded in C (vs. Bytecode)
-#define METHOD_FLG_VARPARM		0x40 //!< The method accepts a variable number of parameters
+// 0x80 reserved for Locked
+#define METHOD_FLG_C			0x40 //!< The method is coded in C (vs. Bytecode)
+#define METHOD_FLG_VARPARM		0x20 //!< The method accepts a variable number of parameters
 
 /** Is the value a method? */
 #define isMethod(val) (isEnc(val, MethEnc))
@@ -154,10 +155,10 @@ enum ByteCodeOps {
 /** Information about a bytecode method */
 typedef struct BMethodInfo {
 	MemCommonInfoMeth;			//!< Common method header
-	Instruction *code;		//!< Array of bytecode instructions (size is its size)
+	Instruction *code;		//!< Array of bytecode instructions (size is nbr of instructions)
 	Value *lits;			//!< Array of literals used by this method
 	Value *locals;			//!< Array of local variables (& parms) used by method
-	AuintIdx nextInst;		//!< Number of instructions in method
+	AuintIdx avail;			//!< nbr of Instructions code is allocated for
 	AuintIdx litsz;			//!< Allocated size of literal list
 	AuintIdx nbrlits;		//!< Number of literals in lits
 	AuintIdx localsz;		//!< Allocated size of local list
@@ -181,7 +182,7 @@ typedef struct BMethodInfo {
 	{if (isCMethod(m)) mem_free(th, (CMethodInfo*)(m)); \
 	else {\
 		BMethodInfo* bm = (BMethodInfo*)m; \
-		if (bm->code) mem_freearray(th, bm->code, bm->size); \
+		if (bm->code) mem_freearray(th, bm->code, bm->avail); \
 		if (bm->lits) mem_freearray(th, bm->lits, bm->litsz); \
 		if (bm->locals) mem_freearray(th, bm->locals, bm->localsz); \
 		mem_free(th, bm); \

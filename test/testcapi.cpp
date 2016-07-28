@@ -175,7 +175,7 @@ void testCapi(void) {
 	Value cdatamixin = pushMixin(th, aNull, aNull, 1);
 	pushCMethod(th, cdatafin);
 	popMember(th, i, "_finalizer");
-	pushCData(th, cdatamixin, 10);
+	pushCData(th, cdatamixin, 10, 0);
 	popValue(th); // Will free and trigger finalizer at end, if not before
 	popValue(th);
 

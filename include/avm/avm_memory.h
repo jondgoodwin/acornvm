@@ -108,6 +108,7 @@ enum EncType {
 /** Is value a pointer to the encoding data structure? */
 #define isEnc(val, enc) (isPtr(val) && ((MemInfo*) val)->enctyp==enc)
 
+#define ValLocked 0x80	//!< On if value is locked
 
 /* ************************************
    Garbage Collection

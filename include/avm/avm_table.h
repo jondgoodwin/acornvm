@@ -64,8 +64,9 @@ typedef struct TblInfo {
 #define lAvailNodes flags2
 
 /* flags1 flags */
-#define TypeTbl 0x80	//!< Flags1 bit, if table is for a Type (members are properties)
-#define ProtoType 0x40	//!< Flags1 bit, if uses own properties and inheritype == type
+// 0x80 reserved for Locked
+#define TypeTbl 0x40	//!< Flags1 bit, if table is for a Type (members are properties)
+#define ProtoType 0x20	//!< Flags1 bit, if uses own properties and inheritype == type
 
 /** Mark all in-use table values for garbage collection 
  * Increments how much allocated memory the table uses. */
