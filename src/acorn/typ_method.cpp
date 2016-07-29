@@ -19,7 +19,7 @@ extern "C" {
 int typ_method_get(Value th) {
 	pushValue(th, aNull);
 	insertLocal(th, 1); // Insert null as self
-	methodCall(th, getTop(th)-1, BCVARRET); // Pass all parameters
+	getCall(th, getTop(th)-1, BCVARRET); // Pass all parameters
 	return getTop(th); // return all return values
 }
 
@@ -40,21 +40,21 @@ void typ_method_init(Value th) {
 	vmlit(TypeMethc) = pushType(th, vmlit(TypeType), 2);
 		vmlit(TypeMethm) = pushMixin(th, vmlit(TypeType), aNull, 3);
 			pushCMethod(th, typ_method_get);
-			popMember(th, 1, "()");
+			popProperty(th, 1, "()");
 			pushCMethod(th, typ_method_arity);
-			popMember(th, 1, "arity");
+			popProperty(th, 1, "arity");
 			pushCMethod(th, typ_method_varargs);
-			popMember(th, 1, "varargs?");
-		popMember(th, 0, "newtype");
+			popProperty(th, 1, "varargs?");
+		popProperty(th, 0, "newtype");
 		pushCMethod(th, acn_new);
-		popMember(th, 0, "new");
+		popProperty(th, 0, "new");
 	popGloVar(th, "Method");
 
 	// Register this type as Resource's 'acn' extension
 	pushGloVar(th, "Resource");
-		pushMember(th, getTop(th) - 1, "extensions");
+		pushProperty(th, getTop(th) - 1, "extensions");
 			pushValue(th, vmlit(TypeMethc));
-			popMember(th, getTop(th) - 2, "acn");
+			popTblSet(th, getTop(th) - 2, "acn");
 		popValue(th);
 	popValue(th);
 	return;

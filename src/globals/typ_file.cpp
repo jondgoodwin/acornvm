@@ -55,14 +55,14 @@ int typ_file_get(Value th) {
 void typ_file_init(Value th) {
 	Value typ = pushType(th, vmlit(TypeType), 1);
 		pushCMethod(th, typ_file_get);
-		popMember(th, 0, "()");
+		popProperty(th, 0, "()");
 	popGloVar(th, "File");
 
 	// Register this type as Resource's 'file' scheme
 	pushGloVar(th, "Resource");
-		pushMember(th, getTop(th) - 1, "schemes");
+		pushProperty(th, getTop(th) - 1, "schemes");
 			pushValue(th, typ);
-			popMember(th, getTop(th) - 2, "file");
+			popTblSet(th, getTop(th) - 2, "file");
 		popValue(th);
 	popValue(th);
 }

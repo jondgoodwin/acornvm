@@ -47,12 +47,12 @@ void typ_int_init(Value th) {
 	vmlit(TypeIntc) = pushType(th, vmlit(TypeType), 2);
 		vmlit(TypeIntm) = pushMixin(th, vmlit(TypeType), aNull, 3);
 			pushCMethod(th, typ_int_plus);
-			popMember(th, 1, "+");
+			popProperty(th, 1, "+");
 			pushCMethod(th, typ_int_minus);
-			popMember(th, 1, "-");
+			popProperty(th, 1, "-");
 			pushCMethod(th, typ_int_mult);
-			popMember(th, 1, "*");
-		popMember(th, 0, "newtype");
+			popProperty(th, 1, "*");
+		popProperty(th, 0, "newtype");
 	popGloVar(th, "Integer");
 	return;
 }
@@ -90,12 +90,12 @@ void typ_list_init(Value th) {
 	vmlit(TypeListc) = pushType(th, vmlit(TypeType), 2);
 		vmlit(TypeListm) = pushMixin(th, vmlit(TypeType), aNull, 2);
 			pushCMethod(th, typ_list_add);
-			popMember(th, 1, "<<");
+			popProperty(th, 1, "<<");
 			pushCMethod(th, typ_list_next);
-			popMember(th, 1, "next");
-		popMember(th, 0, "newtype");
+			popProperty(th, 1, "next");
+		popProperty(th, 0, "newtype");
 		pushCMethod(th, typ_list_new);
-		popMember(th, 0, "new");
+		popProperty(th, 0, "new");
 	popGloVar(th, "List");
 	return;
 }
@@ -110,7 +110,7 @@ int typ_type_get(Value th) {
 void typ_type_init(Value th) {
 	vmlit(TypeType) = pushType(th, aNull, 1);
 		pushCMethod(th, typ_type_get);
-		popMember(th, 0, "()");
+		popProperty(th, 0, "()");
 	popGloVar(th, "Type");
 	return;
 }

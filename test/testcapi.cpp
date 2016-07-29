@@ -174,7 +174,7 @@ void testCapi(void) {
 	i = getTop(th);
 	Value cdatamixin = pushMixin(th, aNull, aNull, 1);
 	pushCMethod(th, cdatafin);
-	popMember(th, i, "_finalizer");
+	popProperty(th, i, "_finalizer");
 	pushCData(th, cdatamixin, 10, 0);
 	popValue(th); // Will free and trigger finalizer at end, if not before
 	popValue(th);
@@ -270,7 +270,7 @@ void testCapi(void) {
 	i = getTop(th);
 	pushCMethod(th, test_cmeth);
 	pushValue(th, aTrue); // Pass parameter
-	methodCall(th, 1, 1);
+	getCall(th, 1, 1);
 	t(popValue(th)==aFalse, "c-method return success: popValue(th)==aFalse");
 	t(getTop(th)==i, "getTop(th)==0");
 
@@ -280,30 +280,30 @@ void testCapi(void) {
 	pushCMethod(th, test_closet);
 	pushValue(th, anInt(-905));
 	pushClosure(th, 3);
-	popMember(th, i, "closure");
+	popProperty(th, i, "closure");
 	popValue(th);
 	pushSym(th, "closure");
 	pushGloVar(th, "Type");
-	methodCall(th, 1, 1);
+	getCall(th, 1, 1);
 	t(-905 == toAint(popValue(th)), "Closure: -905 == toAint(popValue(th))");
 	pushSym(th, "closure");
 	pushGloVar(th, "Type");
-	methodCall(th, 1, 1);
+	getCall(th, 1, 1);
 	t(-904 == toAint(popValue(th)), "Closure: -904 == toAint(popValue(th))");
 	pushSym(th, "closure");
 	pushGloVar(th, "Type");
 	pushValue(th, anInt(25));
-	methodSetCall(th, 2, 1);
+	setCall(th, 2, 1);
 	pushSym(th, "closure");
 	pushGloVar(th, "Type");
-	methodCall(th, 1, 1);
+	getCall(th, 1, 1);
 	t(25 == toAint(popValue(th)), "Closure: 25 == toAint(popValue(th))");
 
 	// Type API tests - makes use of built-in types, which use the API to create types and its methods
 	pushSym(th, "+");
 	pushValue(th, anInt(50));
 	pushValue(th, anInt(40));
-	methodCall(th, 2, 1);
+	getCall(th, 2, 1);
 	t(popValue(th)==anInt(90), "popValue(th)==anInt(90)"); // Yay - first successful O-O request!
 	pushGloVar(th, "Integer");
 	t(isType(popValue(th)), "pushGloVar(th, 'Integer'); isType(popValue(th))");

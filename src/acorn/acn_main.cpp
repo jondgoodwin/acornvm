@@ -62,11 +62,11 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 3, 2, 0));
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 4, 1, ss(SymPlus)));
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 6, 2, 0));
-		genAddInstr(ac, BCINS_ABC(OpCall, 4, 2, 1));
+		genAddInstr(ac, BCINS_ABC(OpGetCall, 4, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpLoadRegs, 1, 3, 2));
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 0, ss(SymMinus)));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 5, genAddLit(ac, anInt(1))));
-		genAddInstr(ac, BCINS_ABC(OpCall, 3, 2, 1));
+		genAddInstr(ac, BCINS_ABC(OpGetCall, 3, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 0, 3, 0));
 		genAddInstr(ac, BCINS_AJ(OpJump, 0, -11));
 		genAddInstr(ac, BCINS_ABC(OpReturn, 1, 1, 0));
@@ -84,13 +84,13 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 2, genAddLit(ac, fact)));
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 0, ss(SymMinus)));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 5, genAddLit(ac, anInt(1))));
-		genAddInstr(ac, BCINS_ABC(OpCall, 3, 2, 1));
+		genAddInstr(ac, BCINS_ABC(OpGetCall, 3, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 4, 0, ss(SymMult)));
 		genAddInstr(ac, BCINS_AJ(OpJFalse, 1, 2));
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 6, 1, 0));
 		genAddInstr(ac, BCINS_AJ(OpJump, 0, 1));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 6, genAddLit(ac, anInt(1))));
-		genAddInstr(ac, BCINS_ABC(OpCall, 4, 2, 1));
+		genAddInstr(ac, BCINS_ABC(OpGetCall, 4, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpTailCall, 2, 2, BCVARRET));
 
 		tblSet(th, vmlit(TypeIntm), fact, ac->method);
@@ -106,7 +106,7 @@ Value genTestPgm(Value th, int pgm) {
 		genMaxStack(ac, 9);
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 3, 0, ss(SymNew)));
 		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 4, genAddLit(ac, list)));
-		genAddInstr(ac, BCINS_ABC(OpCall, 3, 1, 1));
+		genAddInstr(ac, BCINS_ABC(OpGetCall, 3, 1, 1));
 		genAddInstr(ac, BCINS_ABC(OpRptPrep, 2, 3, ss(SymAppend)));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 4, genAddLit(ac, anInt(5))));
 		genAddInstr(ac, BCINS_ABC(OpRptCall, 2, 2, 0));
@@ -121,7 +121,7 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_AJ(OpJNull, 4, BCNO_JMP)); // Will calculate to 5
 		genAddInstr(ac, BCINS_ABC(OpLoadStd, 6, 1, ss(SymPlus)));
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 8, 5, 0));
-		genAddInstr(ac, BCINS_ABC(OpCall, 6, 2, 1));
+		genAddInstr(ac, BCINS_ABC(OpGetCall, 6, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpLoadReg, 1, 6, 0));
 		genAddInstr(ac, BCINS_AJ(OpJump, 0, -7));
 		genSetJumpList(ac, saveip, ac->method->size); // Correct the jump to go to here
@@ -138,7 +138,7 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 3, genAddLit(ac, get)));
 		genAddInstr(ac, BCINS_ABx(OpGetGlobal, 4, genAddLit(ac, fil)));
 		genAddInstr(ac, BCINS_ABx(OpLoadLit, 5, genAddLit(ac, testacn)));
-		genAddInstr(ac, BCINS_ABC(OpCall, 3, 2, 1));
+		genAddInstr(ac, BCINS_ABC(OpGetCall, 3, 2, 1));
 		genAddInstr(ac, BCINS_ABC(OpReturn, 1, 1, 0));
 		popValue(th);
 		popValue(th);

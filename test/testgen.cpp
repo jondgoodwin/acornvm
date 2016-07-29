@@ -31,14 +31,14 @@ void testGen(void) {
 	// Bytecode-method and Thread call stack tests
 	Value testbmeth = genTestPgm(th, 0);
 	pushValue(th, testbmeth);
-	methodCall(th, 0, 1); // Call with no parameters, will return puffed null
+	getCall(th, 0, 1); // Call with no parameters, will return puffed null
 	t(popValue(th)==aNull, "b-method return success: popValue(th)==aNull");
 	t(getTop(th)==0, "getTop(th)==0");
 
 	// Call method that tests loader
 	pushValue(th, testbmeth);
 	pushValue(th, anInt(4));
-	methodCall(th, 1, 4); // Call with 1 parameter, will return 4
+	getCall(th, 1, 4); // Call with 1 parameter, will return 4
 	t(popValue(th)==aFloat(3.14f), "b-method return success: popValue(th)==3.14");
 	t(popValue(th)==aFloat(3.14f), "popValue(th)==3.14");
 	t(popValue(th)==aTrue, "popValue(th)==true");
@@ -50,7 +50,7 @@ void testGen(void) {
 	pushValue(th, anInt(1));
 	pushValue(th, anInt(2));
 	pushValue(th, anInt(3));
-	methodCall(th, 3, 3); // Call with 3 parameters, will return 3
+	getCall(th, 3, 3); // Call with 3 parameters, will return 3
 	t(popValue(th)==anInt(3), "popValue(th)==3");
 	t(popValue(th)==anInt(2), "popValue(th)==2");
 	t(popValue(th)==anInt(1), "popValue(th)==1");
@@ -59,21 +59,21 @@ void testGen(void) {
 	// Call fibonacci calculator with (conditional) jumps and calls
 	pushValue(th, genTestPgm(th,2));
 	pushValue(th, anInt(4));
-	methodCall(th, 1, 1);
+	getCall(th, 1, 1);
 	t(popValue(th)==anInt(5), "popValue(th)==5");
 	t(getTop(th)==0, "getTop(th)==0");
 
 	// Call recursive factorial program with tailcall
 	pushValue(th, genTestPgm(th,3));
 	pushValue(th, anInt(4));
-	methodCall(th, 1, 1);
+	getCall(th, 1, 1);
 	t(popValue(th)==anInt(24), "popValue(th)==24");
 	t(getTop(th)==0, "getTop(th)==0");
 
 	// Call List build and for loop program (summing its numbers)
 	pushValue(th, genTestPgm(th,4));
 	pushValue(th, anInt(4));
-	methodCall(th, 1, 1);
+	getCall(th, 1, 1);
 	t(popValue(th)==anInt(20), "popValue(th)==20");
 	t(getTop(th)==0, "getTop(th)==0");
 
@@ -81,7 +81,7 @@ void testGen(void) {
 	pushValue(th, genTestPgm(th,5));
 	//pushSerialized(th, getFromTop(th, 0));
 	//puts(toStr(popValue(th)));
-	methodCall(th, 0, 0);
+	getCall(th, 0, 0);
 
 	vm_close(th);
 	printf("All %ld Gen tests completed. %ld failed.\n", tests, fails);

@@ -32,15 +32,7 @@ int isCallable(Value val) {
 		|| (((MemInfo*) val)->enctyp==ArrEnc && arr_info(val)->flags1 & TypeClo)));
 }
 
-/** Return codes from methodCallPrep */
-enum MethodTypes {
-	MethodBad,	//!< Not a valid method (probably unknown method)
-	MethodBC,	//!< Byte-code method
-	MethodC,	//!< C-method
-	MethodRet	//!< Bad method - but we want to do a C-return for tailcall
-};
-
-/** Prepare call to method value on stack (with parms above it). 
+/* Prepare call to method value on stack (with parms above it). 
  * Specify how many return values to expect to find on stack.
  * Flags is 0 for normal get, 1 for set, and 2 for repeat get
  * Returns 0 if bad method, 1 if bytecode, 2 if C-method
@@ -51,7 +43,7 @@ enum MethodTypes {
  * For byte code, parameters are massaged to ensure the expected number of
  * fixed parameters and establish a holding place for the variable parameters.
  */
-MethodTypes methodCallPrep(Value th, Value *methodval, int nexpected, int flags) {
+MethodTypes callPrep(Value th, Value *methodval, int nexpected, int flags) {
 
 	// Do not call if we do not have a valid method to call - return nulls or set val instead
 	if (!isCallable(*methodval)) {
@@ -138,7 +130,7 @@ MethodTypes methodCallPrep(Value th, Value *methodval, int nexpected, int flags)
  * For byte code, parameters are massaged to ensure the expected number of
  * fixed parameters and establish a holding place for the variable parameters.
  */
-MethodTypes methodTailCallPrep(Value th, Value *methodval, int nexpected, int getset) {
+MethodTypes tailcallPrep(Value th, Value *methodval, int nexpected, int getset) {
 
 	// Return if we do not have a valid method to call
 	// Respond to call failure with a return of setval or nulls
@@ -231,7 +223,7 @@ MethodTypes methodTailCallPrep(Value th, Value *methodval, int nexpected, int ge
 }
 
 /** Execute C method (and do return) at thread's current call frame 
- * Call and data stack already set up by methodCallPrep. */
+ * Call and data stack already set up by callPrep. */
 void methodRunC(Value th) {
 	CallInfo *ci =th(th)->curmethod;
 
@@ -262,7 +254,7 @@ void methodRunC(Value th) {
 
 /** macro to make method calls consistent easier to read in methodRunBC */
 #define methCall(stkbeg, nexpected, flags) \
-	switch (methodCallPrep(th, stkbeg, nexpected, flags)) { \
+	switch (callPrep(th, stkbeg, nexpected, flags)) { \
 	case MethodBC: \
 		ci = th(th)->curmethod; \
 		meth = (BMethodInfo*) (ci->method); \
@@ -270,7 +262,7 @@ void methodRunC(Value th) {
 		stkbeg = ci->begin; \
 	}
 
-/** Execute byte-code method pointed at by thread's current call frame */
+/* Execute byte-code method pointed at by thread's current call frame */
 void methodRunBC(Value th) {
 	CallInfo *ci = ((ThreadInfo*)th)->curmethod;
 	BMethodInfo* meth = (BMethodInfo*) (ci->method);
@@ -439,9 +431,9 @@ void methodRunBC(Value th) {
 			break;
 
 		// OpSetProp: R(A) := R(A).*R(A+1)=R(A+2)
-		// Set property value, if this is a type or table
+		// Set property value, if this is a type
 		case OpSetProp:
-			if (isTbl(*(rega+1)))
+			if (isType(*(rega+1)))
 				tblSet(th, *(rega+1), *rega, *(rega+2));
 			*rega = *(rega+2);
 			break;
@@ -465,16 +457,16 @@ void methodRunBC(Value th) {
 				methCall(rega, 1, 1);
 			}
 			else {
-				if (isTbl(*(rega+1)))
+				if (isType(*(rega+1)))
 					tblSet(th, *(rega+1), *rega, *(rega+2));
 				*rega = *(rega+2);
 			}
 			} break;
 
-		// OpCall: R(A .. A+C-1) := R(A+1).R(A)(R(A+1) .. A+B-1))
+		// OpGetCall: R(A .. A+C-1) := R(A+1).R(A)(R(A+1) .. A+B-1))
 		// if (B == 0xFF) then B = top. If (C == 0xFF), then top is set to last_result+1, 
 		// so next open instruction (CALL, RETURN, VAR) may use top.
-		case OpCall: {
+		case OpGetCall: {
 			// Get property value. If executable, we can do call
 			*rega = getProperty(th, *(rega+1), *rega); // Find executable
 			if (!isCallable(*rega)) {
@@ -513,7 +505,7 @@ void methodRunBC(Value th) {
 			methCall(rega, bc_c(i), 1);
 			} break;
 
-		// OpCall: R(A .. A+C-1) := R(A+1).R(A)(R(A+1) .. A+B-1))
+		// OpGetCall: R(A .. A+C-1) := R(A+1).R(A)(R(A+1) .. A+B-1))
 		// if (B == 0xFF) then B = top. If (C == 0xFF), then top is set to last_result+1, 
 		// so next open instruction (CALL, RETURN, VAR) may use top.
 		case OpTailCall: {
@@ -524,7 +516,7 @@ void methodRunBC(Value th) {
 
 			// Prepare call frame and stack, then perform the call
 			*rega = getProperty(th, *(rega+1), *rega);
-			switch (methodTailCallPrep(th, rega, bc_c(i), 0)) {
+			switch (tailcallPrep(th, rega, bc_c(i), 0)) {
 			case MethodRet:
 				return; // Return to C caller on bad tailcall attempt
 			case MethodBad:
@@ -598,34 +590,49 @@ void methodRunBC(Value th) {
   }
 }
 
-/* Call a method whose property symbol is placed on stack (with nparms above it). 
+/* Get a value's property using indexing parameters. Will call a method if found.
+ * The stack holds the property symbol followed by nparms parameters (starting with self).
  * nexpected specifies how many return values to expect to find on stack.*/
-void methodCall(Value th, int nparms, int nexpected) {
+void getCall(Value th, int nparms, int nexpected) {
 	Value* methodpos = th(th)->stk_top - nparms - 1;
 
-	// If "method" is a symbol, treat it as a property to lookup
-	if (isSym(*methodpos))
+	// If "method" is not a method (likely a symbol), treat it as a property to lookup
+	if (!isCallable(*methodpos)) {
 		*methodpos = getProperty(th, *(methodpos+1), *methodpos);
+		// If property's value is not callable, set up an indexed get/set using '()' property
+		if (!isCallable(*methodpos)) {
+			*(methodpos+1) = *methodpos;	// property value we got becomes 'self'
+			*methodpos = getProperty(th, *(methodpos+1), vmlit(SymParas)); // look up '()' method
+		}
+	}
 
 	// Prepare call frame and stack, then perform the call
-	switch (methodCallPrep(th, methodpos, nexpected, 0)) {
+	switch (callPrep(th, methodpos, nexpected, 0)) {
 	case MethodBC:
 		methodRunBC(th);
 		break;
 	}
 }
 
-/* Call a 'set' method whose property symbol is placed on stack (with nparms above it). 
+/* Set a value's property using indexing parameters. Will call a closure's set method if found.
+ * The stack holds the property symbol followed by nparms parameters (starting with self).
+ * The first value after self is the value to set.
  * nexpected specifies how many return values to expect to find on stack.*/
-void methodSetCall(Value th, int nparms, int nexpected) {
+void setCall(Value th, int nparms, int nexpected) {
 	Value* methodpos = th(th)->stk_top - nparms - 1;
 
 	// If "method" is a symbol, treat it as a property to lookup
-	if (isSym(*methodpos))
+	if (!isCallable(*methodpos)) {
 		*methodpos = getProperty(th, *(methodpos+1), *methodpos);
+		// If property's value is not callable, set up an indexed get/set using '()' property
+		if (!isCallable(*methodpos)) {
+			*(methodpos+1) = *methodpos;	// property value we got becomes 'self'
+			*methodpos = getProperty(th, *(methodpos+1), vmlit(SymParas)); // look up '()' method
+		}
+	}
 
 	// Prepare call frame and stack, then perform the call
-	switch (methodCallPrep(th, methodpos, nexpected, 1)) {
+	switch (callPrep(th, methodpos, nexpected, 1)) {
 	case MethodBC:
 		methodRunBC(th);
 		break;
@@ -706,7 +713,7 @@ void methSerialize(Value th, Value str, int indent, Value method) {
 		case OpSetProp: methABCSerialize(th, str, "SetProp ", i); break;
 		case OpGetActProp:  methABCSerialize(th, str, "GetActProp ", i); break;
 		case OpSetActProp:  methABCSerialize(th, str, "SetActProp ", i); break;
-		case OpCall:  methABCSerialize(th, str, "Call ", i); break;
+		case OpGetCall:  methABCSerialize(th, str, "GetCall ", i); break;
 		case OpSetCall:  methABCSerialize(th, str, "SetCall ", i); break;
 		case OpTailCall:  methABCSerialize(th, str, "TailCall ", i); break;
 		case OpRptCall:  methABCSerialize(th, str, "RptCall ", i); break;

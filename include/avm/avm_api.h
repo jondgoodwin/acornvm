@@ -127,12 +127,15 @@ AVM_API void addMixin(Value th, Value type, Value mixin);
 // Implemented in avm_method.cpp
 /** Return 1 if callable: a method or closure */
 AVM_API int isCallable(Value val);
-/** Call a method whose property symbol is placed on stack (with nparms above it). 
+/** Get a value's property using indexing parameters. Will call a method if found.
+ * The stack holds the property symbol followed by nparms parameters (starting with self).
  * nexpected specifies how many return values to expect to find on stack.*/
-AVM_API void methodCall(Value th, int nparms, int nexpected);
-/** Call a 'set' method whose property symbol is placed on stack (with nparms above it). 
+AVM_API void getCall(Value th, int nparms, int nexpected);
+/** Set a value's property using indexing parameters. Will call a closure's set method if found.
+ * The stack holds the property symbol followed by nparms parameters (starting with self).
+ * The first value after self is the value to set.
  * nexpected specifies how many return values to expect to find on stack.*/
-AVM_API void methodSetCall(Value th, int nparms, int nexpected);
+AVM_API void setCall(Value th, int nparms, int nexpected);
 
 // Implemented in avm_thread.cpp
 /** Return 1 if a Thread, else return 0 */
@@ -209,12 +212,24 @@ AVM_API Value pushVM(Value th);
 /** Push a value's serialized Text, an abridged, human-readable view of the contents of a value,
 	as well as recursively all values it contains. */
 AVM_API Value pushSerialized(Value th, Value val);
-/** Push and return the raw value of the named property of the value found at the stack's specified index */
+/** Push and return the value held by the perhaps-called property of the value found at the stack's specified index.
+ * Note: This lives in between pushProperty (which never calls) and getCall (which always calls). 
+ * This calls the property's value only if it is callable, otherwise it just pushes the property's value. */
+AVM_API Value pushGetActProp(Value th, AintIdx selfidx, const char *propnm);
+/** Store the local stack's top value into the perhaps-called property of the value found at the stack's specified index 
+ * Note: This lives in between popProperty (which never calls) and setCall (which always calls). 
+ * This calls the property's value only if it is a closure with a set method.
+ * Otherwise, it sets the property's value directly if (and only if) self is a type. */
+AVM_API void popSetActProp(Value th, AintIdx selfidx, const char *mbrnm);
+/** Push and return the value held by the uncalled property of the value found at the stack's specified index */
 AVM_API Value pushProperty(Value th, AintIdx validx, const char *propnm);
+/** Store the local stack's top value into the uncalled property of the type found at the stack's specified index 
+ * Note: Unlike pushProperty, popProperty is restricted to the type being changed. */
+AVM_API void popProperty(Value th, AintIdx typeidx, const char *mbrnm);
 /** Push and return the value of the named member of the table found at the stack's specified index */
-AVM_API Value pushMember(Value th, AintIdx tblidx, const char *mbrnm);
+AVM_API Value pushTblGet(Value th, AintIdx tblidx, const char *mbrnm);
 /** Put the local stack's top value into the named member of the table found at the stack's specified index */
-AVM_API void popMember(Value th, AintIdx tblidx, const char *mbrnm);
+AVM_API void popTblSet(Value th, AintIdx tblidx, const char *mbrnm);
 /** Push a copy of a stack's value at index onto the stack's top */
 AVM_API Value pushLocal(Value th, AintIdx idx);
 /** Pop a value off the top of the stack */

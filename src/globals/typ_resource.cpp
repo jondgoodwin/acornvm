@@ -166,7 +166,7 @@ void newResource(Value th, Value url, Value baseurl, Value *resarray) {
 		schemep = authl? "http" : "file"; // default scheme
 		schemel = strlen(schemep);
 	}
-	pushMember(th, 0, "schemes"); // Get table from Resource (self)
+	pushProperty(th, 0, "schemes"); // Get table from Resource (self)
 	pushSyml(th, schemep, schemel);
 	resarray[ResSchemeType] = tblGet(th, getFromTop(th, 1), getFromTop(th, 0));
 	setTop(th, stktop); // reset stack
@@ -180,7 +180,7 @@ void newResource(Value th, Value url, Value baseurl, Value *resarray) {
 		extp = "acn";
 		extl = strlen(extp);
 	}
-	pushMember(th, 0, "extensions"); // Get table from Resource (self)
+	pushProperty(th, 0, "extensions"); // Get table from Resource (self)
 	pushSyml(th, extp, extl);
 	resarray[ResExtType] = tblGet(th, getFromTop(th, 1), getFromTop(th, 0));
 	setTop(th, stktop); // reset stack
@@ -248,7 +248,7 @@ void newResource(Value th, Value url, Value baseurl, Value *resarray) {
 void getResource(Value th, Value *resarray) {
 	// If it was retrieved already and is found in the cache, return it
 	pushGloVar(th, "Resource");
-	Value cache = pushMember(th, getTop(th)-1, "cache");
+	Value cache = pushProperty(th, getTop(th)-1, "cache");
 	popValue(th);
 	popValue(th);
 	Value resval = tblGet(th, cache, resarray[ResNormUrl]);
@@ -263,10 +263,10 @@ void getResource(Value th, Value *resarray) {
 	pushValue(th, vmlit(SymParas));
 	pushValue(th, resarray[ResSchemeType]);
 	pushValue(th, resarray[ResNormUrl]);
-	methodCall(th, 2, 1);
+	getCall(th, 2, 1);
 	pushValue(th, resarray[ResNormUrl]);
 	pushValue(th, resarray[ResFragment]);
-	methodCall(th, 4, 1);
+	getCall(th, 4, 1);
 
 	// Save it in cache
 	if (getFromTop(th, 0)!=aNull)
@@ -333,22 +333,22 @@ void typ_resource_init(Value th) {
 	vmlit(TypeResc) = pushType(th, vmlit(TypeType), 6);
 		vmlit(TypeResm) = pushMixin(th, vmlit(TypeType), aNull, 5);
 			pushCMethod(th, typ_resource_inst_get);
-			popMember(th, 1, "()");
+			popProperty(th, 1, "()");
 			pushCMethod(th, typ_resource_inst_frag);
-			popMember(th, 1, "fragment");
+			popProperty(th, 1, "fragment");
 			pushCMethod(th, typ_resource_inst_url);
-			popMember(th, 1, "url");
-		popMember(th, 0, "newtype");
+			popProperty(th, 1, "url");
+		popProperty(th, 0, "newtype");
 		pushCMethod(th, typ_resource_new);
-		popMember(th, 0, "new");
+		popProperty(th, 0, "new");
 		pushCMethod(th, typ_resource_get);
-		popMember(th, 0, "()");
+		popProperty(th, 0, "()");
 		pushTbl(th, vmlit(TypeIndexm), 10);
-		popMember(th, 0, "schemes");
+		popProperty(th, 0, "schemes");
 		pushTbl(th, vmlit(TypeIndexm), 10);
-		popMember(th, 0, "extensions");
+		popProperty(th, 0, "extensions");
 		pushTbl(th, vmlit(TypeIndexm), 10);
-		popMember(th, 0, "cache");
+		popProperty(th, 0, "cache");
 	popGloVar(th, "Resource");
 }
 

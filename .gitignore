@@ -34,6 +34,8 @@
 *.opensdf
 *.sdf
 
+*.log
+
 # Folders
 build
 bin

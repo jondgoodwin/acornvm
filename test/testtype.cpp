@@ -35,13 +35,13 @@ void restest(Value th, const char* url, const char *baseurl, const char *normurl
 	pushGloVar(th, "Resource");
 	pushSym(th, url);
 	if (strlen(baseurl)) pushSym(th, baseurl); else pushValue(th, aNull);
-	methodCall(th, 3, 1);
+	getCall(th, 3, 1);
 	Value resource = getLocal(th, getTop(th)-1);
 
 	// Test that resource generates the correct url */
 	pushSym(th, "url");
 	pushValue(th, resource);
-	methodCall(th, 1, 1);
+	getCall(th, 1, 1);
 	const char *madeurl = toStr(popValue(th));
 	tstrcmp(normurl, madeurl, "Resource failure: Expected '%s', but made '%s'\n");
 

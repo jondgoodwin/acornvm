@@ -211,7 +211,7 @@ Value pushSerialized(Value th, Value val) {
 }
 
 /* Push and return the value of the named member of the table found at the stack's specified index */
-Value pushMember(Value th, AintIdx tblidx, const char *mbrnm) {
+Value pushTblGet(Value th, AintIdx tblidx, const char *mbrnm) {
 	stkCanIncTop(th); /* Check if there is room */
 	Value tbl = *stkAt(th, tblidx);
 	assert(isTbl(tbl));
@@ -220,7 +220,7 @@ Value pushMember(Value th, AintIdx tblidx, const char *mbrnm) {
 }
 
 /* Put the local stack's top value into the named member of the table found at the stack's specified index */
-void popMember(Value th, AintIdx tblidx, const char *mbrnm) {
+void popTblSet(Value th, AintIdx tblidx, const char *mbrnm) {
 	assert(stkSz(th)>0); // Must be at least one value to remove!
 	Value tbl = *stkAt(th, tblidx);
 	assert(isTbl(tbl));
@@ -229,12 +229,82 @@ void popMember(Value th, AintIdx tblidx, const char *mbrnm) {
 	th(th)->stk_top -= 2; // Pop key & value after value is safely in table
 }
 
-/* Push and return the raw value of the named property of the value found at the stack's specified index */
+/* Push and return the value held by the uncalled property of the value found at the stack's specified index. */
 Value pushProperty(Value th, AintIdx validx, const char *propnm) {
 	stkCanIncTop(th); /* Check if there is room */
 	Value val = *stkAt(th, validx);
 	newSym(th, th(th)->stk_top++, propnm, strlen(propnm));
 	return *(th(th)->stk_top-1) = getProperty(th, val, *(th(th)->stk_top-1));
+}
+
+/* Store the local stack's top value into the uncalled property of the type found at the stack's specified index 
+ * Note: Unlike pushProperty, popProperty is restricted to the type being changed. */
+void popProperty(Value th, AintIdx typeidx, const char *mbrnm) {
+	assert(stkSz(th)>0); // Must be at least one value to remove!
+	Value tbl = *stkAt(th, typeidx);
+	newSym(th, th(th)->stk_top++, mbrnm, strlen(mbrnm));
+	if (isType(tbl))
+		tblSet(th, tbl, *(th(th)->stk_top-1), *(th(th)->stk_top-2));
+	th(th)->stk_top -= 2; // Pop key & value after value is stored
+}
+
+/* Push and return the value held by the perhaps-called property of the value found at the stack's specified index.
+ * Note: This lives in between pushProperty (which never calls) and getCall (which always calls). 
+ * This calls the property's value only if it is callable, otherwise it just pushes the property's value. */
+Value pushGetActProp(Value th, AintIdx selfidx, const char *propnm) {
+	stkCanIncTop(th); /* Check if there is room */
+	Value self = *stkAt(th, selfidx);
+	newSym(th, th(th)->stk_top++, propnm, strlen(propnm));
+	Value ret = *(th(th)->stk_top-1) = getProperty(th, self, *(th(th)->stk_top-1));
+
+	// If it is callable (e.g., a method), call it to get property value
+	if (isCallable(ret)) {
+		// Finish setting up stack for call
+		stkCanIncTop(th); /* Check if there is room for self */
+		*(th(th)->stk_top++) = self;
+		// Do the call, expecting (and returning) just one return value
+		switch (callPrep(th, th(th)->stk_top-2, 1, 0)) {
+			case MethodBC:
+				methodRunBC(th);
+				break;
+		}
+		ret = *(th(th)->stk_top-1);
+	}
+	return ret;
+}
+
+/* Store the local stack's top value into the perhaps-called property of the value found at the stack's specified index 
+ * Note: This lives in between popProperty (which never calls) and setCall (which always calls). 
+ * This calls the property's value only if it is a closure with a set method.
+ * Otherwise, it sets the property's value directly if (and only if) self is a type. */
+void popSetActProp(Value th, AintIdx selfidx, const char *mbrnm) {
+	assert(stkSz(th)>0); // Must be at least one value to remove!
+	Value self = *stkAt(th, selfidx);
+	stkCanIncTop(th); /* Check if there is room for symbol */
+	newSym(th, th(th)->stk_top++, mbrnm, strlen(mbrnm));
+	Value propval = getProperty(th, self, *(th(th)->stk_top-1));
+
+	// If it is callable (e.g., a method), call it to set property value
+	if (isCallable(propval)) {
+		// Set up stack for call
+		stkCanIncTop(th); /* Check if there is room for self */
+		Value set = getFromTop(th, 1); // the value to set
+		*(th(th)->stk_top-1) = propval;
+		*(th(th)->stk_top) = self;
+		*(th(th)->stk_top++) = set;
+		// Do the set call, expecting (and returning) just one return value
+		switch (callPrep(th, th(th)->stk_top-3, 1, 1)) {
+			case MethodBC:
+				methodRunBC(th);
+				break;
+		}
+	}
+	else {
+		// Only if self is a type, store value in property
+		if (isType(self))
+			tblSet(th, self, *(th(th)->stk_top-1), *(th(th)->stk_top-2));
+		th(th)->stk_top -= 2; // Pop key & value
+	}
 }
 
 /* Push a copy of a stack's value at index onto the stack's top */
