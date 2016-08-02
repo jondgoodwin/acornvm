@@ -13,14 +13,37 @@ namespace avm {
 extern "C" {
 #endif
 
+/* Return a new CompInfo value, compiler state for an Acorn method */
+Value newCompiler(Value th, Value *dest, Value src, Value url) {
+	CompInfo *comp;
+	mem_gccheck(th);	// Incremental GC before memory allocation events
+
+	// Create an compiler context (this block of code can be gc-locked as atomic)
+	MemInfo **linkp = NULL;
+	comp = (CompInfo *) mem_new(th, CompEnc, sizeof(CompInfo), linkp, 0);
+	*dest = (Value) comp;
+	comp->th = th;
+	comp->lex = NULL;
+	comp->ast = (Value) NULL;
+	comp->method = NULL;
+
+	newLex(th, (Value *) &comp->lex, src, url);
+	newArr(th, &comp->ast, aNull, 3);
+	newBMethod(th, (Value *)&comp->method);
+
+	comp->reg_top = 0;
+
+	return *dest;
+}
+
 //! Get index for a standard symbol identified using its VM literal name
 #define ss(lit) (toAint(tblGet(th, vm(th)->stdidx, vmlit(lit))))
 
 /** Generate bytecode test programs */
 Value genTestPgm(Value th, int pgm) {
 	int saveip = 0;
-	Acorn* ac = &vm(th)->acornProgram;
-	genNew(ac);
+	Value src = pushString(th, aNull, "");
+	CompInfo* ac = (CompInfo*) pushCompiler(th, src, aNull);
 	pushValue(th, ac->method);
 	Value self = pushSym(th, "self");
 	switch (pgm) {
@@ -150,22 +173,15 @@ Value genTestPgm(Value th, int pgm) {
 	}
 	popValue(th);
 	popValue(th);
+	popValue(th);
+	popValue(th);
 	return ac->method;
-}
-
-/** Initialize all core types */
-void acn_init(Value th) {
-	// Initialize program compile state
-	Acorn* ac = &vm(th)->acornProgram;
-	ac->prev = ac->next = NULL;
-	ac->th = th;
 }
 
 /* Method to compile and run an Acorn resource.
    Pass it a string containing the program source and a symbol for the baseurl.
    It returns the value returned by running the program's compiled method. */
-#include <stdio.h>
-void testchars(LexInfo* lex);
+void testlexer(LexInfo* lex);
 int acn_new(Value th) {
 	// Retrieve pgmsrc and baseurl from parameters
 	Value pgmsrc, baseurl;
@@ -177,11 +193,8 @@ int acn_new(Value th) {
 	if (getTop(th)<3 || !isSym(baseurl = getLocal(th,2)))
 		baseurl = aNull;
 
-	puts("Method will now compile and run this program:");
-	puts(toStr(pgmsrc));
-
-	Value lex = pushLex(th, pgmsrc, baseurl);
-	testchars((LexInfo*)lex);
+	Value comp = pushCompiler(th, pgmsrc, baseurl);
+	testlexer(((CompInfo*)comp)->lex);
 	popValue(th);
 
 	pushValue(th, aNull);

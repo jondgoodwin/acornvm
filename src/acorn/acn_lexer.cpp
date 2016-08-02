@@ -28,7 +28,7 @@ Value newLex(Value th, Value *dest, Value src, Value url) {
 	LexInfo *lex;
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 
-	// Create an array object
+	// Create an lexer object
 	MemInfo **linkp = NULL;
 	lex = (LexInfo *) mem_new(th, LexEnc, sizeof(LexInfo), linkp, 0);
 
@@ -578,33 +578,6 @@ bool lex_match(LexInfo *lex, const char *sym) {
 /* Log an compiler message */
 void lex_log(LexInfo *lex, const char *msg) {
 	vm_log("While compiling %s(%d:%d): %s", toStr(lex->url), lex->tokline, lex->toklinepos, msg);
-}
-
-/* Test lexer - bye, bye soon! */
-void testchars(LexInfo* lex) {
-	if (lex_match(lex, "+"))
-		puts("+ matched!");
-	lex_log(lex, "Actually I have no error to report here");
-	while (lex->toktype!=Eof_Token) {
-		switch (lex->toktype) {
-		case Lit_Token: {
-			pushSerialized(lex->th, lex->token);
-			printf("Literal: %s\n", toStr(getFromTop(lex->th, 0)));
-			popValue(lex->th);
-			} break;
-		case Name_Token: {
-			pushSerialized(lex->th, lex->token);
-			printf("Name: %s\n", toStr(getFromTop(lex->th, 0)));
-			popValue(lex->th);
-			} break;
-		case Res_Token: {
-			pushSerialized(lex->th, lex->token);
-			printf("Reserved: %s\n", toStr(getFromTop(lex->th, 0)));
-			popValue(lex->th);
-			} break;
-		}
-		lex_getNextToken(lex);
-	}
 }
 
 #ifdef __cplusplus

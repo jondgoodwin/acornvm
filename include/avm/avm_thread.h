@@ -100,8 +100,8 @@ void gloSet(Value th, Value var, Value val);
 
 /** Create a new Thread with a starter stack. */
 Value newThread(Value th, Value *dest, AuintIdx stksz);
-/** Push and return a new Lexer */
-Value pushLex(Value th, Value src, Value url);
+/** Push and return a new CompInfo value, compiler state for an Acorn method */
+Value pushCompiler(Value th, Value src, Value url);
 
 #ifdef __cplusplus
 } // end "C"

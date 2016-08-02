@@ -42,8 +42,6 @@ extern "C" {
 		Value stdidx;				//!< Table to convert std symbol to index
 		Value *stdsym;				//!< c-array to convert index to std symbol
 
-		Acorn acornProgram;			//!< Compile state for a program
-
 		// Garbage Collection state
 		MemInfo *objlist;			//!< linked list of all collectable objects
 		MemInfo **sweepgc;			//!< current position of sweep in list 'objlist'

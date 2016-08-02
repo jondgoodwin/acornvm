@@ -17,7 +17,6 @@ namespace avm {
 extern "C" {
 #endif
 
-void acn_init(Value th); // Initializer for Acorn compile
 void vm_litinit(Value th); // Initializer for literals
 void vm_stdinit(Value th); // Initializer for standard symbols
 
@@ -75,7 +74,6 @@ AVM_API Value newVM(void) {
 
 	// Initialize byte-code standard methods and the Acorn compiler
 	vm_stdinit(th);
-	acn_init(th);
 
 	// Start garbage collection
 	mem_gcstart(th);

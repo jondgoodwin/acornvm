@@ -33,6 +33,7 @@
     <ClCompile Include="src\acorn\acn_gen.cpp" />
     <ClCompile Include="src\acorn\acn_lexer.cpp" />
     <ClCompile Include="src\acorn\acn_main.cpp" />
+    <ClCompile Include="src\acorn\acn_parser.cpp" />
     <ClCompile Include="src\avmlib\avm_array.cpp" />
     <ClCompile Include="src\avmlib\avm_method.cpp" />
     <ClCompile Include="src\avmlib\avm_gc.cpp" />

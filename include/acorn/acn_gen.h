@@ -39,23 +39,23 @@ extern "C" {
 // ***********
 
 /** Create a new bytecode method value. */
-void genNew(Acorn *ac);
+void genNew(CompInfo *comp);
 /** Put new byte-code instruction to code array */
-void genPutInstr(Acorn *ac, AuintIdx loc, Instruction i);
+void genPutInstr(CompInfo *comp, AuintIdx loc, Instruction i);
 /** Append new instruction to code array */
-void genAddInstr(Acorn *ac, Instruction i);
+void genAddInstr(CompInfo *comp, Instruction i);
 /** Add a literal and return its index */
-int genAddLit(Acorn *ac, Value val);
+int genAddLit(CompInfo *comp, Value val);
 /** Look in reverse order for local variable, returning its register. Add if not found. */
-int genLocalVar(Acorn *ac, Value varnm);
+int genLocalVar(CompInfo *comp, Value varnm);
 /** Add a parameter */
-void genAddParm(Acorn *ac, Value sym);
+void genAddParm(CompInfo *comp, Value sym);
 /** Indicate the method has a variable number of parameters */
-void genVarParms(Acorn *ac);
+void genVarParms(CompInfo *comp);
 /** Raise method's max stack size if register is above it */
-void genMaxStack(Acorn *ac, AuintIdx reg);
+void genMaxStack(CompInfo *comp, AuintIdx reg);
 /** Set the jump instruction link chain starting at listip to jump to dest */
-void genSetJumpList(Acorn *ac, int listip, int dest);
+void genSetJumpList(CompInfo *comp, int listip, int dest);
 
 #ifdef __cplusplus
 } // end "C"

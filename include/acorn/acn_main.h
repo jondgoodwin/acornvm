@@ -47,7 +47,7 @@ typedef struct LexInfo {
 	TokenType toktype;	//!< type of the current token
 	bool newline;		//!< True if we just started a new non-continued line
 	bool newprogram;	//!< True if we have not yet processed any token
-} LexState;
+} LexInfo;
 
 /** Mark values for garbage collection 
  * Increments how much allocated memory the lexinfo uses. */
@@ -59,12 +59,42 @@ typedef struct LexInfo {
 #define lexFree(th, o) \
 	mem_free(th, (o));
 
+/** Compiler state for a method being compiled */
+typedef struct CompInfo {
+	MemCommonInfo;	//!< Common header
+
+	Value th;				//!< Current thread
+	LexInfo *lex;			//!< Lexer info for Acorn source being compiled
+	Value ast;				//!< Abstract Syntax Tree
+	BMethodInfo* method;	//!< Method whose byte-code is being built
+
+	AuintIdx reg_top; //!< Top of method's data stack
+} CompInfo;
+
+/** Mark values for garbage collection 
+ * Increments how much allocated memory the compinfo uses. */
+#define compMark(th, o) \
+	{if ((o)->lex) mem_markobj(th, (o)->lex); \
+	if ((void *)(o)->ast) mem_markobj(th, (o)->ast); \
+	if ((o)->method) mem_markobj(th, (o)->method); \
+	vm(th)->gcmemtrav += sizeof(CompInfo);}
+
+/** Free all of a compinfo's allocated memory */
+#define compFree(th, o) \
+	mem_free(th, (o));
+
 // ***********
 // Non-API C-Method functions
 // ***********
 
+/** Return a new CompInfo value, compiler state for an Acorn method */
+Value newCompiler(Value th, Value *dest, Value src, Value url);
+
 /** Return a new LexInfo value, lexer context for a source program */
 Value newLex(Value th, Value *dest, Value src, Value url);
+
+/** Create a new bytecode method value. */
+void newBMethod(Value th, Value *dest);
 
 /** Get the next token */
 void lex_getNextToken(LexInfo *lex);

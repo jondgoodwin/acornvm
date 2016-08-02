@@ -202,10 +202,10 @@ Value pushVM(Value th) {
 	return *th(th)->stk_top++ = vm(th);
 }
 
-/* Push and return a new Lexer */
-Value pushLex(Value th, Value src, Value url) {
+/* Push and return a new CompInfo value, compiler state for an Acorn method */
+Value pushCompiler(Value th, Value src, Value url) {
 	stkCanIncTop(th); /* Check if there is room */
-	return newLex(th, th(th)->stk_top++, src, url);
+	return newCompiler(th, th(th)->stk_top++, src, url);
 }
 
 /* Push a value's serialized Text */

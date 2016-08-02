@@ -188,15 +188,6 @@ typedef struct BMethodInfo {
 		mem_free(th, bm); \
 	}}
 
-/** Acorn compilation state */
-typedef struct Acorn {
-	Acorn* prev;	//!< Previous compile state in chain
-	Acorn* next;	//!< Next compile state in chain
-	Value th;		//!< Current thread
-	BMethodInfo* method; //!< Method being built
-	AuintIdx reg_top; //!< Top of method's data stack
-} Acorn;
-
 // ***********
 // Non-API C-method functions
 // ***********
