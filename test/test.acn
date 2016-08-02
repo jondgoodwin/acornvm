@@ -1,2 +1,17 @@
-# A test Acorn program
-$stream << File::get("test.acn")
+﻿# A test Acorn program
+### Multiline comment
+Ignore me! #i
+	# ignore comment
+	\ Ignore me
+###
++Invoice
+	header:	"Fantastic \ufb01ne merchandise, 
+			bought in the finest condition.\n
+			Purchased from ο Δικαιοπολις εν αγρω εστιν."
+	item: +Item
+		first_name:   'Dorothy'
+		cost:  		12.423E2
+		quantity?:	0x3F
+if true != false 
+	\ && false==null
+	$stream << File.get("test.acn")

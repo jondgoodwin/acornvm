@@ -165,6 +165,7 @@ void acn_init(Value th) {
    Pass it a string containing the program source and a symbol for the baseurl.
    It returns the value returned by running the program's compiled method. */
 #include <stdio.h>
+void testchars(LexInfo* lex);
 int acn_new(Value th) {
 	// Retrieve pgmsrc and baseurl from parameters
 	Value pgmsrc, baseurl;
@@ -173,11 +174,15 @@ int acn_new(Value th) {
 		pushValue(th, aNull);
 		return 1;
 	}
-	if (getTop(th)<3 || !isSym(baseurl = getLocal(th,1)))
+	if (getTop(th)<3 || !isSym(baseurl = getLocal(th,2)))
 		baseurl = aNull;
 
 	puts("Method will now compile and run this program:");
 	puts(toStr(pgmsrc));
+
+	Value lex = pushLex(th, pgmsrc, baseurl);
+	testchars((LexInfo*)lex);
+	popValue(th);
 
 	pushValue(th, aNull);
 	return 1;

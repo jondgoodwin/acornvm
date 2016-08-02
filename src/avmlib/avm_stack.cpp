@@ -202,6 +202,12 @@ Value pushVM(Value th) {
 	return *th(th)->stk_top++ = vm(th);
 }
 
+/* Push and return a new Lexer */
+Value pushLex(Value th, Value src, Value url) {
+	stkCanIncTop(th); /* Check if there is room */
+	return newLex(th, th(th)->stk_top++, src, url);
+}
+
 /* Push a value's serialized Text */
 Value pushSerialized(Value th, Value val) {
 	stkCanIncTop(th); /* Check if there is room */

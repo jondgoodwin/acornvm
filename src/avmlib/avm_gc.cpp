@@ -162,6 +162,7 @@ void mem_markobjraw(Value th, MemInfo *mem) {
 	case MethEnc:
 	case ThrEnc:
 	case VmEnc:
+	case LexEnc:
 	{
 		((MemInfoGray*)mem) -> graylink = vm->gray;
 		vm->gray = (MemInfoGray*)mem;
@@ -200,6 +201,7 @@ void mem_marktopgray(Value th) {
 	case MethEnc: methodMark(th, (MethodInfo *)o); return;
 	case ThrEnc: thrMark(th, (ThreadInfo *)o); return;
 	case VmEnc: vmMark(th, (VmInfo *)o); return;
+	case LexEnc: lexMark(th, (LexInfo *)o); return;
 
 	// Should never get here
 	default: assert(0); return;
@@ -265,6 +267,7 @@ void mem_sweepfree(Value th, MemInfo *mb) {
 	case TblEnc: tblFree(th, (TblInfo *)mb); break;
 	case MethEnc: methodFree(th, (MethodInfo*)mb); break;
 	case ThrEnc: thrFree(th, (ThreadInfo *)mb); break;
+	case LexEnc: lexFree(th, (LexInfo *)mb); break;
 	default: assert(0);
 	}
 }

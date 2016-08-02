@@ -23,6 +23,7 @@
 #include "avm/avm_table.h"
 #include "avm/avm_method.h"
 #include "avm/avm_thread.h"
+#include "acorn/acn_main.h"
 #include "avm/avm_vm.h" // Should be last
 
 #ifdef __cplusplus

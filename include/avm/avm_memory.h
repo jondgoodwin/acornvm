@@ -83,10 +83,15 @@ typedef struct MemInfoT {
 /** Various types of Value encodings, some stored in pointer Values and
  * all used as an index into the VM's default encodings-to-types map */
 enum EncType {
+	/* default typed that allocate memory */
 	SymEnc,		//!< Symbol
 	ThrEnc,		//!< Thread
 	VmEnc,		//!< Virtual Machine
 	MethEnc,	//!< C or Bytecode method
+
+	/* Internal for Acorn compiler */
+	LexEnc,		//!< Lexer context
+	CompEnc,	//!< Compiler context for a method
 
 	/* after this, all encodings use typed info header */
 	StrEnc,		//!< String (bytes)

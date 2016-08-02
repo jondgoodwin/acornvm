@@ -31,8 +31,8 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\acorn\acn_gen.cpp" />
+    <ClCompile Include="src\acorn\acn_lexer.cpp" />
     <ClCompile Include="src\acorn\acn_main.cpp" />
-    <ClCompile Include="src\acorn\typ_method.cpp" />
     <ClCompile Include="src\avmlib\avm_array.cpp" />
     <ClCompile Include="src\avmlib\avm_method.cpp" />
     <ClCompile Include="src\avmlib\avm_gc.cpp" />
@@ -46,6 +46,7 @@
     <ClCompile Include="src\avmlib\avm_vm.cpp" />
     <ClCompile Include="src\globals\typ_file.cpp" />
     <ClCompile Include="src\globals\glo_init.cpp" />
+    <ClCompile Include="src\globals\typ_method.cpp" />
     <ClCompile Include="src\globals\typ_resource.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

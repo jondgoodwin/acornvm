@@ -41,7 +41,7 @@ int typ_file_get(Value th) {
 	fseek(file, 0, SEEK_SET);
 
 	// Create the string buffer (which will be returned)
-	Value strbuf = pushStringl(th, aNull, NULL, size);
+	Value strbuf = pushStringl(th, aNull, "", size);
 
 	// Load the data into an allocated buffer
 	fread(str_cstr(strbuf), 1, size, file);

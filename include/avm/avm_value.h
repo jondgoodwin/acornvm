@@ -36,6 +36,9 @@ typedef size_t Auint;
 /** A float, whose size matches Value (see avm_env.h) */
 typedef ptrdiff_float Afloat;
 
+/** A unicode character */
+typedef uint32_t Auchar;
+
 /** A fixed-sized, self-typed encoded value which holds any kind of data.
  * It can be passed to or returned from Acorn or C-methods.
  * Never manipulate a Value directly; always use an AcornVM api function.

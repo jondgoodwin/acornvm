@@ -22,8 +22,11 @@ void testAll(void) {
 	testType();
 }
 
+#include <locale.h>
+
 int main(int argc, char **argv) {
 
+    setlocale(LC_ALL, "");
 	freopen("acornvm.log", "w", stderr);
 
 	printf("Testing %d-bit %s\n", AVM_ARCH, AVM_RELEASE);
