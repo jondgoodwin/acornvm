@@ -47,6 +47,7 @@ typedef struct LexInfo {
 	TokenType toktype;	//!< type of the current token
 	bool newline;		//!< True if we just started a new non-continued line
 	bool newprogram;	//!< True if we have not yet processed any token
+	bool insertSemi;	//!< True if we need to insert ';' as next token
 } LexInfo;
 
 /** Mark values for garbage collection 
@@ -96,15 +97,21 @@ Value newLex(Value th, Value *dest, Value src, Value url);
 /** Create a new bytecode method value. */
 void newBMethod(Value th, Value *dest);
 
+/** Parse an Acorn program */
+void parseProgram(CompInfo* comp);
+
 /** Get the next token */
-void lex_getNextToken(LexInfo *lex);
+void lexGetNextToken(LexInfo *lex);
+
+/** Match current token to a reserved symbol. */
+bool lexMatch(LexInfo *lex, const char *sym);
 
 /** Match current token to a reserved symbol.
  * If it matches, advance to the next token */
-bool lex_match(LexInfo *lex, const char *sym);
+bool lexMatchNext(LexInfo *lex, const char *sym);
 
 /** Log an compiler message */
-void lex_log(LexInfo *lex, const char *msg);
+void lexLog(LexInfo *lex, const char *msg);
 
 /** A temporary function for generating byte-code test programs */
 AVM_API Value genTestPgm(Value th, int pgm);

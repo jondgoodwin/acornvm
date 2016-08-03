@@ -129,6 +129,16 @@ extern "C" {
 
 		SymFinalizer, //!< '_finalizer' method for CData
 
+		// AST symbols
+		SymMethod,	//!< 'method'
+		SymAssgn,	//!< '='
+		SymColon,	//!< ':'
+		SymThisBlock, //!< 'thisblock'
+		SymCallProp, //!< 'callprop'
+		SymActProp, //!< 'activeprop'
+		SymGlobal,  //!< 'global'
+		SymLit,		//!< 'lit'
+
 		// Core type type
 		TypeType,	//!< Type
 		TypeNullc,	//!< Null class

@@ -28,7 +28,7 @@ Value newCompiler(Value th, Value *dest, Value src, Value url) {
 	comp->method = NULL;
 
 	newLex(th, (Value *) &comp->lex, src, url);
-	newArr(th, &comp->ast, aNull, 3);
+	newArr(th, &comp->ast, aNull, 2);
 	newBMethod(th, (Value *)&comp->method);
 
 	comp->reg_top = 0;
@@ -181,7 +181,6 @@ Value genTestPgm(Value th, int pgm) {
 /* Method to compile and run an Acorn resource.
    Pass it a string containing the program source and a symbol for the baseurl.
    It returns the value returned by running the program's compiled method. */
-void testlexer(LexInfo* lex);
 int acn_new(Value th) {
 	// Retrieve pgmsrc and baseurl from parameters
 	Value pgmsrc, baseurl;
@@ -193,8 +192,12 @@ int acn_new(Value th) {
 	if (getTop(th)<3 || !isSym(baseurl = getLocal(th,2)))
 		baseurl = aNull;
 
-	Value comp = pushCompiler(th, pgmsrc, baseurl);
-	testlexer(((CompInfo*)comp)->lex);
+	// Parse and Generate
+	CompInfo* comp = (CompInfo*) pushCompiler(th, pgmsrc, baseurl);
+	parseProgram(comp);
+	Value aststr = pushSerialized(th, comp->ast);
+	vm_log("Resulting AST is: %s", toStr(aststr));
+	popValue(th);
 	popValue(th);
 
 	pushValue(th, aNull);

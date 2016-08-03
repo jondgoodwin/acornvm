@@ -49,10 +49,11 @@ Value newLex(Value th, Value *dest, Value src, Value url) {
 
 	lex->newline = false;
 	lex->newprogram = true;
+	lex->insertSemi = false;
 	lex->optype = 0;
 
 	// Prime the pump by getting the first token
-	lex_getNextToken(lex);
+	lexGetNextToken(lex);
 	return *dest = (Value) lex;
 }
 
@@ -131,9 +132,19 @@ void lex_skipchar(LexInfo* lex) {
 
 /** Scan past non-tokenized white space. 
  * Handle line indentation and continuation */
-bool lex_scanWhite(LexInfo *lex) {
-	Auchar chr;
+bool lexScanWhite(LexInfo *lex) {
+	Value th = lex->th;	// for vmlit
 
+	// Insert semicolon as a token, if requested by implied closing brace
+	if (lex->insertSemi) {
+		lex->insertSemi = false;
+		lex->toktype=Res_Token;
+		lex->token=vmlit(SymSemicolon);
+		return true;
+	}
+
+	// Ignore all forms of white space
+	Auchar chr;
 	bool lookForWhiteSpace = true;
 	while (lookForWhiteSpace) {
 
@@ -205,7 +216,7 @@ bool lex_scanWhite(LexInfo *lex) {
 	// We now know the next character starts a real token
 	// But first, we must handle insertion of ; { and } characters
 	// depending on the indentation changes and newline flag
-	Value th = lex->th;	// for vmlit
+
 	// Handle increasing indentation
 	if (lex->newindent > lex->curindent) {
 		lex->toktype=Res_Token;
@@ -236,6 +247,7 @@ bool lex_scanWhite(LexInfo *lex) {
 		lex->toktype=Res_Token;
 		lex->token=vmlit(SymRBrace);
 		lex->curindent--;
+		lex->insertSemi = true;	// Always insert semi-colon after implied closing brace
 		return true;
 	}
 
@@ -243,7 +255,7 @@ bool lex_scanWhite(LexInfo *lex) {
 }
 
 /** End of source program is a token */
-bool lex_scanEof(LexInfo *lex) {
+bool lexScanEof(LexInfo *lex) {
 	if (!lex_isEOF(lex))
 		return false;
 
@@ -252,7 +264,7 @@ bool lex_scanEof(LexInfo *lex) {
 }
 
 /** Tokenize an integer or floating point number */
-bool lex_scanNumber(LexInfo *lex) {
+bool lexScanNumber(LexInfo *lex) {
 
 	// A number token's first character is always 0-9
 	// We cannot handle negative sign here, as it might be a subtraction
@@ -354,7 +366,7 @@ static VmLiterals ReservedNames[] = {
 
 /** Tokenize a name. The result could be Name_Token (e.g., for variables) 
  * Res_Token, a reserved keyword, or Lit_Token for null, false and true. */
-bool lex_scanName(LexInfo *lex) {
+bool lexScanName(LexInfo *lex) {
 
 	// Name token's first character is always a-z, _ or $
 	Auchar chr = lex_thischar(lex);
@@ -389,14 +401,15 @@ bool lex_scanName(LexInfo *lex) {
 		}
 	}
 
-	// It is a regular name, such as a variable
-	lex->toktype = Name_Token;
+	// If it is immediately followed by a ':', treat it as a literal symbol
+	// Otherwise it is a regular name, such as a variable
+	lex->toktype = lex_thischar(lex)==':'? Lit_Token : Name_Token;
 	return true;
 }
 
 /** Tokenize a string (double quotes) or symbol (single quotes) 
  * Handle escape sequences. Ignore line-end and leading tabs for multi-line. */
-bool lex_scanString(LexInfo *lex) {
+bool lexScanString(LexInfo *lex) {
 	
 	// String token's first character should be a quote mark
 	Auchar quotemark = lex_thischar(lex);
@@ -515,7 +528,7 @@ bool lex_scanString(LexInfo *lex) {
 
 /** Tokenize a punctuation-oriented operator symbol.
  * By this point we take at least one character, unless multi-char op is recognized. */
-bool lex_scanOp(LexInfo *lex) {
+bool lexScanOp(LexInfo *lex) {
 	const char *begp = &toStr(lex->source)[lex->bytepos];
 	Auchar ch1 = lex_thischar(lex);
 	lex_skipchar(lex);
@@ -554,29 +567,52 @@ bool lex_scanOp(LexInfo *lex) {
 }
 
 /* Get the next token */
-void lex_getNextToken(LexInfo *lex) {
+void lexGetNextToken(LexInfo *lex) {
 
 	// Scan until we find a token
-	(!lex_scanWhite(lex) 
-		&& !lex_scanEof(lex) 
-		&& !lex_scanNumber(lex) 
-		&& !lex_scanName(lex) 
-		&& !lex_scanString(lex) 
-		&& !lex_scanOp(lex));
+	(!lexScanWhite(lex) 
+		&& !lexScanEof(lex) 
+		&& !lexScanNumber(lex) 
+		&& !lexScanName(lex) 
+		&& !lexScanString(lex) 
+		&& !lexScanOp(lex));
+
+	switch (lex->toktype) {
+	case Lit_Token: {
+		pushSerialized(lex->th, lex->token);
+		vm_log("Literal: %s", toStr(getFromTop(lex->th, 0)));
+		popValue(lex->th);
+		} break;
+	case Name_Token: {
+		pushSerialized(lex->th, lex->token);
+		vm_log("Name: %s", toStr(getFromTop(lex->th, 0)));
+		popValue(lex->th);
+		} break;
+	case Res_Token: {
+		pushSerialized(lex->th, lex->token);
+		vm_log("Reserved: %s", toStr(getFromTop(lex->th, 0)));
+		popValue(lex->th);
+		} break;
+	}
+}
+
+/* Match current token to a reserved symbol. */
+bool lexMatch(LexInfo *lex, const char *sym) {
+	return (lex->toktype==Res_Token && 0==strcmp(sym, toStr(lex->token)));
 }
 
 /* Match current token to a reserved symbol.
  * If it matches, advance to the next token */
-bool lex_match(LexInfo *lex, const char *sym) {
+bool lexMatchNext(LexInfo *lex, const char *sym) {
 	if (lex->toktype==Res_Token && 0==strcmp(sym, toStr(lex->token))) {
-		lex_getNextToken(lex);
+		lexGetNextToken(lex);
 		return true;
 	}
 	return false;
 }
 
 /* Log an compiler message */
-void lex_log(LexInfo *lex, const char *msg) {
+void lexLog(LexInfo *lex, const char *msg) {
 	vm_log("While compiling %s(%d:%d): %s", toStr(lex->url), lex->tokline, lex->toklinepos, msg);
 }
 

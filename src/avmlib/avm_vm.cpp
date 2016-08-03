@@ -177,6 +177,16 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 
 	{SymFinalizer, "_finalizer"},
 
+	// AST symbols
+	{SymMethod, "method"},
+	{SymAssgn, "="},
+	{SymColon, ":"},
+	{SymThisBlock, "thisblock"},
+	{SymCallProp, "callprop"},
+	{SymActProp, "activeprop"},
+	{SymGlobal, "global"},
+	{SymLit, "lit"},
+
 	// End of literal table
 	{0, NULL}
 };

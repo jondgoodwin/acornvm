@@ -128,9 +128,9 @@ void arrAdd(Value th, Value arr, Value val) {
 	AuintIdx sz = arr_size(arr);
 	assert(isArr(arr));
 
-	// Grow, if needed
+	// Double size, if more space is needed
 	if (sz+1>a->avail)
-		arrMakeRoom(th, arr, sz+1);
+		arrMakeRoom(th, arr, sz+(sz>0? sz:1));
 
 	// Append value
 	a->arr[sz]=val;
