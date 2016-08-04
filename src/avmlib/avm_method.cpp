@@ -451,8 +451,9 @@ void methodRunBC(Value th) {
 		// OpSetActProp: R(A) := R(A).R(A+1)=R(A+2)
 		// Set active property value
 		case OpSetActProp: {
-			*rega = getProperty(th, *(rega+1), *rega);
-			if (isCallable(*rega)) {
+			Value propval = getProperty(th, *(rega+1), *rega);
+			if (isCallable(propval)) {
+				*rega = propval;
 				th(th)->stk_top = rega+3; // Set fixed top for 2 values
 				methCall(rega, 1, 1);
 			}
@@ -489,8 +490,10 @@ void methodRunBC(Value th) {
 		// so next open instruction (CALL, RETURN, VAR) may use top.
 		case OpSetCall: {
 			// Get property value. If executable, we can do call
-			*rega = getProperty(th, *(rega+1), *rega); // Find executable
-			if (!isCallable(*rega)) {
+			Value propcall = getProperty(th, *(rega+1), *rega); // Find executable
+			if (isCallable(propcall)) 
+				*rega = propcall;
+			else {
 				// If not callable, do an indexed get/set
 				*(rega+1) = *rega;
 				*rega = getProperty(th, *(rega+1), vmlit(SymParas));

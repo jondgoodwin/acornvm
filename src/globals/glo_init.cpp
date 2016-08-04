@@ -100,6 +100,12 @@ void typ_list_init(Value th) {
 	return;
 }
 
+/** Create a new Type */
+int typ_type_new(Value th) {
+	Value type = pushType(th, getLocal(th, 0), 4);
+	return 1;
+}
+
 /** Lookup a value from type's named property */
 int typ_type_get(Value th) {
 	pushValue(th, getTop(th)>=2? getProperty(th, getLocal(th,0), getLocal(th,1)) : aNull);
@@ -109,6 +115,8 @@ int typ_type_get(Value th) {
 /** Initialize the Type type, used to create other types */
 void typ_type_init(Value th) {
 	vmlit(TypeType) = pushType(th, aNull, 1);
+		pushCMethod(th, typ_type_new);
+		popProperty(th, 0, "new");
 		pushCMethod(th, typ_type_get);
 		popProperty(th, 0, "()");
 	popGloVar(th, "Type");

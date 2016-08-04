@@ -1,47 +1,9 @@
-﻿$ = +World
-	camera: +Camera
-		position: +Xyz(0., 0., -10.)
-		lookat: +Xyz(0., 0., 0.)
-	scene: +Scene
-		parts: +List <<
-			+Shape
-				material: +Material
-					uniforms: +List('mvpmatrix')
-					vertexAttributes: +List('position', 'color')
-					vertex: "
-						// Vertex shader for a self-lit mesh where each vertex has its own color\n
-						#version 130\n
-						
-						uniform mat4 mvpmatrix;
-						
-						in  vec3 position;
-						in  vec4 color;
-						
-						out vec4 vert_color4;
-						
-						void main(void) {
-							gl_Position = mvpmatrix * vec4(position, 1.0);
-							vert_color4 = color;
-						}
-						"
-					fragment: "
-						// Fragment shader passes along interpolated, full opacity vec3 color from vertex shader\n
-						#version 130\n
-						
-						in  vec4 vert_color4;
-						
-						void main(void) {
-							gl_FragColor = vert_color4;
-						}
-						"
-				draw: 'polygon'
-				position3: +Xyzs"
-					0.0,  1.0, -1.0,
-					1.0,  0.0, -1.0,
-					0.0, -1.0, -1.0,
-					-1.0,  0.0, -3.0"
-				color3: +Colors"
-					1.0,  0.0,  0.0, 1.0, 
-					0.0,  1.0,  0.0, 1.0, 
-					0.0,  0.0,  1.0, 1,0, 
-					1.0,  1.0,  1.0, 1.0"
+﻿'abc'
+$temp = +Type
+	george: +Type
+		child: "George Jr."
+	mary: +List <<
+		'Little Dorrit'
+		'Tiny Tim'
+$temp.george.child = "Trip"
+$temp

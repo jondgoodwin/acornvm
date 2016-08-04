@@ -38,8 +38,6 @@ extern "C" {
 // Non-API C-Method functions
 // ***********
 
-/** Create a new bytecode method value. */
-void genNew(CompInfo *comp);
 /** Put new byte-code instruction to code array */
 void genPutInstr(CompInfo *comp, AuintIdx loc, Instruction i);
 /** Append new instruction to code array */

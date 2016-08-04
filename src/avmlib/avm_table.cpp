@@ -464,7 +464,7 @@ void tblSerialize(Value th, Value str, int indent, Value tbl) {
 	Node *last = &tbl_info(tbl)->nodes[1 << tbl_info(tbl)->lAvailNodes];
 	int ind;
 
-	strAppend(th, str, "+Index", 6);
+	strAppend(th, str, isType(tbl)? "+Type " : "+Index", 6);
 	for (; n < last; n++) {
 		if (n->key != aNull) {
 			strAppend(th, str, "\n", 1);
