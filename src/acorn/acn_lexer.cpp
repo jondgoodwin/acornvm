@@ -579,17 +579,17 @@ void lexGetNextToken(LexInfo *lex) {
 	switch (lex->toktype) {
 	case Lit_Token: {
 		pushSerialized(lex->th, lex->token);
-		vm_log("Literal: %s", toStr(getFromTop(lex->th, 0)));
+		vmLog("Literal: %s", toStr(getFromTop(lex->th, 0)));
 		popValue(lex->th);
 		} break;
 	case Name_Token: {
 		pushSerialized(lex->th, lex->token);
-		vm_log("Name: %s", toStr(getFromTop(lex->th, 0)));
+		vmLog("Name: %s", toStr(getFromTop(lex->th, 0)));
 		popValue(lex->th);
 		} break;
 	case Res_Token: {
 		pushSerialized(lex->th, lex->token);
-		vm_log("Reserved: %s", toStr(getFromTop(lex->th, 0)));
+		vmLog("Reserved: %s", toStr(getFromTop(lex->th, 0)));
 		popValue(lex->th);
 		} break;
 	}
@@ -612,7 +612,7 @@ bool lexMatchNext(LexInfo *lex, const char *sym) {
 
 /* Log an compiler message */
 void lexLog(LexInfo *lex, const char *msg) {
-	vm_log("While compiling %s(%d:%d): %s", toStr(lex->url), lex->tokline, lex->toklinepos, msg);
+	vmLog("While compiling %s(%d:%d): %s", toStr(lex->url), lex->tokline, lex->toklinepos, msg);
 }
 
 #ifdef __cplusplus

@@ -83,6 +83,6 @@ void testGen(void) {
 	//puts(toStr(popValue(th)));
 	getCall(th, 0, 0);
 
-	vm_close(th);
+	vmClose(th);
 	printf("All %ld Gen tests completed. %ld failed.\n", tests, fails);
 }

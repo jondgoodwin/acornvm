@@ -97,12 +97,12 @@ void serialize(Value th, Value str, int indent, Value val) {
 		switch (((MemInfo*)val)->enctyp) {
 		case SymEnc: 
 			{strAppend(th, str, "'", 1);
-			strAppend(th, str, sym_cstr(val), sym_size(val)); 
+			strAppend(th, str, sym_cstr(val), strlen(sym_cstr(val))); 
 			strAppend(th, str, "'", 1);
 			return;}
 		case StrEnc: 
 			{strAppend(th, str, "\"", 1);
-			strAppend(th, str, str_cstr(val), str_size(val)); 
+			strAppend(th, str, str_cstr(val), strlen(str_cstr(val))); 
 			strAppend(th, str, "\"", 1);
 			return;}
 		case ArrEnc: 
@@ -140,12 +140,14 @@ Value *getPropR(Value type, Value methsym) {
 	else if (isArr(type)) {
 		Value *types = arr_info(type)->arr;
 		AuintIdx ntypes = arr_size(type);
-		while (ntypes--)
-			if (NULL != (meth = tblGetp(*types++, methsym)))
+		while (ntypes--) {
+			if (NULL != (meth = tblGetp(*types, methsym)))
 				return meth;
-		// Or else try inherited properties
-		if (NULL != (meth = getPropR(tbl_info(type)->inheritype, methsym)))
-			return meth;
+			// Or else try inherited properties
+/*			if (NULL != (meth = getPropR(tbl_info(*types++)->inheritype, methsym)))
+				return meth;*/
+			types++;
+		}
 	}
 
 	return NULL;

@@ -110,6 +110,9 @@ void parseValue(CompInfo* comp, Value astseg) {
 	else if (lexMatchNext(comp->lex, "this")) {
 		astAddValue(th, astseg, vmlit(SymThis));
 	}
+	else if (lexMatchNext(comp->lex, "self")) {
+		astAddValue(th, astseg, vmlit(SymSelf));
+	}
 	return;
 }
 

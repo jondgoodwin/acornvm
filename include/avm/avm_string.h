@@ -48,7 +48,9 @@ typedef struct StrInfo {
 /** Define the prototype for a cdata finalizer*/
 typedef int (*CDataFinalizerFn)(Value o);
 
-// Flags2 bits and helpers -->
+// Flags2 bits and helpers for strings holding number arrays -->
+#define StrMatrixFlag 0x80 //!< The structure holds a matrix
+#define StrIntegerFlag 0x40 //!< The value is an Integer (vs. Float)
 #define StrValByteSzMask 0x30 //!< Number of bytes in a value (1, 2, 4, 8)
 #define StrStructSzMask	0x0F //!< Number of values in a structure (1-16)
 
@@ -94,7 +96,7 @@ Value newStr(Value th, Value *dest, Value type, const char *str, AuintIdx len);
 Value newCData(Value th, Value *dest, Value type, AuintIdx len, unsigned int extrahdr);
 
 /** Return a string value containing room for identically structured numbers. */
-Value newNumbers(Value th, Value *dest, Value type, AuintIdx nStructs, unsigned int nVals, unsigned int valSz, unsigned int extrahdr);
+Value newNumbers(Value th, Value *dest, Value type, AuintIdx nStructs, unsigned int nVals, unsigned int valSz, bool isInt, bool isMat, unsigned int extrahdr);
 
 /** Calculate the hash value for a string */
 AuintIdx str_hash(Value th, Value val);

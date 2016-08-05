@@ -59,11 +59,15 @@ AVM_API void strSub(Value th, Value val, AuintIdx pos, AuintIdx sz, const char *
 /**	Append characters to the end of a string, growing its allocated block as needed. */
 AVM_API void strAppend(Value th, Value val, const char *addstr, AuintIdx addstrlen);
 /** Return size of every number in an Numbers block */
-AVM_API AuintIdx getValSz(Value str);
+AVM_API AuintIdx nbrGetValSz(Value str);
 /** Return number of values in a Numbers block structure */
-AVM_API AuintIdx getNVals(Value str);
+AVM_API AuintIdx nbrGetNVals(Value str);
 /** Return number of structures in a Numbers block */
-AVM_API AuintIdx getNStructs(Value str);
+AVM_API AuintIdx nbrGetNStructs(Value str);
+/** Return whether numbers block holds matrices */
+AVM_API bool nbrIsMatrix(Value str);
+/** Return whether numbers block holds integers */
+AVM_API bool nbrIsInteger(Value str);
 
 // Implemented in avm_array.cpp
 /** Return 1 if the value is an Array, otherwise 0 */
@@ -189,7 +193,7 @@ AVM_API Value pushCData(Value th, Value type, AuintIdx size, unsigned int extrah
 	If nStructs>1, it starts off empty (size is 0). Otherwise, it is considered full.
 	The extrahdr indicates the size of the header extension for a small (&lt;= 60 bytes), fixed-size data area
 	(it can be used for metadata - such as specifying the dimensions of a 2- or 3-dimensional array). */
-AVM_API Value pushNumbers(Value th, Value type, AuintIdx nStructs, unsigned int nVals, unsigned int valSz, unsigned int extrahdr);
+AVM_API Value pushNumbers(Value th, Value type, AuintIdx nStructs, unsigned int nVals, unsigned int valSz, bool isInt, bool isMat, unsigned int extrahdr);
 /** Push and return a new Array value */
 AVM_API Value pushArray(Value th, Value type, AuintIdx size);
 /** Push and return a new Closure value.
@@ -252,7 +256,9 @@ AVM_API int needMoreLocal(Value th, AuintIdx needed);
 /** Start a new Virtual Machine. Return the main thread */
 AVM_API Value newVM(void);
 /** Close down the virtual machine, freeing all allocated memory */
-AVM_API void vm_close(Value th);
+AVM_API void vmClose(Value th);
+/** Log a message to the logfile */
+AVM_API void vmLog(const char *msg, ...);
 
 /** Start garbage collection */
 AVM_API void mem_gcstart(Value th);

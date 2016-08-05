@@ -196,11 +196,11 @@ int acn_new(Value th) {
 	CompInfo* comp = (CompInfo*) pushCompiler(th, pgmsrc, baseurl);
 	parseProgram(comp);
 	Value aststr = pushSerialized(th, comp->ast);
-	vm_log("Resulting AST is: %s", toStr(aststr));
+	vmLog("Resulting AST is: %s", toStr(aststr));
 	popValue(th);
 	genBMethod(comp);
 	Value bmethod = pushSerialized(th, comp->method);
-	vm_log("Resulting bytecode is: %s", toStr(bmethod));
+	vmLog("Resulting bytecode is: %s", toStr(bmethod));
 	popValue(th);
 
 	// Call the compiled method, with self=null. Return its value.
@@ -209,7 +209,7 @@ int acn_new(Value th) {
 	pushValue(th, aNull);
 	getCall(th, 1, 1);
 	Value ret = pushSerialized(th, getLocal(th, stk));
-	vm_log("Value returned from running compiled program: %s", toStr(ret));
+	vmLog("Value returned from running compiled program: %s", toStr(ret));
 	popValue(th);
 	return 1;
 }

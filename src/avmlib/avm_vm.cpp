@@ -82,7 +82,7 @@ AVM_API Value newVM(void) {
 }
 
 /* Close down the virtual machine, freeing all allocated memory */
-void vm_close(Value th) {
+void vmClose(Value th) {
 	th = vm(th)->main_thread;
 	VmInfo* vm = vm(th);
 	mem_freeAll(th);  /* collect all objects */
@@ -104,7 +104,7 @@ void vm_unlock(Value th) {
 
 #include <stdarg.h>
 /* Log a message to the logfile */
-void vm_log(const char *msg, ...) {
+void vmLog(const char *msg, ...) {
 	// Start line with timestamp
 	time_t ltime;
 	char timestr[80];

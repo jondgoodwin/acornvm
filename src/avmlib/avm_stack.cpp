@@ -123,9 +123,9 @@ Value pushCData(Value th, Value type, AuintIdx size, unsigned int extrahdr) {
 }
 
 /* Push and return a new typed Numbers value */
-Value pushNumbers(Value th, Value type, AuintIdx nStructs, unsigned int nVals, unsigned int valSz, unsigned int extrahdr) {
+Value pushNumbers(Value th, Value type, AuintIdx nStructs, unsigned int nVals, unsigned int valSz, bool isInt, bool isMat, unsigned int extrahdr) {
 	stkCanIncTop(th); /* Check if there is room */
-	return newNumbers(th, th(th)->stk_top++, type, nStructs, nVals, valSz, extrahdr);
+	return newNumbers(th, th(th)->stk_top++, type, nStructs, nVals, valSz, isInt, isMat, extrahdr);
 }
 	
 /* Push and return a new Array value */
@@ -295,11 +295,11 @@ void popSetActProp(Value th, AintIdx selfidx, const char *mbrnm) {
 		// Set up stack for call
 		stkCanIncTop(th); /* Check if there is room for self */
 		Value set = getFromTop(th, 1); // the value to set
-		*(th(th)->stk_top-1) = propval;
-		*(th(th)->stk_top) = self;
+		*(th(th)->stk_top-2) = propval;
+		*(th(th)->stk_top-1) = self;
 		*(th(th)->stk_top++) = set;
 		// Do the set call, expecting (and returning) just one return value
-		switch (callPrep(th, th(th)->stk_top-3, 1, 1)) {
+		switch (callPrep(th, th(th)->stk_top-3, 0, 1)) {
 			case MethodBC:
 				methodRunBC(th);
 				break;

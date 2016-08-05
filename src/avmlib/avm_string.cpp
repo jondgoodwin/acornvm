@@ -69,7 +69,7 @@ Value newCData(Value th, Value *dest, Value type, AuintIdx len, unsigned int ext
 }
 
 /* Return a string value containing room for identically structured numbers. */
-Value newNumbers(Value th, Value *dest, Value type, AuintIdx nStructs, unsigned int nVals, unsigned int valSz, unsigned int extrahdr) {
+Value newNumbers(Value th, Value *dest, Value type, AuintIdx nStructs, unsigned int nVals, unsigned int valSz, bool isInt, bool isMat, unsigned int extrahdr) {
 	StrInfo *val;
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 
@@ -89,6 +89,8 @@ Value newNumbers(Value th, Value *dest, Value type, AuintIdx nStructs, unsigned 
 	if (nVals>16) nVals=16;
 	else if (nVals==0) nVals=1;
 	val->flags2 |= (nVals-1); // StrStructSzMask 0x0F
+	if (isInt) val->flags2 |= StrIntegerFlag;
+	if (isMat) val->flags2 |= StrMatrixFlag;
 	AuintIdx len = nStructs * nVals * valSz;
 
 	// Allocate block for number values
@@ -111,7 +113,7 @@ const void *toHeader(Value str) {
 }
 
 /* Return size of every number in an Numbers block */
-AuintIdx getValSz(Value str) {
+AuintIdx nbrGetValSz(Value str) {
 	if (!isStr(str))
 		return 1;
 	switch ((((StrInfo*)str)->flags2 & StrValByteSzMask)>>4) {
@@ -124,13 +126,23 @@ AuintIdx getValSz(Value str) {
 }
 
 /* Return number of values in a Numbers block structure */
-AuintIdx getNVals(Value str) {
+AuintIdx nbrGetNVals(Value str) {
 	return isStr(str)? (((StrInfo*)str)->flags2 & StrStructSzMask)+1 : 1;
 }
 
 /* Return number of structures in a Numbers block */
-AuintIdx getNStructs(Value str) {
-	return isStr(str)? ((StrInfo*)str)->size/getNVals(str)/getValSz(str) : 0;
+AuintIdx nbrGetNStructs(Value str) {
+	return isStr(str)? ((StrInfo*)str)->size/nbrGetNVals(str)/nbrGetValSz(str) : 0;
+}
+
+/* Return whether numbers block holds matrices */
+bool nbrIsMatrix(Value str) {
+	return isStr(str) && (((StrInfo*)str)->flags2 & StrMatrixFlag) == StrMatrixFlag;
+}
+
+/* Return whether numbers block holds integers */
+bool nbrIsInteger(Value str) {
+	return isStr(str) && (((StrInfo*)str)->flags2 & StrIntegerFlag) == StrIntegerFlag;
 }
 
 /* Ensure string has room for len Values, allocating memory as needed.

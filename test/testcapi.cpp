@@ -332,6 +332,6 @@ void testCapi(void) {
 	t(0==strcmp(toStr(popValue(th)),"\"A silly string\""), "Fail to serialize 'A silly string'");
 	popValue(th);
 
-	vm_close(th);
+	vmClose(th);
 	printf("All %ld C-API tests completed. %ld failed.\n", tests, fails);
 }

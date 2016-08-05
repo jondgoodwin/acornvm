@@ -78,6 +78,6 @@ void testType(void) {
 
 	testResource(th);
 
-	vm_close(th);
+	vmClose(th);
 	printf("All %ld Type tests completed. %ld failed.\n", tests, fails);
 }
