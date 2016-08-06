@@ -188,6 +188,8 @@ void genExp(CompInfo *comp, Value astseg) {
 			genAddInstr(comp, BCINS_ABC(OpLoadReg, genNextReg(comp), comp->thisreg, 0));
 		else if (vmlit(SymSelf) == astseg)
 			genAddInstr(comp, BCINS_ABC(OpLoadReg, genNextReg(comp), 0, 0));
+		else if (vmlit(SymBaseurl) == astseg)
+			genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, comp->lex->url)));
 	} else {
 		Value op = astGet(th, astseg, 0);
 		if (vmlit(SymLit) == op) {

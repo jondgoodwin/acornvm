@@ -107,6 +107,9 @@ void parseValue(CompInfo* comp, Value astseg) {
 		astAddSeg2(th, astseg, vmlit(SymGlobal), comp->lex->token); // !! NOT RIGHT !! Local?
 		lexGetNextToken(comp->lex);
 	}
+	else if (lexMatchNext(comp->lex, "baseurl")) {
+		astAddValue(th, astseg, vmlit(SymBaseurl));
+	}
 	else if (lexMatchNext(comp->lex, "this")) {
 		astAddValue(th, astseg, vmlit(SymThis));
 	}
@@ -174,6 +177,16 @@ void parsePrefixExp(CompInfo* comp, Value astseg) {
 			Value litseg = astAddSeg(th, astseg, vmlit(SymLit), 2);
 			astAddValue(th, litseg, vmlit(SymNeg));
 		}
+	}
+	else if (lexMatchNext(comp->lex, "@")) {
+		// ('callprop', ('callprop', glo'Resource', lit'new', parsed-value, 'baseurl'), '()')
+		Value getseg = astAddSeg(th, astseg, vmlit(SymCallProp), 3);
+		Value newseg = astAddSeg(th, getseg, vmlit(SymCallProp), 5);
+		astAddSeg2(th, newseg, vmlit(SymGlobal), vmlit(SymResource));
+		astAddSeg2(th, newseg, vmlit(SymLit), vmlit(SymNew));
+		parseTerm(comp, newseg);
+		astAddValue(th, newseg, vmlit(SymBaseurl));
+		astAddSeg2(th, getseg, vmlit(SymLit), vmlit(SymParas));
 	}
 	else
 		parseTerm(comp, astseg);

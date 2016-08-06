@@ -341,6 +341,7 @@ bool lexScanNumber(LexInfo *lex) {
 static VmLiterals ReservedNames[] = {
 	SymAnd,
 	SymAsync,
+	SymBaseurl,
 	SymBreak,
 	SymContinue,
 	SymDo,

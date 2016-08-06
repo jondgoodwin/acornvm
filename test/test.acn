@@ -5,5 +5,7 @@ $temp = +Type
 	mary: +List <<
 		'Little Dorrit'
 		'Tiny Tim'
+		@"test2.acn"
+		+Resource("test2.acn", baseurl)() 	// @"test2.acn"
 $temp.george.child = "Trip"
 $temp

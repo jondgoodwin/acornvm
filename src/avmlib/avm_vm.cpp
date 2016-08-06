@@ -137,6 +137,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymTrue, "true"},
 	{SymAnd, "and"},
 	{SymAsync, "async"},
+	{SymBaseurl, "baseurl"},
 	{SymBreak, "break"},
 	{SymContinue, "continue"},
 	{SymDo, "do"},
@@ -186,6 +187,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymActProp, "activeprop"},
 	{SymGlobal, "global"},
 	{SymLit, "lit"},
+	{SymResource, "Resource"},
 
 	// End of literal table
 	{0, NULL}

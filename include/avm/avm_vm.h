@@ -89,6 +89,7 @@ extern "C" {
 		SymTrue,	//!< 'true'
 		SymAnd,			//!< 'and'
 		SymAsync,		//!< 'async'
+		SymBaseurl,		//!< 'baseurl'
 		SymBreak,		//!< 'break'
 		SymContinue,	//!< 'continue'
 		SymDo,			//!< 'do'
@@ -138,6 +139,7 @@ extern "C" {
 		SymActProp, //!< 'activeprop'
 		SymGlobal,  //!< 'global'
 		SymLit,		//!< 'lit'
+		SymResource, //!< 'Resource'
 
 		// Core type type
 		TypeType,	//!< Type
