@@ -24,7 +24,7 @@ enum TokenType {
 	
 /** Lexer state */
 typedef struct LexInfo {
-	MemCommonInfo;	//!< Common header
+	MemCommonInfoGray;	//!< Common header
 
 	Value source;	//!< The source text
 	Value url;		//!< The url where the source text came from
@@ -54,6 +54,8 @@ typedef struct LexInfo {
  * Increments how much allocated memory the lexinfo uses. */
 #define lexMark(th, o) \
 	{mem_markobj(th, (o)->token); \
+	mem_markobj(th, (o)->source); \
+	mem_markobj(th, (o)->url); \
 	vm(th)->gcmemtrav += sizeof(LexInfo);}
 
 /** Free all of a lexinfo's allocated memory */
@@ -62,12 +64,13 @@ typedef struct LexInfo {
 
 /** Compiler state for a method being compiled */
 typedef struct CompInfo {
-	MemCommonInfo;	//!< Common header
+	MemCommonInfoGray;	//!< Common header
 
 	Value th;				//!< Current thread
 	LexInfo *lex;			//!< Lexer info for Acorn source being compiled
 	Value ast;				//!< Abstract Syntax Tree
 	BMethodInfo* method;	//!< Method whose byte-code is being built
+	Value prevcomp;			//!< Compiler for method that defined this method
 
 	Value thisop;			//!< Operator to use on every 'this' block stmt
 
@@ -81,6 +84,7 @@ typedef struct CompInfo {
 	{if ((o)->lex) mem_markobj(th, (o)->lex); \
 	if ((void *)(o)->ast) mem_markobj(th, (o)->ast); \
 	if ((o)->method) mem_markobj(th, (o)->method); \
+	mem_markobj(th, (o)->prevcomp); \
 	vm(th)->gcmemtrav += sizeof(CompInfo);}
 
 /** Free all of a compinfo's allocated memory */
@@ -90,6 +94,16 @@ typedef struct CompInfo {
 // ***********
 // Non-API C-Method functions
 // ***********
+
+/** Method to compile an Acorn method.
+   Pass it a string containing the program source and a symbol or null for the baseurl.
+   It returns the compiled byte-code method. */
+int acn_newmethod(Value th);
+
+/** Method to compile and run an Acorn program.
+   Pass it a string containing the program source and a symbol or null for the baseurl.
+   Any additional parameters are passed to the compiled method when run. */
+int acn_newprogram(Value th);
 
 /** Return a new CompInfo value, compiler state for an Acorn method */
 Value newCompiler(Value th, Value *dest, Value src, Value url);

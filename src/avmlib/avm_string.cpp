@@ -194,6 +194,7 @@ void strSub(Value th, Value val, AuintIdx pos, AuintIdx sz, const char *repstr, 
 	str->str[len] = '\0';
 }
 
+#include <stdio.h>
 /*	Append characters to the end of a string. */
 void strAppend(Value th, Value val, const char *addstr, AuintIdx addstrlen) {
 	StrInfo* str = str_info(val);

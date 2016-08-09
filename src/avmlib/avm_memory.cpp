@@ -28,6 +28,13 @@ void *mem_gcrealloc(Value th, void *block, Auint osize, Auint nsize) {
 	// Allocate/free/resize the memory block
 	newblock = (Value) mem_frealloc(block, nsize);
 
+#ifdef MEMORYLOG
+	if (nsize==0)
+		vmLog("Freeing %p", block);
+	else
+		vmLog("Allocating %p from %p for %d", newblock, block, nsize);
+#endif
+
 	// If alloc or resize failed, compact memory and try again
 	if (newblock == NULL && nsize > 0) {
 		// realloc cannot fail when shrinking a block
@@ -61,8 +68,9 @@ void *mem_frealloc(void *block, Auint size) {
 		free(block);
 		return NULL;
 	}
-	else
+	else {
 		return realloc(block, size);
+	}
 }
 
 /** Create a new variable-sized object (with given encoding and size) and add to front of *list. */

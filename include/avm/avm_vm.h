@@ -137,7 +137,9 @@ extern "C" {
 		SymThisBlock, //!< 'thisblock'
 		SymCallProp, //!< 'callprop'
 		SymActProp, //!< 'activeprop'
+		SymRawProp, //!< 'rawprop'
 		SymGlobal,  //!< 'global'
+		SymLocal,	//!< 'local'
 		SymLit,		//!< 'lit'
 		SymResource, //!< 'Resource'
 

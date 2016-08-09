@@ -30,6 +30,7 @@ int typ_file_get(Value th) {
 	// Open the file - return null on failure
 	FILE *file;
 	if (!(file = fopen(fn, "rb"))) {
+		vmLog("Cannot open 'file://' resource: %s", fn);
 		pushValue(th, aNull);
 		return 1;
 	}

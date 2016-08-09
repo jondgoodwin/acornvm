@@ -1,11 +1,15 @@
-﻿'abc'
-$temp = +Type
-	george: +Type
-		child: "George Jr."
-	mary: +List <<
-		'Little Dorrit'
-		'Tiny Tim'
-		@"test2.acn"
-		+Resource("test2.acn", baseurl)() 	// @"test2.acn"
-$temp.george.child = "Trip"
-$temp
+﻿[abc, b]
+	abc = 'abc'
+	$temp = +Type
+		prodigal: []
+			'first'
+		george: +Type
+			child: "George Jr."
+		mary: +List <<
+			'Little Dorrit'
+			'Tiny Tim'
+			@"test2.acn"
+			abc
+	$temp.george.child = "Trip"
+	$temp.which = $temp.prodigal
+	$temp

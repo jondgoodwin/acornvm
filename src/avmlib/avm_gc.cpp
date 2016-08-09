@@ -172,6 +172,7 @@ void mem_markobjraw(Value th, MemInfo *mem) {
 
 	// Should never get here
 	default: 
+		vmLog("GC error: gray marking %p unknown object type (deleted?)", mem); 
 		assert(0); 
 		return;
 	}
@@ -196,17 +197,17 @@ void mem_marktopgray(Value th) {
 	// Go mark object's embedded values, incrementing traversed memory count.
 	// This uses encoding-specific macros that know what Values they contain.
 	switch (o->enctyp) {
-	case StrEnc: strMark(th, (StrInfo*) o); return;
-	case ArrEnc: arrMark(th, (ArrInfo*) o);	return;
-	case TblEnc: tblMark(th, (TblInfo*)o); return;
-	case MethEnc: methodMark(th, (MethodInfo *)o); return;
-	case ThrEnc: thrMark(th, (ThreadInfo *)o); return;
-	case VmEnc: vmMark(th, (VmInfo *)o); return;
-	case LexEnc: lexMark(th, (LexInfo *)o); return;
-	case CompEnc: compMark(th, (CompInfo *)o); return;
+	case StrEnc: strMark(th, (StrInfo*) o); break;
+	case ArrEnc: arrMark(th, (ArrInfo*) o);	break;
+	case TblEnc: tblMark(th, (TblInfo*)o); break;
+	case MethEnc: methodMark(th, (MethodInfo *)o); break;
+	case ThrEnc: thrMark(th, (ThreadInfo *)o); break;
+	case VmEnc: vmMark(th, (VmInfo *)o); break;
+	case LexEnc: lexMark(th, (LexInfo *)o); break;
+	case CompEnc: compMark(th, (CompInfo *)o); break;
 
 	// Should never get here
-	default: assert(0); return;
+	default: vmLog("GC error: black marking unknown object type (deleted?)"); assert(0); return;
 	}
 }
 

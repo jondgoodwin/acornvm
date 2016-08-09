@@ -26,8 +26,14 @@ Value newCompiler(Value th, Value *dest, Value src, Value url) {
 	comp->lex = NULL;
 	comp->ast = (Value) NULL;
 	comp->method = NULL;
+	comp->prevcomp = aNull;
 
-	newLex(th, (Value *) &comp->lex, src, url);
+	if (isStr(src)) {
+		newLex(th, (Value *) &comp->lex, src, url);
+	} else {
+		comp->lex = ((CompInfo*)src)->lex;
+		comp->prevcomp = src;
+	}
 	newArr(th, &comp->ast, aNull, 2);
 	newBMethod(th, (Value *)&comp->method);
 
@@ -178,13 +184,13 @@ Value genTestPgm(Value th, int pgm) {
 	return comp->method;
 }
 
-/* Method to compile and run an Acorn resource.
-   Pass it a string containing the program source and a symbol for the baseurl.
-   It returns the value returned by running the program's compiled method. */
-int acn_new(Value th) {
+/* Method to compile an Acorn method.
+   Pass it a string containing the program source and a symbol or null for the baseurl.
+   It returns the compiled byte-code method. */
+int acn_newmethod(Value th) {
 	// Retrieve pgmsrc and baseurl from parameters
 	Value pgmsrc, baseurl;
-	if (getTop(th)<2 || !isStr(pgmsrc = getLocal(th,1)))
+	if (getTop(th)<2 || !(isStr(pgmsrc = getLocal(th,1)) || (isPtr(pgmsrc) && isEnc(pgmsrc, CompEnc))))
 	{
 		pushValue(th, aNull);
 		return 1;
@@ -192,25 +198,64 @@ int acn_new(Value th) {
 	if (getTop(th)<3 || !isSym(baseurl = getLocal(th,2)))
 		baseurl = aNull;
 
-	// Parse and Generate
+	// Create compiler context, then parse source to AST
 	CompInfo* comp = (CompInfo*) pushCompiler(th, pgmsrc, baseurl);
 	parseProgram(comp);
+	if (comp->lex->toktype != Eof_Token)
+		lexLog(comp->lex, "Expected end-of-program. Ignoring everything else.");
+#ifdef COMPILERLOG
 	Value aststr = pushSerialized(th, comp->ast);
 	vmLog("Resulting AST is: %s", toStr(aststr));
 	popValue(th);
+#endif
+
+	// Generate method instructions from AST
 	genBMethod(comp);
+#ifdef COMPILERLOG
 	Value bmethod = pushSerialized(th, comp->method);
 	vmLog("Resulting bytecode is: %s", toStr(bmethod));
 	popValue(th);
+#endif
 
-	// Call the compiled method, with self=null. Return its value.
-	AuintIdx stk = getTop(th);
+	// Return generated method
 	pushValue(th, comp->method);
-	pushValue(th, aNull);
-	getCall(th, 1, 1);
-	Value ret = pushSerialized(th, getLocal(th, stk));
+	return 1;
+}
+
+/* Method to compile and run an Acorn program.
+   Pass it a string containing the program source and a symbol or null for the baseurl.
+   Any additional parameters are passed to the compiled method when run. */
+int acn_newprogram(Value th) {
+	// Validate pgmsrc and baseurl parameters
+	if (getTop(th)<2 || !isStr(getLocal(th,1)))
+	{
+		pushValue(th, aNull);
+		return 1;
+	}
+	if (getTop(th)<3)
+		pushValue(th, aNull);
+	int i = getTop(th);
+
+	// Compile program as a method
+	pushValue(th, vmlit(SymNew));
+	pushGloVar(th, "Method");
+	pushLocal(th, 1);
+	pushLocal(th, 2);
+	getCall(th, 3, 1);
+
+	// Call the compiled method, with self=null. 
+	// Use as parms, the ones passed to us.
+	// Return a single value
+	setLocal(th, 1, getFromTop(th, 0));
+	setLocal(th, 2, getFromTop(th, 0)); 
+	popValue(th);
+	getCall(th, getTop(th)-2, 1);
+
+#ifdef COMPILERLOG
+	Value ret = pushSerialized(th, getLocal(th, 1));
 	vmLog("Value returned from running compiled program: %s", toStr(ret));
 	popValue(th);
+#endif
 	return 1;
 }
 

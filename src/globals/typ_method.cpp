@@ -46,14 +46,19 @@ void typ_method_init(Value th) {
 			pushCMethod(th, typ_method_varargs);
 			popProperty(th, 1, "varargs?");
 		popProperty(th, 0, "newtype");
-		pushCMethod(th, acn_new);
+		pushCMethod(th, acn_newmethod);
 		popProperty(th, 0, "new");
 	popGloVar(th, "Method");
+
+	Value AcornPgm = pushType(th, vmlit(TypeType), 2);
+		pushCMethod(th, acn_newprogram);
+		popProperty(th, 0, "new");
+	popGloVar(th, "AcornProgram");
 
 	// Register this type as Resource's 'acn' extension
 	pushGloVar(th, "Resource");
 		pushProperty(th, getTop(th) - 1, "extensions");
-			pushValue(th, vmlit(TypeMethc));
+			pushValue(th, AcornPgm);
 			popTblSet(th, getTop(th) - 2, "acn");
 		popValue(th);
 	popValue(th);

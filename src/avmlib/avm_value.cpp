@@ -97,7 +97,7 @@ void serialize(Value th, Value str, int indent, Value val) {
 		switch (((MemInfo*)val)->enctyp) {
 		case SymEnc: 
 			{strAppend(th, str, "'", 1);
-			strAppend(th, str, sym_cstr(val), strlen(sym_cstr(val))); 
+			strAppend(th, str, sym_cstr(val), sym_size(val)); 
 			strAppend(th, str, "'", 1);
 			return;}
 		case StrEnc: 
@@ -118,6 +118,11 @@ void serialize(Value th, Value str, int indent, Value val) {
 				{methSerialize(th, str, indent, val); return;}
 		case ThrEnc: strAppend(th, str, "Thread", 6); return;
 		case VmEnc: strAppend(th, str, "Vm", 2); return;
+		default: {
+			MemInfo *mi = (MemInfo*) val;
+			vmLog("Serialize: %p >>%s<< (%d)",mi, toStr(str), getSize(str));
+			assert(0); }
+			return;
 		}
 	}
 	return; // Should not ever get here

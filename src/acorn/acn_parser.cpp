@@ -104,7 +104,12 @@ void parseValue(CompInfo* comp, Value astseg) {
 		lexGetNextToken(comp->lex);
 	}
 	else if (comp->lex->toktype == Name_Token) {
-		astAddSeg2(th, astseg, vmlit(SymGlobal), comp->lex->token); // !! NOT RIGHT !! Local?
+		const char first = (toStr(comp->lex->token))[0];
+		if (first=='$' || (first>='A' && first<='Z'))
+			astAddSeg2(th, astseg, vmlit(SymGlobal), comp->lex->token);
+		else {
+			astAddSeg2(th, astseg, vmlit(SymLocal), anInt(genLocalVar(comp, comp->lex->token)));
+		}
 		lexGetNextToken(comp->lex);
 	}
 	else if (lexMatchNext(comp->lex, "baseurl")) {
@@ -115,6 +120,15 @@ void parseValue(CompInfo* comp, Value astseg) {
 	}
 	else if (lexMatchNext(comp->lex, "self")) {
 		astAddValue(th, astseg, vmlit(SymSelf));
+	}
+	// A method definition starts its own compilation context
+	else if (lexMatch(comp->lex, "[")) {
+		pushValue(th, vmlit(SymNew));
+		pushGloVar(th, "Method");
+		pushValue(th, comp);
+		getCall(th, 2, 1);
+		astAddSeg2(th, astseg, vmlit(SymLit), getFromTop(th, 0));
+		popValue(th);
 	}
 	return;
 }
@@ -218,6 +232,12 @@ void parseAssgnExp(CompInfo* comp, Value astseg) {
 		astInsSeg2(th, astseg, vmlit(SymActProp), vmlit(SymThis), 3);
 		parseThisExp(comp, astseg);
 	}
+	else if (lexMatchNext(comp->lex, ":=")) {
+		// ('=', ('rawprop', 'this', property), value)
+		astseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
+		astInsSeg2(th, astseg, vmlit(SymRawProp), vmlit(SymThis), 3);
+		parseThisExp(comp, astseg);
+	}
 }
 
 /** Parse an expression */
@@ -231,7 +251,7 @@ void parseStmts(CompInfo* comp, Value astseg) {
 	astseg = astAddSeg(th, astseg, vmlit(SymSemicolon), 16);
 	while (comp->lex->toktype != Eof_Token && !lexMatch(comp->lex, "}")) {
 		parseExp(comp, astseg);
-		if (!lexMatchNext(comp->lex, ";")) {
+		if (!lexMatchNext(comp->lex, ";")&&comp->lex->toktype!=Eof_Token) {
 			lexLog(comp->lex, "Unexpected token in statement. Ignoring all until block or ';'.");
 			while (comp->lex->toktype != Eof_Token && !lexMatch(comp->lex, "}") && !lexMatchNext(comp->lex, ";"))
 				if (lexMatch(comp->lex, "{"))
@@ -258,12 +278,23 @@ void parseProgram(CompInfo* comp) {
 	Value th = comp->th;
 	astAddValue(th, comp->ast, vmlit(SymMethod));
 	genAddParm(comp, vmlit(SymSelf));
-	parseStmts(comp, comp->ast);
-	if (comp->lex->toktype != Eof_Token) {
-		lexLog(comp->lex, "Expected end-of-program. Ignoring everything else until found.");
-		while (comp->lex->toktype != Eof_Token)
-			lexGetNextToken(comp->lex);
+	if (lexMatchNext(comp->lex, "[")) {
+		do {
+			if (comp->lex->toktype == Name_Token) {
+				const char first = (toStr(comp->lex->token))[0];
+				if (first=='$' || (first>='A' && first<='Z'))
+					lexLog(comp->lex, "A global name may not be a method parameter");
+				else {
+					genAddParm(comp, comp->lex->token);
+				}
+				lexGetNextToken(comp->lex);
+			}
+		} while (lexMatchNext(comp->lex, ","));
+		lexMatchNext(comp->lex, "]");
+		parseBlock(comp, comp->ast);
 	}
+	else
+		parseStmts(comp, comp->ast);
 }
 
 #ifdef __cplusplus

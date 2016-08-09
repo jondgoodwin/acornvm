@@ -32,8 +32,8 @@ extern "C" {
 /** Size of the method's stack area: base to top */
 #define stkSz(th) (th(th)->stk_top - th(th)->curmethod->begin)
 
-/** Is there room to increment stack top up by 1 */
-#define stkCanIncTop(th) assert((th(th)->stk_top+1 <= th(th)->curmethod->end) && "stack top overflow")
+/** Is there room to increment stack top up by 1 and null it to ensure we do not mark it when making it available for a new value */
+#define stkCanIncTop(th) {assert((th(th)->stk_top+1 <= th(th)->curmethod->end) && "stack top overflow");*th(th)->stk_top=aNull;}
 
 /** Point to current method's stack value at position i.
  * For a method: i=0 is self, i=1 is first parameter, etc. */
@@ -210,10 +210,9 @@ Value pushCompiler(Value th, Value src, Value url) {
 
 /* Push a value's serialized Text */
 Value pushSerialized(Value th, Value val) {
-	stkCanIncTop(th); /* Check if there is room */
-	pushStringl(th, aNull, NULL, 16);
-	serialize(th, getFromTop(th, 0), 0, val);
-	return getFromTop(th, 0);
+	Value serstr = pushStringl(th, aNull, NULL, 16);
+	serialize(th, serstr, 0, val);
+	return serstr;
 }
 
 /* Push and return the value of the named member of the table found at the stack's specified index */
@@ -230,6 +229,7 @@ void popTblSet(Value th, AintIdx tblidx, const char *mbrnm) {
 	assert(stkSz(th)>0); // Must be at least one value to remove!
 	Value tbl = *stkAt(th, tblidx);
 	assert(isTbl(tbl));
+	stkCanIncTop(th); /* Check if there is room */
 	newSym(th, th(th)->stk_top++, mbrnm, strlen(mbrnm));
 	tblSet(th, tbl, *(th(th)->stk_top-1), *(th(th)->stk_top-2));
 	th(th)->stk_top -= 2; // Pop key & value after value is safely in table
@@ -248,6 +248,7 @@ Value pushProperty(Value th, AintIdx validx, const char *propnm) {
 void popProperty(Value th, AintIdx typeidx, const char *mbrnm) {
 	assert(stkSz(th)>0); // Must be at least one value to remove!
 	Value tbl = *stkAt(th, typeidx);
+	stkCanIncTop(th); /* Check if there is room */
 	newSym(th, th(th)->stk_top++, mbrnm, strlen(mbrnm));
 	if (isType(tbl))
 		tblSet(th, tbl, *(th(th)->stk_top-1), *(th(th)->stk_top-2));
@@ -380,6 +381,7 @@ Value pushGloVar(Value th, const char *var) {
 void popGloVar(Value th, const char *var) {
 	assert(stkSz(th)>0); // Must be at least one value to remove!
 	assert(isTbl(th(th)->global));
+	stkCanIncTop(th); /* Check if there is room */
 	Value val = newSym(th, th(th)->stk_top++, var, strlen(var));
 	tblSet(th, th(th)->global, *(th(th)->stk_top-1), *(th(th)->stk_top-2));
 	th(th)->stk_top -= 2; // Pop key & value after value is safely in Global

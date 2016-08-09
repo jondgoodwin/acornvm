@@ -185,7 +185,9 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymThisBlock, "thisblock"},
 	{SymCallProp, "callprop"},
 	{SymActProp, "activeprop"},
+	{SymRawProp, "rawprop"},
 	{SymGlobal, "global"},
+	{SymLocal, "local"},
 	{SymLit, "lit"},
 	{SymResource, "Resource"},
 
@@ -206,6 +208,7 @@ void vm_litinit(Value th) {
 		newSym(th, &vmlits[vmlittblp->litindex], vmlittblp->symnm, strlen(vmlittblp->symnm));
 		vmlittblp++;
 	}
+	arr_size(vm->literals) = nVmLits;
 }
 
 /** Map byte-code's standard symbols to VM's literals (max. number at 256) */

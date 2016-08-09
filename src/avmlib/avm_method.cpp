@@ -254,8 +254,8 @@ void methodRunC(Value th) {
 }
 
 /** macro to make method calls consistent easier to read in methodRunBC */
-#define methCall(stkbeg, nexpected, flags) \
-	switch (callPrep(th, stkbeg, nexpected, flags)) { \
+#define methCall(firstreg, nexpected, flags) \
+	switch (callPrep(th, firstreg, nexpected, flags)) { \
 	case MethodBC: \
 		ci = th(th)->curmethod; \
 		meth = (BMethodInfo*) (ci->method); \
@@ -432,9 +432,9 @@ void methodRunBC(Value th) {
 			break;
 
 		// OpSetProp: R(A) := R(A).*R(A+1)=R(A+2)
-		// Set property value, if this is a type
+		// Set self's member value, if this is a table or type
 		case OpSetProp:
-			if (isType(*(rega+1)))
+			if (isTbl(*(rega+1)))
 				tblSet(th, *(rega+1), *rega, *(rega+2));
 			*rega = *(rega+2);
 			break;

@@ -249,9 +249,9 @@ void getResource(Value th, Value *resarray) {
 	// If it was retrieved already and is found in the cache, return it
 	pushGloVar(th, "Resource");
 	Value cache = pushProperty(th, getTop(th)-1, "cache");
-	popValue(th);
-	popValue(th);
 	Value resval = tblGet(th, cache, resarray[ResNormUrl]);
+	popValue(th);
+	popValue(th);
 	if (resval!=aNull) {
 		pushValue(th, resval);
 		return;
@@ -285,8 +285,9 @@ int typ_resource_new(Value th) {
 		baseurl = aNull;
 
 	// Create the resource instance (an array), populate it, then return the pushed instance
-	Value *resarray = arr_info(pushArray(th, vmlit(TypeResm), nResVals))->arr;
-	newResource(th, urlval, baseurl, resarray = resarray);
+	Value resarray = pushArray(th, vmlit(TypeResm), nResVals);
+	arr_size(resarray) = nResVals;
+	newResource(th, urlval, baseurl, arr_info(resarray)->arr);
 	return 1;
 }
 
@@ -302,9 +303,10 @@ int typ_resource_get(Value th) {
 		baseurl = aNull;
 
 	// Create the resource array, populate it, then get the resource
-	Value *resarray = arr_info(pushArray(th, vmlit(TypeResm), nResVals))->arr;
-	newResource(th, urlval, baseurl, resarray = resarray);
-	getResource(th, resarray);
+	Value resarray = pushArray(th, vmlit(TypeResm), nResVals);
+	arr_size(resarray) = nResVals;
+	newResource(th, urlval, baseurl, arr_info(resarray)->arr);
+	getResource(th, arr_info(resarray)->arr);
 	return 1;
 }
 

@@ -23,6 +23,7 @@ Value newArr(Value th, Value *dest, Value type, AuintIdx len) {
 	// Create an array object
 	MemInfo **linkp = NULL;
 	val = (ArrInfo *) mem_new(th, ArrEnc, sizeof(ArrInfo), linkp, 0);
+	*dest = (Value) val;
 	val->avail = len;
 	val->size = 0;
 	val->arr = NULL;
@@ -30,7 +31,7 @@ Value newArr(Value th, Value *dest, Value type, AuintIdx len) {
 		mem_reallocvector(th, val->arr, 0, len, Value);
 	val->flags1 = 0;	// Initialize Flags1 flags
 	val->type = type;
-	return *dest = (Value) val;
+	return (Value) val;
 }
 
 /* Return a new Array, allocating len slots for Values. */

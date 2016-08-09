@@ -31,6 +31,7 @@ Value newLex(Value th, Value *dest, Value src, Value url) {
 	// Create an lexer object
 	MemInfo **linkp = NULL;
 	lex = (LexInfo *) mem_new(th, LexEnc, sizeof(LexInfo), linkp, 0);
+	*dest = (Value) lex;
 
 	// Values
 	lex->token = aNull;
@@ -54,7 +55,7 @@ Value newLex(Value th, Value *dest, Value src, Value url) {
 
 	// Prime the pump by getting the first token
 	lexGetNextToken(lex);
-	return *dest = (Value) lex;
+	return (Value) lex;
 }
 
 /** Return the current unicode character whose UTF-8 bytes start at lex->bytepos */
@@ -554,6 +555,8 @@ bool lexScanOp(LexInfo *lex) {
 		|| (ch1=='-' && ch2=='=')
 		|| (ch1=='*' && ch2=='=')
 		|| (ch1=='/' && ch2=='=')
+		|| (ch1==':' && ch2=='=')
+		|| (ch1==':' && ch2==':')
 		|| (ch1=='&' && ch2=='&')
 		|| (ch1=='|' && ch2=='|')
 		|| (ch1=='*' && ch2=='*')
@@ -577,23 +580,25 @@ void lexGetNextToken(LexInfo *lex) {
 		&& !lexScanString(lex) 
 		&& !lexScanOp(lex));
 
+#ifdef COMPILERLOG
 	switch (lex->toktype) {
 	case Lit_Token: {
 		pushSerialized(lex->th, lex->token);
-		vmLog("Literal: %s", toStr(getFromTop(lex->th, 0)));
+		vmLog("Literal token: %s", toStr(getFromTop(lex->th, 0)));
 		popValue(lex->th);
 		} break;
 	case Name_Token: {
 		pushSerialized(lex->th, lex->token);
-		vmLog("Name: %s", toStr(getFromTop(lex->th, 0)));
+		vmLog("Name token: %s", toStr(getFromTop(lex->th, 0)));
 		popValue(lex->th);
 		} break;
 	case Res_Token: {
 		pushSerialized(lex->th, lex->token);
-		vmLog("Reserved: %s", toStr(getFromTop(lex->th, 0)));
+		vmLog("Reserved token: %s", toStr(getFromTop(lex->th, 0)));
 		popValue(lex->th);
 		} break;
 	}
+#endif
 }
 
 /* Match current token to a reserved symbol. */

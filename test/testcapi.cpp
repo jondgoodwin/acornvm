@@ -202,6 +202,7 @@ void testCapi(void) {
 	arrSub(th, getLocal(th, array1), 2, 0, getLocal(th, array1), 2, 1); // Insert from self
 	t(getSize(getLocal(th, array1))==4, "getSize(array1)==4");
 	t(arrGet(th, getLocal(th, array1), 3)==aTrue, "arrGet(th, array1, 3)==aTrue");
+
 	pushArray(th, aNull, 4); // array2
 	arrRpt(th, getLocal(th, array2), 4, 5, getLocal(th, string1));
 	t(getSize(getLocal(th, array2))==9, "getSize(array2)==9");

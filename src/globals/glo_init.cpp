@@ -100,6 +100,21 @@ void typ_list_init(Value th) {
 	return;
 }
 
+/** Create a new Index */
+int typ_index_new(Value th) {
+	Value type = pushTbl(th, getLocal(th, 0), 4);
+	return 1;
+}
+
+/** Initialize the Index type, used to create other types */
+void typ_index_init(Value th) {
+	vmlit(TypeType) = pushType(th, aNull, 1);
+		pushCMethod(th, typ_index_new);
+		popProperty(th, 0, "new");
+	popGloVar(th, "Index");
+	return;
+}
+
 /** Create a new Type */
 int typ_type_new(Value th) {
 	Value type = pushType(th, getLocal(th, 0), 4);
@@ -129,6 +144,7 @@ void glo_init(Value th) {
 	typ_type_init(th); // Type must be first, so other types can use this as their type
 	typ_int_init(th);
 	typ_list_init(th);
+	typ_index_init(th);
 	vmlit(TypeAll) = pushType(th, aNull, 0);
 	popGloVar(th, "All");
 
