@@ -201,8 +201,6 @@ int acn_newmethod(Value th) {
 	// Create compiler context, then parse source to AST
 	CompInfo* comp = (CompInfo*) pushCompiler(th, pgmsrc, baseurl);
 	parseProgram(comp);
-	if (comp->lex->toktype != Eof_Token)
-		lexLog(comp->lex, "Expected end-of-program. Ignoring everything else.");
 #ifdef COMPILERLOG
 	Value aststr = pushSerialized(th, comp->ast);
 	vmLog("Resulting AST is: %s", toStr(aststr));

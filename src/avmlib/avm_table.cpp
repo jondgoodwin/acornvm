@@ -335,6 +335,7 @@ Value newTbl(Value th, Value *dest, Value type, AuintIdx size) {
 	TblInfo *t = (TblInfo*) mem_new(th, TblEnc, sizeof(TblInfo), NULL, 0);
 	t->flags1 = 0;
 	t->type = type;
+	t->inheritype = aNull;
 	t->size = 0;
 
 	tblAllocnodes(th, t, size);
@@ -421,12 +422,12 @@ void tblSet(Value th, Value tbl, Value key, Value val) {
 	Node *n = tblFind(tbl, key);
 	if (n) {
 		n->val = val;
-		mem_markChk(th, tbl, val);
+		//mem_markChk(th, tbl, val);
 	}
 	else {
 		tblAdd(th, tbl, key, val);
-		mem_markChk(th, tbl, key);
-		mem_markChk(th, tbl, val);
+		//mem_markChk(th, tbl, key);
+		//mem_markChk(th, tbl, val);
 	}
 }
 
@@ -465,6 +466,12 @@ void tblSerialize(Value th, Value str, int indent, Value tbl) {
 	int ind;
 
 	strAppend(th, str, isType(tbl)? "+Type " : "+Index", 6);
+	strAppend(th, str, "\n", 1);
+	ind = indent+1;
+	while (ind--)
+		strAppend(th, str, "\t", 1);
+	strAppend(th, str, "TYPE: ", 6);
+	serialize(th, str, indent+1, getType(th, tbl));
 	for (; n < last; n++) {
 		if (n->key != aNull) {
 			strAppend(th, str, "\n", 1);

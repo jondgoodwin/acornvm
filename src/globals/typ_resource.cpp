@@ -286,7 +286,7 @@ int typ_resource_new(Value th) {
 
 	// Create the resource instance (an array), populate it, then return the pushed instance
 	Value resarray = pushArray(th, vmlit(TypeResm), nResVals);
-	arr_size(resarray) = nResVals;
+	arrSet(th, resarray, nResVals-1, aNull); // Fill it with nulls
 	newResource(th, urlval, baseurl, arr_info(resarray)->arr);
 	return 1;
 }
@@ -304,7 +304,7 @@ int typ_resource_get(Value th) {
 
 	// Create the resource array, populate it, then get the resource
 	Value resarray = pushArray(th, vmlit(TypeResm), nResVals);
-	arr_size(resarray) = nResVals;
+	arrSet(th, resarray, nResVals-1, aNull); // Fill it with nulls
 	newResource(th, urlval, baseurl, arr_info(resarray)->arr);
 	getResource(th, arr_info(resarray)->arr);
 	return 1;

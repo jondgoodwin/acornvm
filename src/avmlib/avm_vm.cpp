@@ -200,7 +200,10 @@ void vm_litinit(Value th) {
 	// Allocate untyped array for literal storage
 	VmInfo* vm = vm(th);
 	newArr(th, &vm->literals, aNull, nVmLits);
+	arrSet(th, vm->literals, nVmLits-1, aNull);  // Ensure it is full with nulls
+
 	Value *vmlits = arr_info(vm->literals)->arr;
+	vmlits[TypeType] = aNull;
 
 	// Load up literal symbols from table
 	const struct vmLitSymEntry *vmlittblp = &vmLitSymTable[0];
@@ -208,7 +211,6 @@ void vm_litinit(Value th) {
 		newSym(th, &vmlits[vmlittblp->litindex], vmlittblp->symnm, strlen(vmlittblp->symnm));
 		vmlittblp++;
 	}
-	arr_size(vm->literals) = nVmLits;
 }
 
 /** Map byte-code's standard symbols to VM's literals (max. number at 256) */

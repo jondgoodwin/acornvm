@@ -82,7 +82,6 @@ void *mem_frealloc(void *block, Auint size) {
  * \param offset how many bytes to allocate before the object itself (used only by states).
  */
 MemInfo *mem_new(Value th, int enc, Auint sz, MemInfo **list, int offset) {
-
 #if defined(AVM_GCHARDMEMTEST)
 	if (vm(th)->gcrunning)
 		mem_gcfull(th, 1);  /* force a full GC to see if any unattached objects die */
