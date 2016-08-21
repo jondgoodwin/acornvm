@@ -51,7 +51,7 @@ struct cdatathing {
 };
 int cdatafin(Value cdata) {
 	// Demonstrates access to the data itself. Doesn't do anything interesting.
-	struct cdatathing *data = (struct cdatathing *)(toStr(cdata));
+	struct cdatathing *data = (struct cdatathing *)(toCData(cdata));
 	data->nothing = 4;
 	puts("CData finalizer was triggered successfully!");
 	return 1;
@@ -175,7 +175,7 @@ void testCapi(void) {
 	Value cdatamixin = pushMixin(th, aNull, aNull, 1);
 	pushCMethod(th, cdatafin);
 	popProperty(th, i, "_finalizer");
-	pushCData(th, cdatamixin, 10, 0);
+	strHasFinalizer(pushCData(th, cdatamixin, 0, 10, 0));
 	popValue(th); // Will free and trigger finalizer at end, if not before
 	popValue(th);
 

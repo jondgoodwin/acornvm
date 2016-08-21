@@ -117,17 +117,11 @@ Value pushStringl(Value th, Value type, const char *str, AuintIdx size) {
 }
 
 /* Push and return a new typed CData value of size */
-Value pushCData(Value th, Value type, AuintIdx size, unsigned int extrahdr) {
+Value pushCData(Value th, Value type, unsigned char cdatatyp, AuintIdx size, unsigned int extrahdr) {
 	stkCanIncTop(th); /* Check if there is room */
-	return newCData(th, th(th)->stk_top++, type, size, extrahdr);
+	return newCData(th, th(th)->stk_top++, type, cdatatyp, size, extrahdr);
 }
 
-/* Push and return a new typed Numbers value */
-Value pushNumbers(Value th, Value type, AuintIdx nStructs, unsigned int nVals, unsigned int valSz, bool isInt, bool isMat, unsigned int extrahdr) {
-	stkCanIncTop(th); /* Check if there is room */
-	return newNumbers(th, th(th)->stk_top++, type, nStructs, nVals, valSz, isInt, isMat, extrahdr);
-}
-	
 /* Push and return a new Array value */
 Value pushArray(Value th, Value type, AuintIdx size) {
 	stkCanIncTop(th); /* Check if there is room */

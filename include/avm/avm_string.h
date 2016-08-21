@@ -41,9 +41,8 @@ typedef struct StrInfo {
 
 // Flags1 bits and helpers -->
 // 0x80 reserved for Locked
-/** String is a CData structure, possibly with a finalizer */
-#define StrCDataFlg		0x40
-#define StrExtraHdrMask 0x3C //!< How much bigger to allocate StrInfo (x4)
+#define StrExtraHdrMask 0x7C //!< How much bigger to allocate StrInfo (x4)
+#define StrCData 0x01		//!< String is cdata, with encoded header and data
 
 /** Define the prototype for a cdata finalizer*/
 typedef int (*CDataFinalizerFn)(Value o);
@@ -57,7 +56,7 @@ typedef int (*CDataFinalizerFn)(Value o);
 /** Free all of a string's allocated memory.
   This will run a CData's ._finalizer C-method, if its type has one. */
 #define strFree(th, s) \
-	if (str_info(s)->flags1&StrCDataFlg) { \
+	if (isfinalized(str_info(s))) { \
 		Value fin = getProperty(th, s, vmlit(SymFinalizer)); \
 		if (isMethod(fin) && isCMethod(fin)) \
 			((CDataFinalizerFn) (((CMethodInfo*)fin)->methodp))((Value)s); \
@@ -92,11 +91,9 @@ typedef int (*CDataFinalizerFn)(Value o);
 Value newStr(Value th, Value *dest, Value type, const char *str, AuintIdx len);
 
 /** Return a CData value containing C-data for C-methods.
-   Its type may have a _finalizer, called just before the GC frees the C-Data value. */
-Value newCData(Value th, Value *dest, Value type, AuintIdx len, unsigned int extrahdr);
-
-/** Return a string value containing room for identically structured numbers. */
-Value newNumbers(Value th, Value *dest, Value type, AuintIdx nStructs, unsigned int nVals, unsigned int valSz, bool isInt, bool isMat, unsigned int extrahdr);
+	cdatatyp is its sub-type. It may have a fixed size header (up to 64 bytes).
+	Its type may have a _finalizer, called just before the GC frees the C-Data value. */
+Value newCData(Value th, Value *dest, Value type, unsigned char cdatatyp, AuintIdx len, unsigned int extrahdr);
 
 /** Calculate the hash value for a string */
 AuintIdx str_hash(Value th, Value val);

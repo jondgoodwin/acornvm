@@ -43,22 +43,28 @@ Value newStr(Value th, Value *dest, Value type, const char *str, AuintIdx len) {
 	return *dest = (Value) val;
 }
 
+/* Return 1 if the value is a c-String, otherwise 0 */
+int isStr(Value str) {
+	return isEnc(str, StrEnc) && !(str_info(str)->flags1 & StrCData);
+}
+
 /* Return a string value containing C-data for C-methods.
    Its type may have a _finalizer, called just before the GC frees the C-Data value. */
-Value newCData(Value th, Value *dest, Value type, AuintIdx len, unsigned int extrahdr) {
+Value newCData(Value th, Value *dest, Value type, unsigned char cdatatyp, AuintIdx len, unsigned int extrahdr) {
 	StrInfo *val;
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 
 	// Create a string object
 	MemInfo **linkp = NULL;
-	// we only have four bits to represent size of extrahdr (in multiples of four)
-	extrahdr = extrahdr>=60? 60 : (extrahdr&3)? (extrahdr&StrExtraHdrMask)+4 : extrahdr;
+	// we only have five bits to represent size of extrahdr (in multiples of four)
+	extrahdr = extrahdr>=124? 124 : (extrahdr&3)? (extrahdr&StrExtraHdrMask)+4 : extrahdr;
 	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo) + extrahdr, linkp, 0);
-	val->flags1 = StrCDataFlg | extrahdr;
-	val->flags2 = 0;
+	val->flags1 = StrCData | extrahdr;
+	val->flags2 = cdatatyp;
 	val->type = type;
 
-	val->avail = val->size = len;
+	val->size = 0;
+	val->avail = len;
 	if (len>0) {
 		val->str = (char*) mem_gcrealloc(th, NULL, 0, len+1); // an extra byte for 0-terminator
 		val->str[0] = val->str[len] = '\0'; // put in guaranteed 0-terminators, just in case
@@ -68,81 +74,40 @@ Value newCData(Value th, Value *dest, Value type, AuintIdx len, unsigned int ext
 	return *dest = (Value) val;
 }
 
-/* Return a string value containing room for identically structured numbers. */
-Value newNumbers(Value th, Value *dest, Value type, AuintIdx nStructs, unsigned int nVals, unsigned int valSz, bool isInt, bool isMat, unsigned int extrahdr) {
-	StrInfo *val;
-	mem_gccheck(th);	// Incremental GC before memory allocation events
-
-	// Create a string object metadata header (StrInfo)
-	MemInfo **linkp = NULL;
-	// we only have four bits to represent size of extrahdr (in multiples of four)
-	extrahdr = extrahdr>=60? 60 : (extrahdr&3)? (extrahdr&StrExtraHdrMask)+4 : extrahdr;
-	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo) + extrahdr, linkp, 0);
-	val->type = type;
-	val->flags1 = extrahdr;
-
-	// Store information about number organization, hardcoding into the flags
-	if (valSz>4)		{ valSz=8; val->flags2=0x30; } // StrValByteSzMask 0x30
-	else if (valSz>2)	{ valSz=4; val->flags2=0x20; }
-	else if (valSz>1)	{ valSz=2; val->flags2=0x10; }
-	else				{ valSz=1; val->flags2=0x00; }
-	if (nVals>16) nVals=16;
-	else if (nVals==0) nVals=1;
-	val->flags2 |= (nVals-1); // StrStructSzMask 0x0F
-	if (isInt) val->flags2 |= StrIntegerFlag;
-	if (isMat) val->flags2 |= StrMatrixFlag;
-	AuintIdx len = nStructs * nVals * valSz;
-
-	// Allocate block for number values
-	val->avail = len;
-	val->size = (nStructs==1)? len : 0; // Assume it is full if only one structure, but empty if a collection
-	val->str = (char*) mem_gcrealloc(th, NULL, 0, len+1); // an extra byte for 0-terminator
-	val->str[0] = val->str[len] = '\0'; // put guaranteed 0-terminators, just in case
-	return *dest = (Value) val;
+/* Return true if the value is a c-Data */
+bool isCData(Value str) {
+	return (isEnc(str, StrEnc) && (str_info(str)->flags1 & StrCData));
 }
 
-/* Return 1 if the value is a String, otherwise 0 */
-int isStr(Value str) {
-	return isEnc(str, StrEnc);
+/* Return true if it is a CData of specified type */
+bool isCDataType(Value str, unsigned char cdatatyp) {
+	return (isCData(str) && cdatatyp==str_info(str)->flags2);
+}
+
+/* Return CData's subtype */
+unsigned char getCDataType(Value str) {
+	return (isCData(str))? str_info(str)->flags2 : 0;
+}
+
+/* Return a read-only pointer into a C-Data encoded by a string-oriented Value. 
+	Any other value type returns NULL.
+ */
+const void* toCData(Value val) {
+	if (!isEnc(val, StrEnc) || !(str_info(val)->flags1 & StrCData))
+		return NULL;
+	return (void*) str_cstr(val);
+}
+
+/* Mark that CData's type has a _finalizer to call when freed */
+Value strHasFinalizer(Value str) {
+	l_setbit((str_info(str))->marked, FINALIZEDBIT);
+	return str;
 }
 
 /* Return a pointer to the small header extension allocated by a CData or Numbers creation */
 const void *toHeader(Value str) {
-	assert(isStr(str));
+	assert(isCData(str));
 	return (void*) (str_info(str)+1);
-}
-
-/* Return size of every number in an Numbers block */
-AuintIdx nbrGetValSz(Value str) {
-	if (!isStr(str))
-		return 1;
-	switch ((((StrInfo*)str)->flags2 & StrValByteSzMask)>>4) {
-	case 0: return 1;
-	case 1: return 2;
-	case 2: return 4;
-	case 3: return 8;
-	}
-	return 1;
-}
-
-/* Return number of values in a Numbers block structure */
-AuintIdx nbrGetNVals(Value str) {
-	return isStr(str)? (((StrInfo*)str)->flags2 & StrStructSzMask)+1 : 1;
-}
-
-/* Return number of structures in a Numbers block */
-AuintIdx nbrGetNStructs(Value str) {
-	return isStr(str)? ((StrInfo*)str)->size/nbrGetNVals(str)/nbrGetValSz(str) : 0;
-}
-
-/* Return whether numbers block holds matrices */
-bool nbrIsMatrix(Value str) {
-	return isStr(str) && (((StrInfo*)str)->flags2 & StrMatrixFlag) == StrMatrixFlag;
-}
-
-/* Return whether numbers block holds integers */
-bool nbrIsInteger(Value str) {
-	return isStr(str) && (((StrInfo*)str)->flags2 & StrIntegerFlag) == StrIntegerFlag;
 }
 
 /* Ensure string has room for len Values, allocating memory as needed.

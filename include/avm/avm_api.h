@@ -32,10 +32,21 @@ AVM_API Value getProperty(Value th, Value self, Value methsym);
 AVM_API Auint getSize(Value val);
 
 // Implemented in avm_string.cpp and avm_symbol.cpp
+/** Mark that CData's type has a _finalizer to call when freed */
+AVM_API Value strHasFinalizer(Value str);
 /** Return 1 if the value is a Symbol, otherwise 0 */
 AVM_API int isSym(Value sym);
 /** Return 1 if the value is a String, otherwise 0 */
 AVM_API int isStr(Value str);
+/** Return true if the value is a c-Data */
+AVM_API bool isCData(Value str);
+/** Return true if it is a CData of specified type */
+AVM_API bool isCDataType(Value str, unsigned char cdatatyp);
+/** Return CData's subtype */
+AVM_API unsigned char getCDataType(Value str);
+/** Return a read-only pointer into a C-Data encoded by a string-oriented Value. 
+	Any other value type returns NULL. */
+AVM_API const void* toCData(Value val);
 /** Return a pointer to the small header extension allocated by a CData or Numbers creation */
 AVM_API const void *toHeader(Value str);
 /** Return a read-only pointer into the string's byte data. This pointer can be re-cast as needed.
@@ -58,16 +69,6 @@ AVM_API void strMakeRoom(Value th, Value val, AuintIdx len);
 AVM_API void strSub(Value th, Value val, AuintIdx pos, AuintIdx sz, const char *str, AuintIdx len);
 /**	Append characters to the end of a string, growing its allocated block as needed. */
 AVM_API void strAppend(Value th, Value val, const char *addstr, AuintIdx addstrlen);
-/** Return size of every number in an Numbers block */
-AVM_API AuintIdx nbrGetValSz(Value str);
-/** Return number of values in a Numbers block structure */
-AVM_API AuintIdx nbrGetNVals(Value str);
-/** Return number of structures in a Numbers block */
-AVM_API AuintIdx nbrGetNStructs(Value str);
-/** Return whether numbers block holds matrices */
-AVM_API bool nbrIsMatrix(Value str);
-/** Return whether numbers block holds integers */
-AVM_API bool nbrIsInteger(Value str);
 
 // Implemented in avm_array.cpp
 /** Return 1 if the value is an Array, otherwise 0 */
@@ -188,12 +189,7 @@ AVM_API Value pushStringl(Value th, Value type, const char *str, AuintIdx size);
 	Use a re-cast toStr() to initialize, access or alter the cdata contents (which can be resized if needed).
 	Its type (a mixin) may have a _finalizer c-method for de-allocating any resources
 	before the garbage collector frees a no-longer needed c-data value. */
-AVM_API Value pushCData(Value th, Value type, AuintIdx size, unsigned int extrahdr);
-/** Push and return a new "numbers" string allocated to hold nStructs*nVals numbers, each occupying valSz bytes.
-	If nStructs>1, it starts off empty (size is 0). Otherwise, it is considered full.
-	The extrahdr indicates the size of the header extension for a small (&lt;= 60 bytes), fixed-size data area
-	(it can be used for metadata - such as specifying the dimensions of a 2- or 3-dimensional array). */
-AVM_API Value pushNumbers(Value th, Value type, AuintIdx nStructs, unsigned int nVals, unsigned int valSz, bool isInt, bool isMat, unsigned int extrahdr);
+AVM_API Value pushCData(Value th, Value type, unsigned char cdatatyp, AuintIdx size, unsigned int extrahdr);
 /** Push and return a new Array value */
 AVM_API Value pushArray(Value th, Value type, AuintIdx size);
 /** Push and return a new Closure value.

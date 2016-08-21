@@ -142,6 +142,7 @@ enum EncType {
 
 #define iswhite(x)      testbits((x)->marked, WHITEBITS) //!< Return true if object is white
 #define isblack(x)      testbit((x)->marked, BLACKBIT) //!< Return true if object is black
+#define isfinalized(x)	testbit((x)->marked, FINALIZEDBIT) //!< Return true if object's type has a finalizer
 
 #define resetoldbit(o)	resetbit((o)->marked, OLDBIT) //!< Reset the old bit to zero
 

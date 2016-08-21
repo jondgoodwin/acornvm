@@ -36,16 +36,17 @@ int typ_file_get(Value th) {
 	}
 
 	// Determine the file length
-	long int size;
+	size_t size;
 	fseek(file, 0, SEEK_END);
 	size=ftell(file);
 	fseek(file, 0, SEEK_SET);
 
 	// Create the string buffer (which will be returned)
-	Value strbuf = pushStringl(th, aNull, "", size);
+	Value strbuf = pushStringl(th, aNull, NULL, size);
 
 	// Load the data into an allocated buffer
 	fread(str_cstr(strbuf), 1, size, file);
+	str_size(strbuf) = size;
 
 	// Close the file
 	fclose(file);
