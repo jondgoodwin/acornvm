@@ -136,7 +136,7 @@ void parseValue(CompInfo* comp, Value astseg) {
 /** Parse a compound term, handling new and suffixes */
 void parseTerm(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
-	bool newflag = lexMatchNext(comp->lex, "+") || lexMatchNext(comp->lex, "new");
+	bool newflag = lexMatchNext(comp->lex, "+");
 	parseValue(comp, astseg);
 	// Handle suffix chains
 	while (newflag || lexMatch(comp->lex, ".") || lexMatch(comp->lex, "(")) {

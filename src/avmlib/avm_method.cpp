@@ -293,7 +293,7 @@ void methodRunBC(Value th) {
 			*rega = *(lits + bc_bx(i));
 			// Clone a string literal, as program might change it
 			if (isStr(*rega))
-				 newStr(th, rega, ((MemInfoT*)rega)->type, str_cstr(*rega), str_size(*rega)); 
+				newStr(th, rega, ((MemInfoT*)*rega)->type, str_cstr(*rega), str_size(*rega));
 			break;
 
 		// OpLoadLitX: R(A) := Literals(extra arg) {+ EXTRAARG(Ax)}
@@ -302,7 +302,7 @@ void methodRunBC(Value th) {
 			*rega = *(lits + bc_ax(i));
 			// Clone a string literal, as program might change it
 			if (isStr(*rega))
-				newStr(th, rega, ((MemInfoT*)rega)->type, str_cstr(*rega), str_size(*rega));
+				newStr(th, rega, ((MemInfoT*)*rega)->type, str_cstr(*rega), str_size(*rega));
 			break;
 
 		// OpLoadPrim: R(A) := B==0? null, B==1? false, B==2? true

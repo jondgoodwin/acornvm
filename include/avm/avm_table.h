@@ -75,7 +75,6 @@ typedef struct TblInfo {
 	mem_markobj(th, (t)->inheritype); \
 	for (Node *n = &(t)->nodes[((1<<(t)->lAvailNodes))-1]; n >= (t)->nodes; n--) \
 		if (n->key != aNull) { \
-			assert(n->val != aNull); \
 			mem_markobj(th, n->key); \
 			mem_markobj(th, n->val); \
 		} vm(th)->gcmemtrav += sizeof(TblInfo) + sizeof(Node) * (1<<(t)->lAvailNodes);}
