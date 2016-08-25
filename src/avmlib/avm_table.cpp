@@ -457,6 +457,12 @@ void addMixin(Value th, Value type, Value mixin) {
 	// If this is a prototype, sync change to type as well
 	if (typp->flags1 && ProtoType)
 		typp->type = typp->inheritype;
+
+	// Allow mixin to initialize itself or alter the type it joins
+	pushSym(th, "New");
+	pushValue(th, mixin);
+	pushValue(th, type);
+	getCall(th, 2, 0);
 }
 
 /* Serialize an table's contents to indented text */
@@ -465,13 +471,19 @@ void tblSerialize(Value th, Value str, int indent, Value tbl) {
 	Node *last = &tbl_info(tbl)->nodes[1 << tbl_info(tbl)->lAvailNodes];
 	int ind;
 
-	strAppend(th, str, isType(tbl)? "+Type " : "+Index", 6);
-	strAppend(th, str, "\n", 1);
-	ind = indent+1;
-	while (ind--)
-		strAppend(th, str, "\t", 1);
-	strAppend(th, str, "TYPE: ", 6);
-	serialize(th, str, indent+1, getType(th, tbl));
+	const char *typ = isType(tbl)? "Type" : "Index";
+	Value typenm = getProperty(th, getType(th, tbl), vmlit(SymType));
+	if (isSym(typenm))
+		typ = toStr(typenm);
+
+	strAppend(th, str, "+", 1);
+	strAppend(th, str, typ, strlen(typ));
+	// strAppend(th, str, "\n", 1);
+	// ind = indent+1;
+	// while (ind--)
+	// 	strAppend(th, str, "\t", 1);
+	// strAppend(th, str, "TYPE: ", 6);
+	// serialize(th, str, indent+1, getType(th, tbl));
 	for (; n < last; n++) {
 		if (n->key != aNull) {
 			strAppend(th, str, "\n", 1);

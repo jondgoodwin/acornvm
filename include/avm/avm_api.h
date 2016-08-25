@@ -62,6 +62,9 @@ AVM_API Value sym_next(Value th, Value key);
 /** Ensure string has room for len Values, allocating memory as needed.
  * Allocated space will not shrink. Changes nothing about string's contents. */
 AVM_API void strMakeRoom(Value th, Value val, AuintIdx len);
+/** Use provided buffer of specified length, replacing whatever we might have allocated.
+   Provided buffer belongs to Acorn and should not ever be freed by caller. */
+AVM_API void strSwapBuffer(Value th, Value val, char *buffer, AuintIdx len);
 /**	Replace part of a string with the c-string contents starting at pos.
  *	If sz==0, it becomes an insert. If str==NULL or len==0, it becomes a deletion.
  *	The Acorn string will be resized automatically to accommodate excess characters.

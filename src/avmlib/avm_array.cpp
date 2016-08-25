@@ -245,8 +245,9 @@ void arrSerialize(Value th, Value str, int indent, Value arr) {
 	ArrInfo *a = arr_info(arr);
 	AuintIdx sz = arr_size(arr);
 	int ind;
+	const char *typ = arr_info(arr)->flags1&TypeClo? "+Closure" : "+List";
 
-	strAppend(th, str, "+List", 5);
+	strAppend(th, str, typ, strlen(typ));
 	for (AuintIdx i=0; i<sz; i++) {
 		strAppend(th, str, "\n", 1);
 		ind = indent+1;

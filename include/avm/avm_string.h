@@ -40,8 +40,8 @@ typedef struct StrInfo {
 } StrInfo;
 
 // Flags1 bits and helpers -->
-// 0x80 reserved for Locked
 #define StrExtraHdrMask 0x7C //!< How much bigger to allocate StrInfo (x4)
+#define StrLiteral 0x02		//!< String is read-only, and cannot be changed
 #define StrCData 0x01		//!< String is cdata, with encoded header and data
 
 /** Define the prototype for a cdata finalizer*/

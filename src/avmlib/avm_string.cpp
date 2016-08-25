@@ -124,6 +124,23 @@ void strMakeRoom(Value th, Value val, AuintIdx len) {
 	}
 }
 
+/* Use provided buffer of specified length, replacing whatever we might have allocated.
+   Provided buffer belongs to Acorn and should not ever be freed by caller. */
+void strSwapBuffer(Value th, Value val, char *buffer, AuintIdx len) {
+	StrInfo *str = str_info(val);
+
+	// Free whatever buffer we currently have
+	if (str->str)
+		mem_gcrealloc(th, str->str, str->avail+1, 0);
+
+	// Plug in new buffer along with sizing info
+	str->str = buffer;
+	str->size = str->avail = len - 1; // One less to follow convention for buffers we allocate
+
+	// Keep GC memory accounting accurate
+	vm(th)->gcdebt += len;
+}
+
 /*	Replace part of a string with the c-string contents starting at pos.
  *	If sz==0, it becomes an insert. If str==NULL or len==0, it becomes a deletion.
  *	The Acorn string will be resized automatically to accommodate excess characters.
@@ -139,7 +156,7 @@ void strSub(Value th, Value val, AuintIdx pos, AuintIdx sz, const char *repstr, 
 	AuintIdx len = str->size - sz + replen; /* Calculate new length */
 
 	/* Return if nothing to do or new length overflows past 32-bits */
-	if ((sz==0 && replen==0) || len < replen)
+	if ((sz==0 && replen==0) || len < replen || str->flags1 & StrLiteral)
 		return;
 
 	/* Expand available space, if needed */
@@ -166,14 +183,14 @@ void strAppend(Value th, Value val, const char *addstr, AuintIdx addstrlen) {
 	AuintIdx newlen = str->size + addstrlen;
 
 	/* Return if nothing to add, or resulting string is greater than possible */
-	if (addstr==NULL || addstrlen==0 || newlen<str->size) 
+	if (addstr==NULL || addstrlen==0 || newlen<str->size || str->flags1 & StrLiteral) 
 		return;
 
 	/* Expand available space, if needed */
 	if (newlen > str->avail) {
 		AuintIdx newavail = str->avail+str->avail; // try doubling
-		if (newavail < str->avail || newavail<newlen+1)
-			newavail = newlen+1;	// Ask for what we need
+		if (newavail < str->avail || newavail<newlen)
+			newavail = newlen;	// Ask for what we need
 		strMakeRoom(th, val, newavail);
 	}
 

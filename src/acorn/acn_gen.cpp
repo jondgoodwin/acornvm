@@ -58,6 +58,8 @@ int genAddLit(CompInfo *comp, Value val) {
 
 	// If not found, add it
 	mem_growvector(comp->th, f->lits, f->nbrlits, f->litsz, Value, INT_MAX);
+	if (isStr(val))
+		str_info(val)->flags1 |= StrLiteral; // Make strings read only
 	f->lits[f->nbrlits] = val;
 	return f->nbrlits++;
 }

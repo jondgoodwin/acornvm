@@ -379,8 +379,8 @@ bool lexScanName(LexInfo *lex) {
 	while ((chr=lex_thischar(lex))=='_' || chr=='$' || isudigit(chr) || isualpha(chr))
 		lex_skipchar(lex);
 
-	// Allow ! or ? as trailing character
-	if (chr=='!' || chr=='?')
+	// Allow ? as trailing character
+	if (chr=='?')
 		lex_skipchar(lex);
 
 	// Create name token as a symbol

@@ -101,11 +101,15 @@ void serialize(Value th, Value str, int indent, Value val) {
 			strAppend(th, str, "'", 1);
 			return;}
 		case StrEnc: 
-			{strAppend(th, str, "\"", 1);
-			if (str_cstr(val))
-				strAppend(th, str, str_cstr(val), strlen(str_cstr(val))); 
-			strAppend(th, str, "\"", 1);
-			return;}
+			if (isCData(val))
+				strAppend(th, str, "+CData", 6);
+			else {
+				strAppend(th, str, "\"", 1);
+				if (str_cstr(val))
+					strAppend(th, str, str_cstr(val), strlen(str_cstr(val))); 
+				strAppend(th, str, "\"", 1);
+			}
+			return;
 		case ArrEnc: 
 			arrSerialize(th, str, indent, val);
 			return;

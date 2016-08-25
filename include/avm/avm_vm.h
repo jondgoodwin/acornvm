@@ -99,7 +99,6 @@ extern "C" {
 		SymIf,			//!< 'if'
 		SymIn,			//!< 'in'
 		SymMatch,		//!< 'match'
-		SymNew,			//!< 'new'
 		SymNot,			//!< 'not'
 		SymOr,			//!< 'or'
 		SymReturn,		//!< 'return'
@@ -124,11 +123,13 @@ extern "C" {
 
 		// Methods that are not compiler symbols
 		// Byte-code (and parser) standard methods
+		SymNew,		//!< 'New'
 		SymParas,	//!< '()'
 		SymNeg,		//!< '-@'
 		SymNext,	//!< 'next'
 
 		SymFinalizer, //!< '_finalizer' method for CData
+		SymType,	//!< '_type' symbol
 
 		// AST symbols
 		SymMethod,	//!< 'method'

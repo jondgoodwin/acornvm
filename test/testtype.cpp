@@ -31,7 +31,7 @@ static void tstrcmp(const char *str1, const char *str2, const char *text) {
 
 void restest(Value th, const char* url, const char *baseurl, const char *normurl) {
 	// Create the resource
-	pushSym(th, "new");
+	pushSym(th, "New");
 	pushGloVar(th, "Resource");
 	pushSym(th, url);
 	if (strlen(baseurl)) pushSym(th, baseurl); else pushValue(th, aNull);

@@ -38,21 +38,27 @@ int typ_method_varargs(Value th) {
 /** Initialize the Method type and its properties in Global */
 void typ_method_init(Value th) {
 	vmlit(TypeMethc) = pushType(th, vmlit(TypeType), 2);
+		pushSym(th, "Nethod");
+		popProperty(th, 0, "_type");
 		vmlit(TypeMethm) = pushMixin(th, vmlit(TypeType), aNull, 3);
+			pushSym(th, "*Method");
+			popProperty(th, 1, "_type");
 			pushCMethod(th, typ_method_get);
 			popProperty(th, 1, "()");
 			pushCMethod(th, typ_method_arity);
 			popProperty(th, 1, "arity");
 			pushCMethod(th, typ_method_varargs);
 			popProperty(th, 1, "varargs?");
-		popProperty(th, 0, "newtype");
+		popProperty(th, 0, "_newtype");
 		pushCMethod(th, acn_newmethod);
-		popProperty(th, 0, "new");
+		popProperty(th, 0, "New");
 	popGloVar(th, "Method");
 
 	Value AcornPgm = pushType(th, vmlit(TypeType), 2);
+		pushSym(th, "AcornProgram");
+		popProperty(th, 0, "_type");
 		pushCMethod(th, acn_newprogram);
-		popProperty(th, 0, "new");
+		popProperty(th, 0, "New");
 	popGloVar(th, "AcornProgram");
 
 	// Register this type as Resource's 'acn' extension

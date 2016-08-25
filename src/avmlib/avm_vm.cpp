@@ -131,7 +131,7 @@ struct vmLitSymEntry {
 
 /** Constant array that identifies and maps all VM literal symbols */
 const struct vmLitSymEntry vmLitSymTable[] = {
-	// Compiler symbols
+	// Compiler reserved names
 	{SymNull, "null"},
 	{SymFalse, "false"},
 	{SymTrue, "true"},
@@ -147,7 +147,6 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymIf, "if"},
 	{SymIn, "in"},
 	{SymMatch, "match"},
-	{SymNew, "new"},
 	{SymNot, "not"},
 	{SymOr, "or"},
 	{SymReturn, "return"},
@@ -164,7 +163,6 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymSemicolon, ";"},
 
 	// Compiler symbols that are also methods
-	{SymNew, "new"},
 	{SymAppend, "<<"},
 	{SymPlus, "+"},
 	{SymMinus, "-"},
@@ -172,11 +170,13 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymDiv, "/"},
 
 	// Methods that are not compiler symbols
+	{SymNew, "New"},
 	{SymParas, "()"},
 	{SymNeg, "-@"},
 	{SymNext, "next"},
 
 	{SymFinalizer, "_finalizer"},
+	{SymType, "_type"},
 
 	// AST symbols
 	{SymMethod, "method"},

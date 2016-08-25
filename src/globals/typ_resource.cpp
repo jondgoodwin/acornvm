@@ -258,6 +258,7 @@ void getResource(Value th, Value *resarray) {
 	}
 
 	// equivalent to: +(ResExtType)((ResSchemeType)(ResNormUrl), ResNormUrl, ResFragment)
+	vmLog("Retrieving resource: %s", toStr(resarray[ResNormUrl]));
 	pushValue(th, vmlit(SymNew));
 	pushValue(th, resarray[ResExtType]);
 	pushValue(th, vmlit(SymParas));
@@ -333,16 +334,20 @@ int typ_resource_inst_frag(Value th) {
 /** Initialize the Resource type */
 void typ_resource_init(Value th) {
 	vmlit(TypeResc) = pushType(th, vmlit(TypeType), 6);
+		pushSym(th, "Resource");
+		popProperty(th, 0, "_type");
 		vmlit(TypeResm) = pushMixin(th, vmlit(TypeType), aNull, 5);
+			pushSym(th, "*Resource");
+			popProperty(th, 1, "_type");
 			pushCMethod(th, typ_resource_inst_get);
 			popProperty(th, 1, "()");
 			pushCMethod(th, typ_resource_inst_frag);
 			popProperty(th, 1, "fragment");
 			pushCMethod(th, typ_resource_inst_url);
 			popProperty(th, 1, "url");
-		popProperty(th, 0, "newtype");
+		popProperty(th, 0, "_newtype");
 		pushCMethod(th, typ_resource_new);
-		popProperty(th, 0, "new");
+		popProperty(th, 0, "New");
 		pushCMethod(th, typ_resource_get);
 		popProperty(th, 0, "()");
 		pushTbl(th, vmlit(TypeIndexm), 10);

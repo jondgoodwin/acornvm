@@ -56,6 +56,8 @@ int typ_file_get(Value th) {
 /** Initialize the File type */
 void typ_file_init(Value th) {
 	Value typ = pushType(th, vmlit(TypeType), 1);
+		pushSym(th, "File");
+		popProperty(th, 0, "_type");
 		pushCMethod(th, typ_file_get);
 		popProperty(th, 0, "()");
 	popGloVar(th, "File");

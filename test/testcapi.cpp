@@ -57,6 +57,15 @@ int cdatafin(Value cdata) {
 	return 1;
 }
 
+int newmixin(Value th) {
+	puts("New mixin property was successfully triggered!");
+	return 1;
+}
+int decmixin(Value th) {
+	pushValue(th, anInt(toAint(getLocal(th, 0))-1));
+	return 1;
+}
+
 enum stkit {
 	true1,
 	true2,
@@ -312,6 +321,27 @@ void testCapi(void) {
 	Value typtyp = popValue(th);
 	pushGloVar(th, "Integer");
 	t(getType(th, popValue(th))==typtyp, "isType(getType(th, Global(th, 'Integer'))==Global(th, 'Type'))");
+
+	// Mixins
+	pushGloVar(th, "Integer");
+	int mixinidx = getTop(th);
+	Value mixin = pushMixin(th, aNull, aNull, 10);
+	pushCMethod(th, decmixin);
+	popProperty(th, mixinidx, "--");
+	pushCMethod(th, newmixin);
+	popProperty(th, mixinidx, "New");
+	addMixin(th, pushProperty(th, mixinidx-1, "_newtype"), mixin);
+	popValue(th);
+	popValue(th);
+	popValue(th);
+	pushSym(th, "--");
+	pushValue(th, anInt(4));
+	getCall(th, 1, 1);
+	t(popValue(th) == anInt(3), "popValue(th) == anInt(3))");
+	pushSym(th, "++"); // check that non-existence works
+	pushValue(th, anInt(4));
+	getCall(th, 1, 1);
+	t(popValue(th) == aNull, "popValue(th) == aNull)");
 
 	// Serialization
 	pushSerialized(th, aNull);

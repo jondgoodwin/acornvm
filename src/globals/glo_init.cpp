@@ -45,14 +45,18 @@ int typ_int_mult(Value th) {
 /** Initialize the Integer type */
 void typ_int_init(Value th) {
 	vmlit(TypeIntc) = pushType(th, vmlit(TypeType), 2);
+		pushSym(th, "Integer");
+		popProperty(th, 0, "_type");
 		vmlit(TypeIntm) = pushMixin(th, vmlit(TypeType), aNull, 3);
+			pushSym(th, "*Integer");
+			popProperty(th, 1, "_type");
 			pushCMethod(th, typ_int_plus);
 			popProperty(th, 1, "+");
 			pushCMethod(th, typ_int_minus);
 			popProperty(th, 1, "-");
 			pushCMethod(th, typ_int_mult);
 			popProperty(th, 1, "*");
-		popProperty(th, 0, "newtype");
+		popProperty(th, 0, "_newtype");
 	popGloVar(th, "Integer");
 	return;
 }
@@ -88,14 +92,18 @@ int typ_list_next(Value th) {
 /** Initialize the List type */
 void typ_list_init(Value th) {
 	vmlit(TypeListc) = pushType(th, vmlit(TypeType), 2);
+		pushSym(th, "List");
+		popProperty(th, 0, "_type");
 		vmlit(TypeListm) = pushMixin(th, vmlit(TypeType), aNull, 2);
+			pushSym(th, "*List");
+			popProperty(th, 1, "_type");
 			pushCMethod(th, typ_list_add);
 			popProperty(th, 1, "<<");
 			pushCMethod(th, typ_list_next);
 			popProperty(th, 1, "next");
-		popProperty(th, 0, "newtype");
+		popProperty(th, 0, "_newtype");
 		pushCMethod(th, typ_list_new);
-		popProperty(th, 0, "new");
+		popProperty(th, 0, "New");
 	popGloVar(th, "List");
 	return;
 }
@@ -109,8 +117,10 @@ int typ_index_new(Value th) {
 /** Initialize the Index type, used to create other types */
 void typ_index_init(Value th) {
 	vmlit(TypeType) = pushType(th, aNull, 1);
+		pushSym(th, "Index");
+		popProperty(th, 0, "_type");
 		pushCMethod(th, typ_index_new);
-		popProperty(th, 0, "new");
+		popProperty(th, 0, "New");
 	popGloVar(th, "Index");
 	return;
 }
@@ -130,8 +140,10 @@ int typ_type_get(Value th) {
 /** Initialize the Type type, used to create other types */
 void typ_type_init(Value th) {
 	vmlit(TypeType) = pushType(th, aNull, 1);
+		pushSym(th, "Type");
+		popProperty(th, 0, "_type");
 		pushCMethod(th, typ_type_new);
-		popProperty(th, 0, "new");
+		popProperty(th, 0, "New");
 		pushCMethod(th, typ_type_get);
 		popProperty(th, 0, "()");
 	popGloVar(th, "Type");
