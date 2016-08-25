@@ -472,7 +472,7 @@ void tblSerialize(Value th, Value str, int indent, Value tbl) {
 	int ind;
 
 	const char *typ = isType(tbl)? "Type" : "Index";
-	Value typenm = getProperty(th, getType(th, tbl), vmlit(SymType));
+	Value typenm = getProperty(th, getType(th, tbl), vmlit(SymName));
 	if (isSym(typenm))
 		typ = toStr(typenm);
 

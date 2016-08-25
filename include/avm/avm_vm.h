@@ -129,7 +129,7 @@ extern "C" {
 		SymNext,	//!< 'next'
 
 		SymFinalizer, //!< '_finalizer' method for CData
-		SymType,	//!< '_type' symbol
+		SymName,	//!< '_type' symbol
 
 		// AST symbols
 		SymMethod,	//!< 'method'

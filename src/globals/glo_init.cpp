@@ -46,10 +46,10 @@ int typ_int_mult(Value th) {
 void typ_int_init(Value th) {
 	vmlit(TypeIntc) = pushType(th, vmlit(TypeType), 2);
 		pushSym(th, "Integer");
-		popProperty(th, 0, "_type");
+		popProperty(th, 0, "_name");
 		vmlit(TypeIntm) = pushMixin(th, vmlit(TypeType), aNull, 3);
 			pushSym(th, "*Integer");
-			popProperty(th, 1, "_type");
+			popProperty(th, 1, "_name");
 			pushCMethod(th, typ_int_plus);
 			popProperty(th, 1, "+");
 			pushCMethod(th, typ_int_minus);
@@ -93,10 +93,10 @@ int typ_list_next(Value th) {
 void typ_list_init(Value th) {
 	vmlit(TypeListc) = pushType(th, vmlit(TypeType), 2);
 		pushSym(th, "List");
-		popProperty(th, 0, "_type");
+		popProperty(th, 0, "_name");
 		vmlit(TypeListm) = pushMixin(th, vmlit(TypeType), aNull, 2);
 			pushSym(th, "*List");
-			popProperty(th, 1, "_type");
+			popProperty(th, 1, "_name");
 			pushCMethod(th, typ_list_add);
 			popProperty(th, 1, "<<");
 			pushCMethod(th, typ_list_next);
@@ -118,7 +118,7 @@ int typ_index_new(Value th) {
 void typ_index_init(Value th) {
 	vmlit(TypeType) = pushType(th, aNull, 1);
 		pushSym(th, "Index");
-		popProperty(th, 0, "_type");
+		popProperty(th, 0, "_name");
 		pushCMethod(th, typ_index_new);
 		popProperty(th, 0, "New");
 	popGloVar(th, "Index");
@@ -141,7 +141,7 @@ int typ_type_get(Value th) {
 void typ_type_init(Value th) {
 	vmlit(TypeType) = pushType(th, aNull, 1);
 		pushSym(th, "Type");
-		popProperty(th, 0, "_type");
+		popProperty(th, 0, "_name");
 		pushCMethod(th, typ_type_new);
 		popProperty(th, 0, "New");
 		pushCMethod(th, typ_type_get);

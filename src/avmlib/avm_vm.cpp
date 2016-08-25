@@ -176,7 +176,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymNext, "next"},
 
 	{SymFinalizer, "_finalizer"},
-	{SymType, "_type"},
+	{SymName, "_name"},
 
 	// AST symbols
 	{SymMethod, "method"},

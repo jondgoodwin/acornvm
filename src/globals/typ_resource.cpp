@@ -335,10 +335,10 @@ int typ_resource_inst_frag(Value th) {
 void typ_resource_init(Value th) {
 	vmlit(TypeResc) = pushType(th, vmlit(TypeType), 6);
 		pushSym(th, "Resource");
-		popProperty(th, 0, "_type");
+		popProperty(th, 0, "_name");
 		vmlit(TypeResm) = pushMixin(th, vmlit(TypeType), aNull, 5);
 			pushSym(th, "*Resource");
-			popProperty(th, 1, "_type");
+			popProperty(th, 1, "_name");
 			pushCMethod(th, typ_resource_inst_get);
 			popProperty(th, 1, "()");
 			pushCMethod(th, typ_resource_inst_frag);

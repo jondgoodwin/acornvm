@@ -39,10 +39,10 @@ int typ_method_varargs(Value th) {
 void typ_method_init(Value th) {
 	vmlit(TypeMethc) = pushType(th, vmlit(TypeType), 2);
 		pushSym(th, "Nethod");
-		popProperty(th, 0, "_type");
+		popProperty(th, 0, "_name");
 		vmlit(TypeMethm) = pushMixin(th, vmlit(TypeType), aNull, 3);
 			pushSym(th, "*Method");
-			popProperty(th, 1, "_type");
+			popProperty(th, 1, "_name");
 			pushCMethod(th, typ_method_get);
 			popProperty(th, 1, "()");
 			pushCMethod(th, typ_method_arity);
@@ -56,7 +56,7 @@ void typ_method_init(Value th) {
 
 	Value AcornPgm = pushType(th, vmlit(TypeType), 2);
 		pushSym(th, "AcornProgram");
-		popProperty(th, 0, "_type");
+		popProperty(th, 0, "_name");
 		pushCMethod(th, acn_newprogram);
 		popProperty(th, 0, "New");
 	popGloVar(th, "AcornProgram");
