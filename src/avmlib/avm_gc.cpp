@@ -2,11 +2,17 @@
  * @file
  * 
  * The garbage collector implements a tri-color, incremental, single- (or dual-) generation
- * mark-and-sweep algorithm.
+ * mark-and-sweep algorithm. It does no copy-compaction.
  *
  * All pointer-based Values (e.g., string, symbol) share a common header
  * at the start of the allocated area. The implementation code for such pointer-based Values 
  * is interwoven with the garbage collection routines in this file.
+ * In particular, any value that allocates memory must:
+ * - Use mem_new to allocate the fixed-position info block for the Value
+ *   (a GC cycle may be performed just before the block is allocated)
+ * - Define how to mark all Values it contains (when requested by the GC)
+ * - Define how to free all memory it has allocated (when swept by the GC)
+ * - Call mem_markchk whenever a value is stored within another non-thread (stack) value.
  *
  * These garbage collection algorithms are inspired by the garbage collection
  * approach used by Lua.
@@ -104,11 +110,14 @@ void mem_init(VmInfo *vm) {
 /** Return true if object is dead: */
 #define isdead(th, v)	isdeadm(otherwhite(th), (v)->marked)
 
-
-
 /** Is collection mode set to generational? */
 #define isgenerational(th)	(vm(th)->gcmode == KGC_GEN)
 
+/** Tell us whether we must enforce the invariance rule that black objects
+ * never point to white ones. True always, except during non-generational sweep.
+ * During a non-generational collection, the sweep phase may break the invariant, 
+ * as such a sweep only frees old white objects, not current white. */
+#define keepinvariant(th)	(isgenerational(th) || vm(th)->gcstate <= GCSatomic)
 
 /* ====================================================================== */
 
@@ -116,15 +125,13 @@ void mem_init(VmInfo *vm) {
  * Mark Stage
  * ----------
  *
- * Marking begins with the root object (the VM). We traverse from root 
- * recursively to all the current white Values it references, 
- * to change their color to black or gray:
- * - We will mark an object gray if it contains any Values. It will be 
- *   place on the top of the gray chain for later such processing.
- * - We will mark an object black if it contains no Values to check
- *   or if its Values have all been checked and marked. 
+ * Marking begins with the root object (the VM). We recursively traverse from root 
+ * to all the current white Values it references, changing their color to black or gray:
+ * - gray if it contains any Values. It will be 
+ *   placed on the top of the gray chain for later such processing.
+ * - black if it contains no Values to check or if its Values have all been checked and marked. 
  *
- * To reduce lag spikes, marking is done incrementally, typically a single object.
+ * To reduce lag spikes, marking is done incrementally, one or more objects in a step.
  * Thus, objects containing value references to other objects are first marked
  * gray, and on the next iteration marked black as their references are traversed.
  *
@@ -134,6 +141,22 @@ void mem_init(VmInfo *vm) {
 */
 
 
+/** Perform this mark check every time a Value is put into a parent Value (other than a thread/stack).
+ * Why? With incremental garbage collection, it is possible for an unmarked object (white) to be added
+ * to an already scanned and marked (black) parent. Doing nothing during the marking phase
+ * means the object will never get marked and therefore will be swept away prematurely.
+ * We fix this by marking the white value, thereby moving the barrier forward. 
+ * This prevents violating the GC invariance principle that no black value should ever point to a white value.
+ * Doing this mark check would be onerous for the very common scenario of putting temporary values into the stack.
+ * With thread parents, we employ a different strategy:
+ * re-marking all stacks in an uninterrupted (atomic) fashion at the end of the marking phase.
+ */
+void mem_markChk(Value th, Value parent, Value val) {
+	if (isPtr(val) && isblack((MemInfo*)parent) && iswhite((MemInfo*)val) && !isdead(th, (MemInfo*)val)
+		&& keepinvariant(th))
+			mem_markobjraw(th, (MemInfo*)val);
+}
+
 /** Mark a current white object to black or gray (ASSUMES valid white object).
  * (In most cases, use macro mem_markobj to call this only if it is a valid white object).
  * Object is marked black for simple objects without embedded Values, updating gcmemtrav.
@@ -141,7 +164,7 @@ void mem_init(VmInfo *vm) {
  * and added to a gray chain for later marking by mem_marktopgray. */
 void mem_markobjraw(Value th, MemInfo *mem) {
 	VmInfo* vm = vm(th);
-	assert(vm->gcstate == GCSmark);
+	assert(vm->gcstate <= GCSatomic);
 	Aint size = 0;
 	white2gray(mem);
 	switch (mem->enctyp) {
@@ -201,10 +224,30 @@ void mem_marktopgray(Value th) {
 	case ArrEnc: arrMark(th, (ArrInfo*) o);	break;
 	case TblEnc: tblMark(th, (TblInfo*)o); break;
 	case MethEnc: methodMark(th, (MethodInfo *)o); break;
-	case ThrEnc: thrMark(th, (ThreadInfo *)o); break;
 	case VmEnc: vmMark(th, (VmInfo *)o); break;
 	case LexEnc: lexMark(th, (LexInfo *)o); break;
 	case CompEnc: compMark(th, (CompInfo *)o); break;
+
+	// Thread/Stacks use a different strategy for avoiding invariance violations:
+	// keeping it gray until atomic marking, so it is never black pointing to a white value.
+	case ThrEnc: 
+		{
+			ThreadInfo *thread = (ThreadInfo*) o;
+
+			// We keep the thread gray to avoid having to do mem_markchk every time
+			// white values are put into a thread/stack (which is often).
+			// By remembering the thread in grayagain, we can traverse it a second time
+			// during the atomic marking step at the end of marking.
+			if (vm(th)->gcstate == GCSmark) {
+				thread->graylink = vm(th)->grayagain;
+				vm(th)->grayagain = o;
+				black2gray(o);
+			}
+
+			// Fully mark all values in the thread, including all values on the stack
+			thrMark(th, thread);
+		}
+		break;
 
 	// Should never get here
 	default: vmLog("GC error: black marking unknown object type (deleted?)"); assert(0); return;
@@ -217,18 +260,24 @@ void mem_markallgray(Value th) {
 		mem_marktopgray(th);
 }
 
-/** Mark everything that cannot be interrupted by ongoing object changes */
+/** Mark everything that should not be interrupted by ongoing object changes */
 Aint mem_markatomic(Value th) {
 	assert(!iswhite(vm(th))); // Root object is white
 	Aint work = -(Aint) vm(th)->gcmemtrav;  // start counting work
 
-	// Nothing atomic to run at the moment! (Later the finalizers?)
+	// Re-mark the objects in grayagain (threads and what they point to)
+	work += vm(th)->gcmemtrav;  /* stop counting (do not (re)count grays) */
+	assert(vm(th)->gray == NULL);
+	vm(th)->gray = vm(th)->grayagain;
+	vm(th)->grayagain = NULL;
+	mem_markallgray(th);
+	work -= vm(th)->gcmemtrav;  /* re-start counting */
 	
 	work += vm(th)->gcmemtrav;  /* complete counting */
 	return work;  /* estimate of memory marked by 'atomic' */
 }
 
-/** Start garbage collection cycle by initializing the mark cycle */
+/** Start garbage collection by initializing the mark cycle */
 void mem_markbegin(Value th) {
 	// Reset gray object lists
 	vm(th)->gray = vm(th)->grayagain = NULL;
@@ -257,7 +306,7 @@ void mem_keepalive(Value th, MemInfo* blk) {
  * only a few objects per cycle, with the current sweep position preserved.
  *
  * In generational mode, sweeping stops when the first "old" object is found.
- * Full collection may be needed sweep any unreferenced objects after this.
+ * Full collection is done periodically to sweep any unreferenced objects after this.
 */
 
 /** Free memory allocated to an unreferenced object.
@@ -364,7 +413,7 @@ Aint mem_sweepbegin(Value th) {
 	vm(th)->main_thr.marked = (vm(th)->main_thr.marked & maskcolors) | currentwhite(th);
 
 	// prepare to sweep objects
-	vm(th)->sweepstrgc = 0;
+	vm(th)->sweepsymgc = 0;
 	vm(th)->sweepgc = mem_sweepToLive(th, &vm(th)->objlist, &n);
 	return n;
 }
@@ -392,7 +441,7 @@ void mem_freeAll(Value th) {
 	vm->gcstate = KGC_NORMAL;
 	// mem_sweepwholelist(th, &vm->finobj);  /* finalizers can create objs. in 'finobj' */
 	mem_sweepwholelist(th, &vm->objlist);
-	for (i = 0; i < vm->sym_table.nbrAvail; i++)  /* free all string lists */
+	for (i = 0; i < vm->sym_table.nbrAvail; i++)  /* free all symbol lists */
 		mem_sweepwholelist(th, (MemInfo**) &vm->sym_table.symArray[i]);
 	assert(vm->sym_table.nbrUsed == 0);
 }
@@ -429,6 +478,9 @@ void mem_gcsetdebt(Value th, Aint debt) {
  * With gcpause at 200 and PAUSEADJ at 100, this means wait until used memory doubles. */
 void mem_setpause(Value th, Aint estimate) {
 	Aint debt, threshold;
+	Aint oldest = estimate;
+	Aint pauseadj = PAUSEADJ;
+	Aint pau = vm(th)->gcpause;
 	estimate = estimate / PAUSEADJ;  // adjust 'estimate'
 	threshold = (vm(th)->gcpause < MAX_MEM / estimate)  // overflow?
             ? estimate * vm(th)->gcpause  // no overflow
@@ -477,6 +529,7 @@ Aint mem_gconestep(Value th) {
 
 			// Begin sweep phase
 			vm(th)->currentwhite = otherwhite(th);  // flip current white
+			vmLog("Starting sweep phase");
 			return work + mem_sweepbegin(th) * GCSWEEPCOST;
 		}
 	}
@@ -484,10 +537,10 @@ Aint mem_gconestep(Value th) {
     // Sweep unreferenced symbols first
     case GCSsweepsymbol: {
 		Auint i;
-		for (i = 0; i < GCSWEEPMAX && vm(th)->sweepstrgc + i < vm(th)->sym_table.nbrAvail; i++)
-			mem_sweepwholelist(th, (MemInfo**) &vm(th)->sym_table.symArray[vm(th)->sweepstrgc + i]);
-		vm(th)->sweepstrgc += i;
-		if (vm(th)->sweepstrgc >= vm(th)->sym_table.nbrAvail)  /* no more strings to sweep? */
+		for (i = 0; i < GCSWEEPMAX && vm(th)->sweepsymgc + i < vm(th)->sym_table.nbrAvail; i++)
+			mem_sweepwholelist(th, (MemInfo**) &vm(th)->sym_table.symArray[vm(th)->sweepsymgc + i]);
+		vm(th)->sweepsymgc += i;
+		if (vm(th)->sweepsymgc >= vm(th)->sym_table.nbrAvail)  /* no more symbols to sweep? */
 			vm(th)->gcstate = GCSsweep;
 		return i * GCSWEEPCOST;
     }
@@ -576,16 +629,6 @@ void mem_gcstep(Value th) {
 		// If GC not running, reduce how often gcstep is called
 		mem_gcsetdebt(th, -GCSTEPSIZE);
 }
-
-
-/** Prevent white objects from pointing to black? (during sweep or generational)
- * Macro to tell when main invariant (white objects cannot point to black
- * ones) must be kept. During a non-generational collection, the sweep
- * phase may break the invariant, as objects turned white may point to
- * still-black objects. The invariant is restored when sweep ends and
- * all objects are white again. During a generational collection, the
- * invariant must be kept all times. */
-#define keepinvariant(th)	(isgenerational(th) || vm(th)->gcstate <= GCSatomic)
 
 /** Perform a full garbage collection cycle.
  * It will be automatically called in emergency mode if memory fills up.

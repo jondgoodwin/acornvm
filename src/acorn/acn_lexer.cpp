@@ -37,7 +37,9 @@ Value newLex(Value th, Value *dest, Value src, Value url) {
 	lex->token = aNull;
 	lex->th = th;
 	lex->source = src;
+	mem_markChk(th, lex, src);
 	lex->url = url;
+	mem_markChk(th, lex, url);
 
 	// Position info (ignoring initial UTF8 byte-order mark)
 	lex->bytepos = 
@@ -523,6 +525,7 @@ bool lexScanString(LexInfo *lex) {
 		lex->token = buildstr;
 	else
 		newSym(lex->th, &lex->token, toStr(buildstr), getSize(buildstr));
+	mem_markChk(lex->th, lex, lex->token);
 	popValue(lex->th); // buildstr
 	return true;
 }

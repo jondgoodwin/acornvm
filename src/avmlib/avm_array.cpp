@@ -118,7 +118,7 @@ void arrSet(Value th, Value arr, AuintIdx pos, Value val) {
 			a->arr[i]=aNull;
 	// Perform copy
 	a->arr[pos]=val;
-	//mem_markChk(th, arr, val);
+	mem_markChk(th, arr, val);
 	// If final fill is past array size, reset size higher
 	if (pos+1 > a->size)
 		a->size = pos+1;
@@ -136,7 +136,7 @@ void arrAdd(Value th, Value arr, Value val) {
 
 	// Append value
 	a->arr[sz]=val;
-	//mem_markChk(th, arr, val);
+	mem_markChk(th, arr, val);
 	a->size++;
 }
 
@@ -160,7 +160,7 @@ void arrRpt(Value th, Value arr, AuintIdx pos, AuintIdx n, Value val) {
 	// Perform repeat copy
 	for (i=pos; i<pos+n; i++)
 		a->arr[i]=val;
-	//mem_markChk(th, arr, val); // only need to check once
+	mem_markChk(th, arr, val); // only need to check once
 	// If final fill is past array size, reset size higher
 	if (pos+n > a->size)
 		a->size = pos+n;
@@ -234,7 +234,7 @@ void arrSub(Value th, Value arr, AuintIdx pos, AuintIdx n, Value arr2, AuintIdx 
 	if (arr2 && isPtr(arr2))
 		memmove(&a->arr[pos], &arr_info(arr2)->arr[pos2], n2*sizeof(Value));
 	for (AintIdx i=n2-1; i>=0; i--) {
-		//mem_markChk(th, arr, a->arr[pos+i]);
+		mem_markChk(th, arr, a->arr[pos+i]);
 	}
 
 	a->size += n2-n;

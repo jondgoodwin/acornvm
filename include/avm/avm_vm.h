@@ -62,7 +62,7 @@ extern "C" {
 		int gcmajorinc;				//!< pause between major collections (only in gen. mode)
 		int gcstepmul;				//!< GC `granularity' 
 
-		Auint sweepstrgc;  //!< position of sweep in symbol table
+		Auint sweepsymgc;  //!< position of sweep in symbol table
 
 	} VmInfo;
 
@@ -186,11 +186,11 @@ extern "C" {
 	/** Unlock the Vm */
 	void vm_unlock(Value th);
 
-	#define logSevere(msg, ...) {vmLog(msg, __VA_ARGS__); exit(1);}
-	#define logError(msg, ...) vmLog(msg, __VA_ARGS__)
-	#define logWarning(msg, ...) vmLog(msg, __VA_ARGS__)
+	#define logSevere(msg, ...) {vmLog(msg, ##__VA_ARGS__); exit(1);}
+	#define logError(msg, ...) vmLog(msg, ##__VA_ARGS__)
+	#define logWarning(msg, ...) vmLog(msg, ##__VA_ARGS__)
 	#ifdef _DEBUG
-	#define logInfo(msg, ...) vmLog(msg, __VA_ARGS__)
+	#define logInfo(msg, ...) vmLog(msg, ##__VA_ARGS__)
 	#else
 	#define logInfo(msg, ...)
 	#endif

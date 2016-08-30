@@ -30,12 +30,15 @@ Value newCompiler(Value th, Value *dest, Value src, Value url) {
 
 	if (isStr(src)) {
 		newLex(th, (Value *) &comp->lex, src, url);
+		mem_markChk(th, comp, comp->lex);
 	} else {
 		comp->lex = ((CompInfo*)src)->lex;
 		comp->prevcomp = src;
 	}
 	newArr(th, &comp->ast, aNull, 2);
+	mem_markChk(th, comp, comp->ast);
 	newBMethod(th, (Value *)&comp->method);
+	mem_markChk(th, comp, comp->method);
 
 	comp->nextreg = 0;
 

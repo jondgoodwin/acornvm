@@ -30,7 +30,7 @@ void *mem_gcrealloc(Value th, void *block, Auint osize, Auint nsize) {
 
 #ifdef MEMORYLOG
 	if (nsize==0)
-		vmLog("Freeing %p", block);
+		vmLog("Freeing %p size %d", block, osize);
 	else
 		vmLog("Allocating %p from %p for %d", newblock, block, nsize);
 #endif

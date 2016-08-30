@@ -54,7 +54,7 @@ Value getLocal(Value th, AintIdx idx) {
 /* Put the value on the stack at the designated position. Be sure 0<= idx < top. */
 void setLocal(Value th, AintIdx idx, Value val) {
 	*stkAt(th, idx) = val;
-	//mem_markChk(th, th, val);
+	mem_markChk(th, th, val);
 }
 
 /* Copy the stack value at fromidx into toidx */
@@ -88,7 +88,7 @@ void insertLocal(Value th, AintIdx idx) {
 Value pushValue(Value th, Value val) {
 	stkCanIncTop(th); /* Check if there is room */
 	*th(th)->stk_top++ = val;
-	//mem_markChk(th, th, val); // Keep, if marked for deletion?
+	mem_markChk(th, th, val); // Keep, if marked for deletion?
 	return val;
 }
 
@@ -367,7 +367,7 @@ Value pushGloVar(Value th, const char *var) {
 	stkCanIncTop(th); /* Check if there is room */
 	assert(isTbl(th(th)->global));
 	Value val = newSym(th, th(th)->stk_top++, var, strlen(var));
-	//mem_markChk(th, th, val); /* Mark it if needed */
+	mem_markChk(th, th, val); /* Mark it if needed */
 	return *(th(th)->stk_top-1) = tblGet(th, th(th)->global, val);
 }
 

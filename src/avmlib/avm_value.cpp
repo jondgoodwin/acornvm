@@ -44,7 +44,7 @@ void setType(Value th, Value val, Value type) {
 		return;
 
 	((MemInfoT*)val)->type = type;
-	//mem_markChk(th, val, type);
+	mem_markChk(th, val, type);
 }
 
 /* Return the value's type (works for all values) */
@@ -83,7 +83,7 @@ void serialize(Value th, Value str, int indent, Value val) {
 		return;
 	case ValInt:
 		{char istr[15];
-		sprintf(istr, "%d", toAint(val));
+		sprintf(istr, "%d", (int)toAint(val));
 		strAppend(th, str, istr, strlen(istr)); 
 		return;
 		}

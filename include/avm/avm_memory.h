@@ -209,12 +209,9 @@ void *mem_frealloc(void *block, Auint size);
 	if (isPtr(obj) && iswhite((MemInfo*)obj)) \
 		mem_markobjraw(th, (MemInfo*)obj);
 
-/** Fix a value's color mark when placing it within another value.
- * During incremental GC marking, if we add a white object to an object
- * already marked black, then add the white object to the gray list. */
-#define mem_markChk(th, parent, val) \
-	if (isPtr(val) && iswhite((MemInfo*)val) && isblack((MemInfo*)parent) /* && !isdead(th, (MemInfo*)parent)*/) \
-		mem_markobjraw(th, (MemInfo*)val);
+/** Perform this mark check every time a Value is put into a parent Value (other than a thread/stack).
+  It ensures white values placed in already marked black objects are saved from being swept away. */
+void mem_markChk(Value th, Value parent, Value val);
 
 /** Mark a current white object to black or gray (use mem_markobj if unsure whether obj is white).
  * Black is chosen for simple objects without embedded Values, updating gcmemtrav.
@@ -227,7 +224,7 @@ void mem_keepalive(Value Thread, MemInfo* blk);
 
 /** Before allocating more memory, do a GC step if done with pause */
 #define mem_gccheck(th) \
-	{if (vm(th)->gcdebt >= 0) \
+	{/*if (vm(th)->gcdebt >= 0)*/ \
 	mem_gcstep(th);}
 
 /** Free all allocated objects, ahead of VM shut-down */

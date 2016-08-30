@@ -49,6 +49,7 @@ void thrInit(ThreadInfo* thr, VmInfo* vm, AuintIdx stksz) {
 	*thr->stk_top++ = aNull;  // Place for non-existent function
 	ci->begin = thr->stk_top;
 	ci->end = thr->stk_top + STACK_MINSIZE;
+	ci->method = aNull;
 	thr->curmethod = ci;
 
 	thr->global = aNull;

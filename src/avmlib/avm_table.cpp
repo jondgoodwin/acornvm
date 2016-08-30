@@ -422,12 +422,12 @@ void tblSet(Value th, Value tbl, Value key, Value val) {
 	Node *n = tblFind(tbl, key);
 	if (n) {
 		n->val = val;
-		//mem_markChk(th, tbl, val);
+		mem_markChk(th, tbl, val);
 	}
 	else {
 		tblAdd(th, tbl, key, val);
-		//mem_markChk(th, tbl, key);
-		//mem_markChk(th, tbl, val);
+		mem_markChk(th, tbl, key);
+		mem_markChk(th, tbl, val);
 	}
 }
 
