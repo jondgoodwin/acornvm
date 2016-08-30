@@ -17,12 +17,10 @@ extern "C" {
 /* Return a string value containing the byte sequence. */
 Value newStr(Value th, Value *dest, Value type, const char *str, AuintIdx len) {
 	StrInfo *val;
-	mem_gccheck(th);	// Incremental GC before memory allocation events
 
 	// Create a string object
 	unsigned int extrahdr = 0; // No extra header for strings
-	MemInfo **linkp = NULL;
-	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo)+extrahdr, linkp, 0);
+	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo)+extrahdr, NULL, 0);
 	val->flags1 = 0;
 	val->flags2 = 0;
 	val->type = type;
@@ -52,13 +50,11 @@ int isStr(Value str) {
    Its type may have a _finalizer, called just before the GC frees the C-Data value. */
 Value newCData(Value th, Value *dest, Value type, unsigned char cdatatyp, AuintIdx len, unsigned int extrahdr) {
 	StrInfo *val;
-	mem_gccheck(th);	// Incremental GC before memory allocation events
 
 	// Create a string object
-	MemInfo **linkp = NULL;
 	// we only have five bits to represent size of extrahdr (in multiples of four)
 	extrahdr = extrahdr>=124? 124 : (extrahdr&3)? (extrahdr&StrExtraHdrMask)+4 : extrahdr;
-	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo) + extrahdr, linkp, 0);
+	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo) + extrahdr, NULL, 0);
 	val->flags1 = StrCData | extrahdr;
 	val->flags2 = cdatatyp;
 	val->type = type;

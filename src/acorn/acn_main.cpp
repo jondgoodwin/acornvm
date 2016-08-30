@@ -16,11 +16,9 @@ extern "C" {
 /* Return a new CompInfo value, compiler state for an Acorn method */
 Value newCompiler(Value th, Value *dest, Value src, Value url) {
 	CompInfo *comp;
-	mem_gccheck(th);	// Incremental GC before memory allocation events
 
 	// Create an compiler context (this block of code can be gc-locked as atomic)
-	MemInfo **linkp = NULL;
-	comp = (CompInfo *) mem_new(th, CompEnc, sizeof(CompInfo), linkp, 0);
+	comp = (CompInfo *) mem_new(th, CompEnc, sizeof(CompInfo), NULL, 0);
 	*dest = (Value) comp;
 	comp->th = th;
 	comp->lex = NULL;

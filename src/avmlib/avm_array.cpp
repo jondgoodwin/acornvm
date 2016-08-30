@@ -18,11 +18,9 @@ extern "C" {
 /* Return a new Array, allocating len slots for Values. */
 Value newArr(Value th, Value *dest, Value type, AuintIdx len) {
 	ArrInfo *val;
-	mem_gccheck(th);	// Incremental GC before memory allocation events
 
 	// Create an array object
-	MemInfo **linkp = NULL;
-	val = (ArrInfo *) mem_new(th, ArrEnc, sizeof(ArrInfo), linkp, 0);
+	val = (ArrInfo *) mem_new(th, ArrEnc, sizeof(ArrInfo), NULL, 0);
 	*dest = (Value) val;
 	val->flags1 = 0;	// Initialize Flags1 flags
 	val->type = type;
@@ -38,11 +36,9 @@ Value newArr(Value th, Value *dest, Value type, AuintIdx len) {
 /* Return a new Array, allocating len slots for Values. */
 Value newClosure(Value th, Value *dest, Value type, AuintIdx len) {
 	ArrInfo *val;
-	mem_gccheck(th);	// Incremental GC before memory allocation events
 
 	// Create an array object
-	MemInfo **linkp = NULL;
-	val = (ArrInfo *) mem_new(th, ArrEnc, sizeof(ArrInfo), linkp, 0);
+	val = (ArrInfo *) mem_new(th, ArrEnc, sizeof(ArrInfo), NULL, 0);
 	val->flags1 = TypeClo;	// Initialize Flags1 flags
 	val->type = type;
 	val->avail = len;

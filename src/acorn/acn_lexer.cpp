@@ -26,11 +26,9 @@ extern "C" {
 /* Return a new LexInfo value, lexer context for a source program */
 Value newLex(Value th, Value *dest, Value src, Value url) {
 	LexInfo *lex;
-	mem_gccheck(th);	// Incremental GC before memory allocation events
 
 	// Create an lexer object
-	MemInfo **linkp = NULL;
-	lex = (LexInfo *) mem_new(th, LexEnc, sizeof(LexInfo), linkp, 0);
+	lex = (LexInfo *) mem_new(th, LexEnc, sizeof(LexInfo), NULL, 0);
 	*dest = (Value) lex;
 
 	// Values

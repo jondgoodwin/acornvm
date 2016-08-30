@@ -19,7 +19,6 @@ void methodRunC(Value th);
 
 /* Build a new c-method value, pointing to a method written in C */
 Value newCMethod(Value th, Value *dest, AcMethodp method) {
-	mem_gccheck(th);	// Incremental GC before memory allocation events
 	CMethodInfo *meth = (CMethodInfo*) mem_new(th, MethEnc, sizeof(CMethodInfo), NULL, 0);
 	methodFlags(meth) = METHOD_FLG_C;
 	meth->methodp = method;

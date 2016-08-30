@@ -15,7 +15,6 @@ extern "C" {
 
 /* Create a new bytecode method value. */
 void newBMethod(Value th, Value *dest) {
-	mem_gccheck(th);	// Incremental GC before memory allocation events
 	BMethodInfo *meth = (BMethodInfo*) mem_new(th, MethEnc, sizeof(BMethodInfo), NULL, 0);
 	*dest = (Value) meth;
 

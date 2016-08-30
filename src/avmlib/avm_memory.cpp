@@ -82,14 +82,21 @@ void *mem_frealloc(void *block, Auint size) {
  * \param offset how many bytes to allocate before the object itself (used only by states).
  */
 MemInfo *mem_new(Value th, int enc, Auint sz, MemInfo **list, int offset) {
+	// Perform garbage collection before a memory allocation
+	// Not for symbols, because we might shrink symbol table which would invalidate list
+	if (enc!=SymEnc) {
 #if defined(AVM_GCHARDMEMTEST)
 	if (vm(th)->gcrunning)
 		mem_gcfull(th, 1);  /* force a full GC to see if any unattached objects die */
+#else
+	mem_gccheck(th);	// Incremental GC before memory allocation events
 #endif
+	}
 
 	MemInfo *o = (MemInfo*) (offset + (char *) mem_gcrealloc(th, NULL, 0, sz));
+	// Symbols use their own list. If not provided, use the standard list for collectable objects
 	if (list == NULL)
-		list = &vm(th)->objlist;  // standard list for collectable objects
+		list = &vm(th)->objlist;
 	o->marked = vm(th)->currentwhite & WHITEBITS;
 	o->enctyp = enc;
 	o->next = *list;
