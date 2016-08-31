@@ -26,7 +26,7 @@ void sym_resize_tbl(Value th, Auint newsize) {
 
 	// If we need to grow, allocate more cleared space for array
 	if (newsize > sym_tbl->nbrAvail) {
-		mem_gccheck(th);	// Incremental GC before memory allocation events
+		//mem_gccheck(th);	// Incremental GC before memory allocation events
 		mem_reallocvector(th, sym_tbl->symArray, sym_tbl->nbrAvail, newsize, SymInfo *);
 		for (i = sym_tbl->nbrAvail; i < newsize; i++) 
 			sym_tbl->symArray[i] = NULL;
@@ -88,7 +88,7 @@ Value newSym(Value th, Value *dest, const char *str, AuintIdx len) {
 
 	// Not found. Double symbol table size if needed to hold another entry
 	if (sym_tbl->nbrUsed >= sym_tbl->nbrAvail)
-		sym_resize_tbl(th(th)->vm, sym_tbl->nbrAvail*2);
+		sym_resize_tbl(th, sym_tbl->nbrAvail*2);
 
 	// Create a symbol object, adding to symbol table at hash entry
 	MemInfo **linkp = (MemInfo**) &sym_tbl->symArray[hash_binmod(hash, sym_tbl->nbrAvail)];

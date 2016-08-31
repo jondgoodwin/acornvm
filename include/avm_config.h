@@ -16,7 +16,7 @@
 #define MINSIZEARRAY	4
 
 /** Symbol table minimum size - starting size, in number of entries */
-#define AVM_SYMTBLMINSIZE	4096
+#define AVM_SYMTBLMINSIZE	128
 
 // Garbage Collection tuning
 /** Controls how long the collector waits before starting a new cycle. 

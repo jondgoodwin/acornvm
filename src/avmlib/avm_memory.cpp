@@ -94,6 +94,9 @@ MemInfo *mem_new(Value th, int enc, Auint sz, MemInfo **list, int offset) {
 	}
 
 	MemInfo *o = (MemInfo*) (offset + (char *) mem_gcrealloc(th, NULL, 0, sz));
+#ifdef MEMORYLOG
+	vmLog("New object %p size: %d enctyp: %d", o, sz, enc);
+#endif
 	// Symbols use their own list. If not provided, use the standard list for collectable objects
 	if (list == NULL)
 		list = &vm(th)->objlist;

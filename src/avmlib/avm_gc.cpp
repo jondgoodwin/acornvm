@@ -75,6 +75,7 @@ void mem_init(VmInfo *vm) {
 	vm->gcmode = KGC_NORMAL;
 	vm->gcstate = GCSpause;
 	vm->currentwhite = bit2mask(WHITE0BIT, FIXEDBIT);
+	vm->gray = vm->grayagain = NULL;
 
 	vm->objlist = NULL;
 	vm->sweepgc = NULL;
@@ -105,9 +106,9 @@ void mem_init(VmInfo *vm) {
 #define currentwhite(th) (vm(th)->currentwhite & WHITEBITS)
 /** Return the non-current white */
 #define otherwhite(th)	(vm(th)->currentwhite ^ WHITEBITS)
-/** Return true if ... */
+/** Return true if marked flags show object is dead (otherwhite) */
 #define isdeadm(ow,m)	(!(((m) ^ WHITEBITS) & (ow)))
-/** Return true if object is dead: */
+/** Return true if object is dead (otherwhite) */
 #define isdead(th, v)	isdeadm(otherwhite(th), (v)->marked)
 
 /** Is collection mode set to generational? */
@@ -117,7 +118,7 @@ void mem_init(VmInfo *vm) {
  * never point to white ones. True always, except during non-generational sweep.
  * During a non-generational collection, the sweep phase may break the invariant, 
  * as such a sweep only frees old white objects, not current white. */
-#define keepinvariant(th)	(isgenerational(th) || vm(th)->gcstate <= GCSatomic)
+#define enforceinvariant(th)	(isgenerational(th) || vm(th)->gcstate <= GCSatomic)
 
 /* ====================================================================== */
 
@@ -151,9 +152,10 @@ void mem_init(VmInfo *vm) {
  * With thread parents, we employ a different strategy:
  * re-marking all stacks in an uninterrupted (atomic) fashion at the end of the marking phase.
  */
+#include <stdio.h.>
 void mem_markChk(Value th, Value parent, Value val) {
-	if (isPtr(val) && isblack((MemInfo*)parent) && iswhite((MemInfo*)val) && !isdead(th, (MemInfo*)val)
-		&& keepinvariant(th))
+	if (isPtr(val) && enforceinvariant(th)
+		&& isblack((MemInfo*)parent) && iswhite((MemInfo*)val) && !isdead(th, (MemInfo*)val))
 			mem_markobjraw(th, (MemInfo*)val);
 }
 
@@ -224,7 +226,6 @@ void mem_marktopgray(Value th) {
 	case ArrEnc: arrMark(th, (ArrInfo*) o);	break;
 	case TblEnc: tblMark(th, (TblInfo*)o); break;
 	case MethEnc: methodMark(th, (MethodInfo *)o); break;
-	case VmEnc: vmMark(th, (VmInfo *)o); break;
 	case LexEnc: lexMark(th, (LexInfo *)o); break;
 	case CompEnc: compMark(th, (CompInfo *)o); break;
 
@@ -249,6 +250,7 @@ void mem_marktopgray(Value th) {
 		}
 		break;
 
+	// VmEnc has only one instance, the root, which is already marked by mem_markbegin
 	// Should never get here
 	default: vmLog("GC error: black marking unknown object type (deleted?)"); assert(0); return;
 	}
@@ -262,8 +264,14 @@ void mem_markallgray(Value th) {
 
 /** Mark everything that should not be interrupted by ongoing object changes */
 Aint mem_markatomic(Value th) {
-	assert(!iswhite(vm(th))); // Root object is white
+	assert(!iswhite((MemInfo*)th)); // Threads always stay gray
 	Aint work = -(Aint) vm(th)->gcmemtrav;  // start counting work
+
+	// Mark values all threads (which are unprotected by a white barrier)
+	if (vm(th)->gcmode == KGC_GEN) {
+		thrMark(th, (ThreadInfo*) th);
+		mem_markallgray(th);
+	}
 
 	// Re-mark the objects in grayagain (threads and what they point to)
 	work += vm(th)->gcmemtrav;  /* stop counting (do not (re)count grays) */
@@ -283,7 +291,7 @@ void mem_markbegin(Value th) {
 	vm(th)->gray = vm(th)->grayagain = NULL;
 
 	// Mark root object = virtual machine
-	mem_markobj(th, vm(th));
+	vmMark(th, (VmInfo *)vm(th))
 }
 
 /* Keep value alive, if dead but not yet collected */
@@ -408,10 +416,6 @@ Aint mem_sweepbegin(Value th) {
 	assert(vm(th)->sweepgc == NULL);
 	vm(th)->gcstate = GCSsweepsymbol;
 
-	// Manually fix color of vm & main thread who are not in allocated chain
-	vm(th)->marked = (vm(th)->marked & maskcolors) | currentwhite(th);
-	vm(th)->main_thr.marked = (vm(th)->main_thr.marked & maskcolors) | currentwhite(th);
-
 	// prepare to sweep objects
 	vm(th)->sweepsymgc = 0;
 	vm(th)->sweepgc = mem_sweepToLive(th, &vm(th)->objlist, &n);
@@ -424,6 +428,7 @@ void mem_sweepcleanup(Value th) {
 	if (vm(th)->gcmode == KGC_EMERGENCY) return;
 
 	// Shrink symbol table, if usage is grown too small
+	SymTable* sym_tbl = &vm(th)->sym_table;
 	sym_tblshrinkcheck(th);
 }
 
@@ -529,7 +534,6 @@ Aint mem_gconestep(Value th) {
 
 			// Begin sweep phase
 			vm(th)->currentwhite = otherwhite(th);  // flip current white
-			vmLog("Starting sweep phase");
 			return work + mem_sweepbegin(th) * GCSWEEPCOST;
 		}
 	}
@@ -649,7 +653,7 @@ void mem_gcfull(Value th, int isemergency) {
 
 	// If there might be black objects, sweep all objects to turn them back to white
 	// (since white has not changed, nothing will be collected)
-	if (keepinvariant(th)) {
+	if (enforceinvariant(th)) {
 		mem_sweepbegin(th);
 	}
 	// finish any pending sweep phase to start a new cycle

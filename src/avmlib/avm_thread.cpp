@@ -30,6 +30,7 @@ void thrInit(ThreadInfo* thr, VmInfo* vm, AuintIdx stksz) {
 
 	thr->vm = vm;
 	thr->size = 0;
+	thr->marked = 0;	// Threads always stay gray
 	thr->flags1 = 0;	// Initialize Flags1 flags
 
 	// Allocate and initialize thread's stack

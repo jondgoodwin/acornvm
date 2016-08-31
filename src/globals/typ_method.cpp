@@ -37,10 +37,10 @@ int typ_method_varargs(Value th) {
 
 /** Initialize the Method type and its properties in Global */
 void typ_method_init(Value th) {
-	vmlit(TypeMethc) = pushType(th, vmlit(TypeType), 2);
+	vmlit(TypeMethc) = pushType(th, vmlit(TypeType), 4);
 		pushSym(th, "Nethod");
 		popProperty(th, 0, "_name");
-		vmlit(TypeMethm) = pushMixin(th, vmlit(TypeType), aNull, 3);
+		vmlit(TypeMethm) = pushMixin(th, vmlit(TypeType), aNull, 8);
 			pushSym(th, "*Method");
 			popProperty(th, 1, "_name");
 			pushCMethod(th, typ_method_get);

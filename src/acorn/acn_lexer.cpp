@@ -52,9 +52,6 @@ Value newLex(Value th, Value *dest, Value src, Value url) {
 	lex->newprogram = true;
 	lex->insertSemi = false;
 	lex->optype = 0;
-
-	// Prime the pump by getting the first token
-	lexGetNextToken(lex);
 	return (Value) lex;
 }
 
@@ -385,6 +382,7 @@ bool lexScanName(LexInfo *lex) {
 
 	// Create name token as a symbol
 	newSym(lex->th, &lex->token, &toStr(lex->source)[lex->tokbeg], lex->bytepos - lex->tokbeg);
+	mem_markChk(lex->th, lex, lex->token);
 
 	// If it is a reserved name for a literal, say so.
 	Value th = lex->th;
@@ -566,6 +564,7 @@ bool lexScanOp(LexInfo *lex) {
 		) lex_skipchar(lex);
 
 	newSym(lex->th, &lex->token, begp, &toStr(lex->source)[lex->bytepos]-begp);
+	mem_markChk(lex->th, lex, lex->token);
 	lex->toktype = Res_Token;
 	return true;
 }

@@ -29,8 +29,12 @@ Value newCompiler(Value th, Value *dest, Value src, Value url) {
 	if (isStr(src)) {
 		newLex(th, (Value *) &comp->lex, src, url);
 		mem_markChk(th, comp, comp->lex);
+
+		// Prime the pump by getting the first token
+		lexGetNextToken(comp->lex);
 	} else {
 		comp->lex = ((CompInfo*)src)->lex;
+		mem_markChk(th, comp, comp->lex);
 		comp->prevcomp = src;
 	}
 	newArr(th, &comp->ast, aNull, 2);

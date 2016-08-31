@@ -44,10 +44,10 @@ int typ_int_mult(Value th) {
 
 /** Initialize the Integer type */
 void typ_int_init(Value th) {
-	vmlit(TypeIntc) = pushType(th, vmlit(TypeType), 2);
+	vmlit(TypeIntc) = pushType(th, vmlit(TypeType), 4);
 		pushSym(th, "Integer");
 		popProperty(th, 0, "_name");
-		vmlit(TypeIntm) = pushMixin(th, vmlit(TypeType), aNull, 3);
+		vmlit(TypeIntm) = pushMixin(th, vmlit(TypeType), aNull, 30);
 			pushSym(th, "*Integer");
 			popProperty(th, 1, "_name");
 			pushCMethod(th, typ_int_plus);
@@ -91,10 +91,10 @@ int typ_list_next(Value th) {
 
 /** Initialize the List type */
 void typ_list_init(Value th) {
-	vmlit(TypeListc) = pushType(th, vmlit(TypeType), 2);
+	vmlit(TypeListc) = pushType(th, vmlit(TypeType), 4);
 		pushSym(th, "List");
 		popProperty(th, 0, "_name");
-		vmlit(TypeListm) = pushMixin(th, vmlit(TypeType), aNull, 2);
+		vmlit(TypeListm) = pushMixin(th, vmlit(TypeType), aNull, 20);
 			pushSym(th, "*List");
 			popProperty(th, 1, "_name");
 			pushCMethod(th, typ_list_add);
@@ -139,7 +139,7 @@ int typ_type_get(Value th) {
 
 /** Initialize the Type type, used to create other types */
 void typ_type_init(Value th) {
-	vmlit(TypeType) = pushType(th, aNull, 1);
+	vmlit(TypeType) = pushType(th, aNull, 12);
 		pushSym(th, "Type");
 		popProperty(th, 0, "_name");
 		pushCMethod(th, typ_type_new);

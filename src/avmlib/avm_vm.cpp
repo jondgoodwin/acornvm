@@ -45,11 +45,12 @@ AVM_API Value newVM(void) {
 	VmInfo *vm = (struct VmInfo*) mem_frealloc(NULL, sizeof(VmInfo));
 	vm->enctyp = VmEnc;
 	mem_init(vm); /* Initialize memory & garbage collection */
-	vm->marked = vm->currentwhite & WHITEBITS;
+
+	// VM is GC Root: Never marked or collected. Black will trigger write barrier
+	vm->marked = bitmask(BLACKBIT); 
 
 	// Initialize main thread (allocated as part of VmInfo)
 	Value th = (Value) (vm->main_thread = &vm->main_thr);
-	((ThreadInfo*) th)->marked = vm->currentwhite & WHITEBITS;
 	((ThreadInfo*) th)->enctyp = ThrEnc;
 	((ThreadInfo*) th)->next = NULL;
 	thrInit(&vm->main_thr, vm, STACK_NEWSIZE);
@@ -67,6 +68,7 @@ AVM_API Value newVM(void) {
 	// Initialize vm-wide symbol table, global table and literals
 	sym_init(th); // Initialize hash table for symbols
 	newTbl(th, &vm->global, aNull, GLOBAL_NEWSIZE); // Create global hash table
+	mem_markChk(th, vm, vm->global);
 	((ThreadInfo*) th)->global = vm->global; // For now, main thread needs global too
 	vm_litinit(th); // Load reserved and standard symbols into literal list
 	glo_init(th); // Load up global table and literal list with core types
@@ -200,6 +202,7 @@ void vm_litinit(Value th) {
 	// Allocate untyped array for literal storage
 	VmInfo* vm = vm(th);
 	newArr(th, &vm->literals, aNull, nVmLits);
+	mem_markChk(th, vm, vm->literals);
 	arrSet(th, vm->literals, nVmLits-1, aNull);  // Ensure it is full with nulls
 
 	Value *vmlits = arr_info(vm->literals)->arr;
@@ -234,6 +237,7 @@ void vm_stdinit(Value th) {
 	// Allocate mapping tables
 	VmInfo* vm = vm(th);
 	Value stdidx =  newTbl(th, &vm->stdidx, aNull, nStdSym);
+	mem_markChk(th, vm, vm->stdidx);
 	vm->stdsym = NULL;
 	mem_reallocvector(th, vm->stdsym, 0, nStdSym, Value);
 
