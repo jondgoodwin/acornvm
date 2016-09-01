@@ -28,7 +28,7 @@ Value newLex(Value th, Value *dest, Value src, Value url) {
 	LexInfo *lex;
 
 	// Create an lexer object
-	lex = (LexInfo *) mem_new(th, LexEnc, sizeof(LexInfo), NULL, 0);
+	lex = (LexInfo *) mem_new(th, LexEnc, sizeof(LexInfo));
 	*dest = (Value) lex;
 
 	// Values

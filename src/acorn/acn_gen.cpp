@@ -15,7 +15,7 @@ extern "C" {
 
 /* Create a new bytecode method value. */
 void newBMethod(Value th, Value *dest) {
-	BMethodInfo *meth = (BMethodInfo*) mem_new(th, MethEnc, sizeof(BMethodInfo), NULL, 0);
+	BMethodInfo *meth = (BMethodInfo*) mem_new(th, MethEnc, sizeof(BMethodInfo));
 	*dest = (Value) meth;
 
 	methodFlags(meth) = 0;

@@ -20,7 +20,7 @@ Value newArr(Value th, Value *dest, Value type, AuintIdx len) {
 	ArrInfo *val;
 
 	// Create an array object
-	val = (ArrInfo *) mem_new(th, ArrEnc, sizeof(ArrInfo), NULL, 0);
+	val = (ArrInfo *) mem_new(th, ArrEnc, sizeof(ArrInfo));
 	*dest = (Value) val;
 	val->flags1 = 0;	// Initialize Flags1 flags
 	val->type = type;
@@ -38,7 +38,7 @@ Value newClosure(Value th, Value *dest, Value type, AuintIdx len) {
 	ArrInfo *val;
 
 	// Create an array object
-	val = (ArrInfo *) mem_new(th, ArrEnc, sizeof(ArrInfo), NULL, 0);
+	val = (ArrInfo *) mem_new(th, ArrEnc, sizeof(ArrInfo));
 	val->flags1 = TypeClo;	// Initialize Flags1 flags
 	val->type = type;
 	val->avail = len;

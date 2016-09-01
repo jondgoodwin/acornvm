@@ -18,7 +18,7 @@ Value newCompiler(Value th, Value *dest, Value src, Value url) {
 	CompInfo *comp;
 
 	// Create an compiler context (this block of code can be gc-locked as atomic)
-	comp = (CompInfo *) mem_new(th, CompEnc, sizeof(CompInfo), NULL, 0);
+	comp = (CompInfo *) mem_new(th, CompEnc, sizeof(CompInfo));
 	*dest = (Value) comp;
 	comp->th = th;
 	comp->lex = NULL;

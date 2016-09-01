@@ -51,6 +51,7 @@ AVM_API Value newVM(void) {
 
 	// Initialize main thread (allocated as part of VmInfo)
 	Value th = (Value) (vm->main_thread = &vm->main_thr);
+	((ThreadInfo*) th)->marked = vm->currentwhite;
 	((ThreadInfo*) th)->enctyp = ThrEnc;
 	((ThreadInfo*) th)->next = NULL;
 	thrInit(&vm->main_thr, vm, STACK_NEWSIZE);

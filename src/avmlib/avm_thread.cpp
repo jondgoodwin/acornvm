@@ -19,7 +19,7 @@ Value newThread(Value th, Value *dest, AuintIdx stksz) {
 	ThreadInfo *newth;
 
 	// Create and initialize a thread
-	newth = (ThreadInfo *) mem_new(th, ThrEnc, sizeof(ThreadInfo), NULL, 0);
+	newth = (ThreadInfo *) mem_new(th, ThrEnc, sizeof(ThreadInfo));
 	thrInit(newth, vm(th), stksz);
 	return *dest = (Value)newth;
 }
@@ -30,7 +30,6 @@ void thrInit(ThreadInfo* thr, VmInfo* vm, AuintIdx stksz) {
 
 	thr->vm = vm;
 	thr->size = 0;
-	thr->marked = 0;	// Threads always stay gray
 	thr->flags1 = 0;	// Initialize Flags1 flags
 
 	// Allocate and initialize thread's stack

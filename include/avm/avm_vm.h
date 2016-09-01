@@ -53,17 +53,19 @@ extern "C" {
 		Auint gcmemtrav;			//!< cumulative size of all objects marked black
 		Auint gcestimate;			//!< an estimate of the non-garbage memory in use
 
-		char gcmode;				//!< Collection mode: Normal, Emergency, Gen
-		char gcstate;				//!< state of garbage collector
-		char gcrunning;				//!< true if GC is running
-		char currentwhite;			//!< Current white color for new objects
+		Auint sweepsymgc;			//!< position of sweep in symbol table
 
 		int gcpause;				//!< size of pause between successive GCs 
 		int gcmajorinc;				//!< pause between major collections (only in gen. mode)
 		int gcstepmul;				//!< GC `granularity' 
 
-		Auint sweepsymgc;  //!< position of sweep in symbol table
+		char gcmode;				//!< Collection mode: Normal, Emergency, Gen
+		char gcnextmode;			//!< Collection mode for next cycle
+		char gcstate;				//!< state of garbage collector
+		char gcrunning;				//!< true if GC is running
+		char currentwhite;			//!< Current white color for new objects
 
+		char gcbarrieron;			//!< Is the write protector on? Yes prevents black->white
 	} VmInfo;
 
 	/** Mark all in-use thread values for garbage collection 

@@ -331,7 +331,7 @@ void tblResize(Value th, Value tbl, AuintIdx newsize) {
 
 /* Create and initialize a new hashed Table */
 Value newTbl(Value th, Value *dest, Value type, AuintIdx size) {
-	TblInfo *t = (TblInfo*) mem_new(th, TblEnc, sizeof(TblInfo), NULL, 0);
+	TblInfo *t = (TblInfo*) mem_new(th, TblEnc, sizeof(TblInfo));
 	t->flags1 = 0;
 	t->type = type;
 	t->inheritype = aNull;
@@ -343,7 +343,7 @@ Value newTbl(Value th, Value *dest, Value type, AuintIdx size) {
 
 /* Create and initialize a new Type (a table where members are properties) */
 Value newType(Value th, Value *dest, Value type, AuintIdx size) {
-	TblInfo *t = (TblInfo*) mem_new(th, TblEnc, sizeof(TblInfo), NULL, 0);
+	TblInfo *t = (TblInfo*) mem_new(th, TblEnc, sizeof(TblInfo));
 	t->flags1 = TypeTbl | ProtoType;
 	t->type = t->inheritype = type;
 	t->size = 0;
@@ -354,7 +354,7 @@ Value newType(Value th, Value *dest, Value type, AuintIdx size) {
 
 /* Create and initialize a new Mixin type */
 Value newMixin(Value th, Value *dest, Value type, Value inheritype, AuintIdx size) {
-	TblInfo *t = (TblInfo*) mem_new(th, TblEnc, sizeof(TblInfo), NULL, 0);
+	TblInfo *t = (TblInfo*) mem_new(th, TblEnc, sizeof(TblInfo));
 	t->flags1 = TypeTbl;
 	t->type = type;
 	t->inheritype = inheritype;

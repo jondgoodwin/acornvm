@@ -91,8 +91,10 @@ Value newSym(Value th, Value *dest, const char *str, AuintIdx len) {
 		sym_resize_tbl(th, sym_tbl->nbrAvail*2);
 
 	// Create a symbol object, adding to symbol table at hash entry
+	sym = (SymInfo *) mem_newnolink(th, SymEnc, sym_memsize(len));
 	MemInfo **linkp = (MemInfo**) &sym_tbl->symArray[hash_binmod(hash, sym_tbl->nbrAvail)];
-	sym = (SymInfo *) mem_new(th, SymEnc, sym_memsize(len), linkp, 0);
+	sym->next = *linkp;
+	*linkp = (MemInfo*)sym;
 	sym->size = len;
 	sym->hash = hash;
 	memcpy(sym_cstr(sym), str, len);

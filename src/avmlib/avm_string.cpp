@@ -20,7 +20,7 @@ Value newStr(Value th, Value *dest, Value type, const char *str, AuintIdx len) {
 
 	// Create a string object
 	unsigned int extrahdr = 0; // No extra header for strings
-	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo)+extrahdr, NULL, 0);
+	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo)+extrahdr);
 	val->flags1 = 0;
 	val->flags2 = 0;
 	val->type = type;
@@ -54,7 +54,7 @@ Value newCData(Value th, Value *dest, Value type, unsigned char cdatatyp, AuintI
 	// Create a string object
 	// we only have five bits to represent size of extrahdr (in multiples of four)
 	extrahdr = extrahdr>=124? 124 : (extrahdr&3)? (extrahdr&StrExtraHdrMask)+4 : extrahdr;
-	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo) + extrahdr, NULL, 0);
+	val = (StrInfo *) mem_new(th, StrEnc, sizeof(StrInfo) + extrahdr);
 	val->flags1 = StrCData | extrahdr;
 	val->flags2 = cdatatyp;
 	val->type = type;

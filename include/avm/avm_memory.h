@@ -150,14 +150,11 @@ enum EncType {
 void mem_init(struct VmInfo* vm);
 
 /** Create a new variable-sized object (with given encoding and size) and add to front of *list. */
-/**
- * \param th the current thread
- * \param enc the encoding of the new object
- * \param sz number of bytes to allocate
- * \param list forward-link chain to push allocated object onto
- * \param offset how many bytes to allocate before the object itself (used only by states).
- */
-MemInfo *mem_new(Value th, int enc, Auint sz, MemInfo **list, int offset);
+MemInfo *mem_new(Value th, int enc, Auint sz);
+
+/** Create a new pointer object (with given encoding and size).
+	Caller must add itself to its own private list */
+MemInfo *mem_newnolink(Value th, int enc, Auint sz);
 
 /** Garbage-collection savvy memory malloc, free and realloc function
  * - If nsize==0, it frees the memory block (if non-NULL)

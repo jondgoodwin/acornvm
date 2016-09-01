@@ -19,7 +19,7 @@ void methodRunC(Value th);
 
 /* Build a new c-method value, pointing to a method written in C */
 Value newCMethod(Value th, Value *dest, AcMethodp method) {
-	CMethodInfo *meth = (CMethodInfo*) mem_new(th, MethEnc, sizeof(CMethodInfo), NULL, 0);
+	CMethodInfo *meth = (CMethodInfo*) mem_new(th, MethEnc, sizeof(CMethodInfo));
 	methodFlags(meth) = METHOD_FLG_C;
 	meth->methodp = method;
 	return *dest = (Value) meth;

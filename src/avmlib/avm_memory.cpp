@@ -73,37 +73,44 @@ void *mem_frealloc(void *block, Auint size) {
 	}
 }
 
-/** Create a new variable-sized object (with given encoding and size) and add to front of *list. */
-/**
- * \param th the current thread
- * \param enc the encoding of the new object
- * \param sz number of bytes to allocate
- * \param list forward-link chain to push allocated object onto
- * \param offset how many bytes to allocate before the object itself (used only by states).
- */
-MemInfo *mem_new(Value th, int enc, Auint sz, MemInfo **list, int offset) {
+/* Create a new pointer object (with given encoding and size) and add to front of *list. */
+MemInfo *mem_new(Value th, int enc, Auint sz) {
+
 	// Perform garbage collection before a memory allocation
-	// Not for symbols, because we might shrink symbol table which would invalidate list
-	if (enc!=SymEnc) {
 #if defined(AVM_GCHARDMEMTEST)
 	if (vm(th)->gcrunning)
 		mem_gcfull(th, 1);  /* force a full GC to see if any unattached objects die */
 #else
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 #endif
-	}
 
-	MemInfo *o = (MemInfo*) (offset + (char *) mem_gcrealloc(th, NULL, 0, sz));
-#ifdef MEMORYLOG
-	vmLog("New object %p size: %d enctyp: %d", o, sz, enc);
-#endif
-	// Symbols use their own list. If not provided, use the standard list for collectable objects
-	if (list == NULL)
-		list = &vm(th)->objlist;
+	MemInfo *o = (MemInfo*) (char *) mem_gcrealloc(th, NULL, 0, sz);
 	o->marked = vm(th)->currentwhite & WHITEBITS;
 	o->enctyp = enc;
+
+	// Use the standard list for collectable objects
+	MemInfo **list = &vm(th)->objlist;
 	o->next = *list;
 	*list = o;
+	return o;
+}
+
+/* Create a new pointer object (with given encoding and size).
+	Caller must add itself to its own private list */
+MemInfo *mem_newnolink(Value th, int enc, Auint sz) {
+
+	// Perform garbage collection before a memory allocation
+#if defined(AVM_GCHARDMEMTEST)
+	if (vm(th)->gcrunning)
+		mem_gcfull(th, 1);  /* force a full GC to see if any unattached objects die */
+#else
+	mem_gccheck(th);	// Incremental GC before memory allocation events
+#endif
+
+	// Allocate and initialize
+	MemInfo *o = (MemInfo*) (char *) mem_gcrealloc(th, NULL, 0, sz);
+	o->marked = vm(th)->currentwhite & WHITEBITS;
+	o->enctyp = enc;
 	return o;
 }
 
