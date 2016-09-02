@@ -46,7 +46,7 @@ extern "C" {
 		MemInfo *objlist;			//!< linked list of all collectable objects
 		MemInfo **sweepgc;			//!< current position of sweep in list 'objlist'
 		MemInfoGray *gray;			//!< list of gray objects
-		MemInfoGray *grayagain;		//!< list of objects to be traversed atomically
+		MemInfo *threads;			//!< list of all threads
 
 		Auint totalbytes;			//!< number of bytes currently allocated - GCdebt
 		Aint gcdebt;				//!< bytes allocated, not yet compensated by the collector

@@ -55,6 +55,7 @@ AVM_API Value newVM(void) {
 	((ThreadInfo*) th)->enctyp = ThrEnc;
 	((ThreadInfo*) th)->next = NULL;
 	thrInit(&vm->main_thr, vm, STACK_NEWSIZE);
+	vm->threads = (MemInfo*) &vm->main_thr;
 
 	// Compute a randomized seed, using address space layout to increaase randomness
 	// Seed is used to help calculate randomly distributed symbol hashes

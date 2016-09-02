@@ -19,7 +19,13 @@ Value newThread(Value th, Value *dest, AuintIdx stksz) {
 	ThreadInfo *newth;
 
 	// Create and initialize a thread
-	newth = (ThreadInfo *) mem_new(th, ThrEnc, sizeof(ThreadInfo));
+	newth = (ThreadInfo *) mem_newnolink(th, ThrEnc, sizeof(ThreadInfo));
+
+	// Add to the list of threads
+	MemInfo **list = &vm(th)->threads;
+	((MemInfo*)newth)->next = *list;
+	*list = (MemInfo*)newth;
+
 	thrInit(newth, vm(th), stksz);
 	return *dest = (Value)newth;
 }

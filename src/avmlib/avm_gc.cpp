@@ -78,7 +78,7 @@ void mem_init(VmInfo *vm) {
 	vm->gcstate = GCSbegin;
 	vm->gcbarrieron = 0;
 	vm->currentwhite = bit2mask(WHITE0BIT, FIXEDBIT);
-	vm->gray = vm->grayagain = NULL;
+	vm->gray = NULL;
 
 	vm->objlist = NULL;
 	vm->sweepgc = NULL;
@@ -123,6 +123,8 @@ void mem_init(VmInfo *vm) {
  * as such a sweep only frees old white objects, not current white. */
 #define enforceinvariant(th)	(isgenerational(th) || vm(th)->gcstate <= GCSatomic)
 
+void mem_sweepfree(Value th, MemInfo *mb);
+
 /* ====================================================================== */
 
 /** @file
@@ -155,7 +157,6 @@ void mem_init(VmInfo *vm) {
  * With thread parents, we employ a different strategy:
  * re-marking all stacks in an uninterrupted (atomic) fashion at the end of the marking phase.
  */
-#include <stdio.h.>
 void mem_markChk(Value th, Value parent, Value val) {
 	if (isPtr(val) && vm(th)->gcbarrieron
 		&& isblack((MemInfo*)parent) && iswhite((MemInfo*)val) && !isdead(th, (MemInfo*)val))
@@ -211,7 +212,7 @@ void mem_markobjraw(Value th, MemInfo *mem) {
 }
 
 /** Pop gray object, marking it black and marking any values in it
- * (except threads which are moved to grayagain list, instead of black). 
+ * (except threads which stay gray and are not marked now). 
  * This gray object is known to have other values within it.
  * gcmemtrav is incremented by the size of the gray object. */
 void mem_marktopgray(Value th) {
@@ -234,22 +235,11 @@ void mem_marktopgray(Value th) {
 
 	// Thread/Stacks use a different strategy for avoiding invariance violations:
 	// keeping it gray until atomic marking, so it is never black pointing to a white value.
+	// Threads are not write protected, so it makes little sense to waste time marking it
 	case ThrEnc: 
 		{
-			ThreadInfo *thread = (ThreadInfo*) o;
-
-			// We keep the thread gray to avoid having to do mem_markchk every time
-			// white values are put into a thread/stack (which is often).
-			// By remembering the thread in grayagain, we can traverse it a second time
-			// during the atomic marking step at the end of marking.
-			if (vm(th)->gcstate == GCSmark) {
-				thread->graylink = vm(th)->grayagain;
-				vm(th)->grayagain = o;
+			if (vm(th)->gcstate == GCSmark)
 				black2gray(o);
-			}
-
-			// Fully mark all values in the thread, including all values on the stack
-			thrMark(th, thread);
 		}
 		break;
 
@@ -270,22 +260,25 @@ Aint mem_markatomic(Value th) {
 	assert(!iswhite((MemInfo*)th));
 	Aint work = -(Aint) vm(th)->gcmemtrav;  // start counting work
 
+	// Clear out any grays that might have accumulated
 	mem_markallgray(th);
 
-	// Mark values in all threads (which are unprotected by a white barrier)
-	if (vm(th)->gcmode == GC_GENMODE) {
-		thrMark(th, (ThreadInfo*) th);
-		mem_markallgray(th);
+	// Mark all threads, sweeping dead ones (note: we have not flipped white yet)
+	MemInfo **threads = &vm(th)->threads;
+	while (*threads) {
+		ThreadInfo* thread = (ThreadInfo*) *threads;
+		if (thread->marked & vm(th)->currentwhite & WHITEBITS) {
+			*threads = thread->next;
+			mem_sweepfree(th, (MemInfo*)thread);
+		}
+		else {
+			thrMark(th, thread);
+			thread->marked = (thread->marked & ~WHITEBITS) | otherwhite(th);
+		}
+		threads = &(*threads)->next;
 	}
-
-	// Re-mark the objects in grayagain (threads and what they point to)
-	work += vm(th)->gcmemtrav;  /* stop counting (do not (re)count grays) */
-	assert(vm(th)->gray == NULL);
-	vm(th)->gray = vm(th)->grayagain;
-	vm(th)->grayagain = NULL;
 	mem_markallgray(th);
-	work -= vm(th)->gcmemtrav;  /* re-start counting */
-	
+
 	work += vm(th)->gcmemtrav;  /* complete counting */
 	return work;  /* estimate of memory marked by 'atomic' */
 }
@@ -509,7 +502,7 @@ Aint mem_gconestep(Value th) {
 
 		// If we are doing full GC, start with root (the VM)
 		if (vm->gcmode == GC_FULLMODE) {
-			vm->gray = vm(th)->grayagain = NULL;
+			vm->gray = NULL;
 			vmMark(th, (VmInfo *)vm(th));
 			vm->gcmemtrav = sym_tblsz(th); // Indicate we traversed symbol table
 		}
