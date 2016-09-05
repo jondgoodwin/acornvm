@@ -83,6 +83,7 @@ MemInfo *mem_new(Value th, int enc, Auint sz) {
 #else
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 #endif
+	vm(th)->gcnbrnew++;
 
 	MemInfo *o = (MemInfo*) (char *) mem_gcrealloc(th, NULL, 0, sz);
 	o->marked = vm(th)->currentwhite & WHITEBITS;
@@ -106,6 +107,7 @@ MemInfo *mem_newnolink(Value th, int enc, Auint sz) {
 #else
 	mem_gccheck(th);	// Incremental GC before memory allocation events
 #endif
+	vm(th)->gcnbrnew++;
 
 	// Allocate and initialize
 	MemInfo *o = (MemInfo*) (char *) mem_gcrealloc(th, NULL, 0, sz);

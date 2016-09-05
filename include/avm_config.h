@@ -19,6 +19,18 @@
 #define AVM_SYMTBLMINSIZE	128
 
 // Garbage Collection tuning
+/** How many new objects will trigger start of a GC cycle */
+#define GCNEWTRIGGER 200
+/** How many objects converted from new to old will trigger a full collection */
+#define GCOLDTRIGGER 1000
+/** How much work to perform (at most) per GC step */
+#define GCMAXSTEPCOST 500
+/** Unit cost for marking an object's values */
+#define GCMARKCOST 2
+/** Unit cost for re-coloring a live object during a GC sweep */
+#define GCSWEEPLIVECOST 1
+/** Unit cost for freeing a dead object during a GC sweep */
+#define GCSWEEPDEADCOST 12
 /** Controls how long the collector waits before starting a new cycle. 
  * Larger values make the collector less aggressive. 
  * Values smaller than 100 mean the collector will not wait to start a new cycle. 

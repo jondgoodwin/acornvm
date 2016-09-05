@@ -56,25 +56,18 @@ extern "C" {
 // Garbage collector states
 #define GCSbegin	0		//!< The start of the GC collection cycle
 #define GCSmark	1			//!< Incrementally mark gray objects
-#define GCSpause	2		//!< Pause collection activity
-#define GCSatomic	3		//!< Atomic marking of threads
-#define GCSsweepsymbol	4	//!< Sweeping symbol table
-#define GCSsweep	5		//!< General purpose sweep stage
+#define GCSatomic	2		//!< Atomic marking of threads
+#define GCSsweepsymbol	3	//!< Sweeping symbol table
+#define GCSsweep	4		//!< General purpose sweep stage
 
 /** true during all sweep stages */
 #define GCSsweepphases (bitmask(GCSsweepsymbol) | bitmask(GCSsweep))
 
 /** Initialize the global state for garbage collection */
 void mem_init(VmInfo *vm) {
-	vm->gcestimate = 0;
-	vm->gcdebt = 0;
-	vm->totalbytes = sizeof(VmInfo);
-	vm->gcpause = AVM_GCPAUSE;
-	vm->gcmajorinc = AVM_GCMAJOR;
-	vm->gcstepmul = AVM_GCMUL;
-
 	vm->gcrunning = 0;
 	vm->gcmode = GC_FULLMODE;
+	vm->gcnextmode = 0;
 	vm->gcstate = GCSbegin;
 	vm->gcbarrieron = 0;
 	vm->currentwhite = bit2mask(WHITE0BIT, FIXEDBIT);
@@ -82,6 +75,21 @@ void mem_init(VmInfo *vm) {
 
 	vm->objlist = NULL;
 	vm->sweepgc = NULL;
+
+	vm->gcnewtrigger = GCNEWTRIGGER;
+	vm->gcoldtrigger = GCOLDTRIGGER;
+
+	vm->gcnbrnew = 0;
+	vm->gcnbrold = 0;
+	vm->gctrigger = -vm->gcnewtrigger;
+	vm->gcstepdelay = 1;
+
+	vm->gcestimate = 0;
+	vm->gcdebt = 0;
+	vm->totalbytes = sizeof(VmInfo);
+	vm->gcpause = AVM_GCPAUSE;
+	vm->gcmajorinc = AVM_GCMAJOR;
+	vm->gcstepmul = AVM_GCMUL;
 }
 
 /* ====================================================================== */
@@ -116,12 +124,6 @@ void mem_init(VmInfo *vm) {
 
 /** Is collection mode set to generational? */
 #define isgenerational(th)	(vm(th)->gcmode == GC_GENMODE)
-
-/** Tell us whether we must enforce the invariance rule that black objects
- * never point to white ones. True always, except during non-generational sweep.
- * During a non-generational collection, the sweep phase may break the invariant, 
- * as such a sweep only frees old white objects, not current white. */
-#define enforceinvariant(th)	(isgenerational(th) || vm(th)->gcstate <= GCSatomic)
 
 void mem_sweepfree(Value th, MemInfo *mb);
 
@@ -217,6 +219,8 @@ void mem_markobjraw(Value th, MemInfo *mem) {
  * gcmemtrav is incremented by the size of the gray object. */
 void mem_marktopgray(Value th) {
 
+	vm(th)->gcstepunits -= GCMARKCOST;
+
 	// Pop the next gray object from list and mark it black
 	MemInfoGray *o = vm(th)->gray;
 	vm(th)->gray = ((MemInfoGray*) o) -> graylink;
@@ -237,10 +241,8 @@ void mem_marktopgray(Value th) {
 	// keeping it gray until atomic marking, so it is never black pointing to a white value.
 	// Threads are not write protected, so it makes little sense to waste time marking it
 	case ThrEnc: 
-		{
-			if (vm(th)->gcstate == GCSmark)
-				black2gray(o);
-		}
+		if (vm(th)->gcstate == GCSmark)
+			black2gray(o);
 		break;
 
 	// VmEnc has only one instance, the root, which is marked when marking begins for full cycle
@@ -257,23 +259,29 @@ void mem_markallgray(Value th) {
 
 /** Mark everything that should not be interrupted by ongoing object changes */
 Aint mem_markatomic(Value th) {
-	assert(!iswhite((MemInfo*)th));
+	assert(!iswhite((ThreadInfo*)th));
 	Aint work = -(Aint) vm(th)->gcmemtrav;  // start counting work
 
 	// Clear out any grays that might have accumulated
 	mem_markallgray(th);
 
-	// Mark all threads, sweeping dead ones (note: we have not flipped white yet)
+	// Mark and sweep threads (note: we have not flipped white yet)
 	MemInfo **threads = &vm(th)->threads;
 	while (*threads) {
 		ThreadInfo* thread = (ThreadInfo*) *threads;
-		if (thread->marked & vm(th)->currentwhite & WHITEBITS) {
+		if (thread->marked & vm(th)->currentwhite & WHITEBITS
+			&& !(vm(th)->gcnextmode == GC_GENMODE && thread->marked & bitmask(OLDBIT))) {
 			*threads = thread->next;
 			mem_sweepfree(th, (MemInfo*)thread);
+			vm(th)->gcstepunits -= GCSWEEPDEADCOST;
 		}
 		else {
 			thrMark(th, thread);
-			thread->marked = (thread->marked & ~WHITEBITS) | otherwhite(th);
+			if (vm(th)->gcnextmode == GC_GENMODE)
+				thread->marked |= bitmask(OLDBIT);
+			else
+				thread->marked = (thread->marked & ~WHITEBITS) | otherwhite(th);
+			vm(th)->gcstepunits -= GCSWEEPLIVECOST;
 		}
 		threads = &(*threads)->next;
 	}
@@ -309,6 +317,7 @@ void mem_keepalive(Value th, MemInfo* blk) {
 /** Free memory allocated to an unreferenced object.
  * This uses encoding-specific macros that understand the allocated structures. */
 void mem_sweepfree(Value th, MemInfo *mb) {
+	vm(th)->gcnbrfrees++;
 	switch (mb->enctyp) {
 	case SymEnc: symFree(th, (SymInfo*)mb); break;
 	case StrEnc: strFree(th, (StrInfo*)mb); break;
@@ -335,35 +344,41 @@ void mem_sweepfree(Value th, MemInfo *mb) {
  * \param p pointer to linked chain of objects to sweep
  * \param count Maximum number of objects to sweep
  * \return Where we stopped sweep */
-MemInfo **mem_sweeplist(Value th, MemInfo **p, Auint count) {
+MemInfo **mem_sweeplist(Value th, MemInfo **p, bool doall) {
 	int ow = otherwhite(th);
 	int toclear, toset;  // bits to clear and to set in all live objects
 	int tostop;  // stop sweep when this is true
 
-	if (isgenerational(th)) {  /* generational mode? */
+	if (vm(th)->gcnextmode == GC_GENMODE) {  /* generational mode? */
 		toclear = ~0;  /* clear nothing */
 		toset = bitmask(OLDBIT);  /* set the old bit of all surviving objects */
 		tostop = bitmask(OLDBIT);  /* do not sweep old generation */
 	}
-	else {  /* normal mode */
+	else {  /* full mode */
 		toclear = maskcolors;  /* clear all color bits + old bit */
 		toset = currentwhite(th);  /* make object white */
 		tostop = 0;  /* do not stop */
 	}
 
 	// Sweep loop for 'count' objects (or end of list)
-	while (*p != NULL && count-- > 0) {
+	while (*p != NULL && (doall || vm(th)->gcstepunits > 0)) {
 		MemInfo *curr = *p;
 		int marked = curr->marked;
 		// If 'curr' object is dead, remove from list and free
 		if (isdeadm(ow, marked)) {
 			*p = curr->next;
 			mem_sweepfree(th, curr);
+			vm(th)->gcstepunits -= GCSWEEPDEADCOST;
 		}
 		// If 'curr' object is live, mark it white or old, as needed
 		else {
 			if (testbits(marked, tostop))
 				return NULL;  /* stop sweeping this list */
+			// In gen mode, count new's converted to old,
+			// used to trigger a full GC cycle
+			vm(th)->gcstepunits -= GCSWEEPLIVECOST;
+			if (tostop)
+				vm(th)->gcnbrold++;
 			// update marks
 			curr->marked = ((marked & toclear) | toset);
 			p = &curr->next;  // go to next element
@@ -375,39 +390,7 @@ MemInfo **mem_sweeplist(Value th, MemInfo **p, Auint count) {
 
 /** Sweep the entire list (rather than incremental) */
 MemInfo **mem_sweepwholelist(Value th, MemInfo **p) { 
-	return mem_sweeplist(th, p, MAX_MEM); 
-}
-
-/** Sweep a list until we find a live object (or end of list)
- * \param th current thread
- * \param p List of objects to sweep
- * \param n pointer to a nbr to increment by how many objects were swept
- * \return Pointer to object inside the list */
-MemInfo **mem_sweepToLive(Value th, MemInfo **p, int *n) {
-	MemInfo **start = p;
-	int i = 0;
-	do {
-		i++;
-		p = mem_sweeplist(th, p, 1);
-	} while (p == start);
-	if (n) *n += i;
-	return p;
-}
-
-/** Initialize the start of sweep stage
- * Note: The call to 'sweepToLive' ensures pointers point to an
- * object inside the list (instead of to the header), so that we
- * do not sweep objects created between "now" and the start
- * of the real sweep.
- * Return how many objects were swept. */
-Aint mem_sweepbegin(Value th) {
-	int n = 0;
-	assert(vm(th)->sweepgc == NULL);
-
-	// prepare to sweep objects
-	vm(th)->sweepsymgc = 0;
-	vm(th)->sweepgc = mem_sweepToLive(th, &vm(th)->objlist, &n);
-	return n;
+	return mem_sweeplist(th, p, 1); 
 }
 
 /** Clean up after sweep by collapsing buffers, as needed */
@@ -494,6 +477,12 @@ Aint mem_gconestep(Value th) {
 
 	// Begin the collection process anew, initializing the marking cycle
 	case GCSbegin: {
+		vm->gctrigger = 0 - vm->gcnewtrigger;
+		vm->gcnbrnew = 0;
+
+		vm->gcnbrmarks = 0;
+		vm->gcnbrfrees = 0;
+		vm->gcmicrodt = 0;
 
 		// Start incremental marking
 		vm->gcstate = GCSmark;
@@ -519,20 +508,24 @@ Aint mem_gconestep(Value th) {
 		}
 
 		// Done with all gray marking, pause for a bit
-		vm->gcstate = GCSpause;
-		vm->gcnextmode = GC_FULLMODE; // Set a default mode
-		return 0;
-	}
-
-	// Pause for a bit. Write barrier is on.
-	// While here, outsider could trigger forward movement and reset gcnextmode 
-	case GCSpause: {
 		vm->gcstate = GCSatomic;
 		return 0;
 	}
 
 	// Mark the write-unprotected threads in uninterrupted fashion (stop the world)
 	case GCSatomic: {
+		// Since sweeping is about to start, we must ensure
+		// next cycle's mode is decided, so sweep sets up objects correctly
+		if (vm->gcnextmode == 0) {
+			if (vm->gcnbrold >= vm->gcoldtrigger)
+				vm->gcnextmode = GC_FULLMODE;
+			else
+				vm->gcnextmode = GC_GENMODE;
+		}
+		if (vm->gcnextmode != GC_GENMODE)
+			vm->gcnbrold = 0;
+		vm->gcnbrnew = 0;
+
 		// Do atomic (finalization) marking
 		Aint work;
 		vm->gcestimate = vm->gcmemtrav;  // save what was counted
@@ -542,9 +535,13 @@ Aint mem_gconestep(Value th) {
 		// Begin sweep phase
 		vm->gcstate = GCSsweepsymbol;
 		vm->currentwhite = otherwhite(th);  // flip current white
+		assert(vm(th)->sweepgc == NULL);
+		vm(th)->sweepsymgc = 0;
+		vm(th)->sweepgc = &vm(th)->objlist; // Point to list of objects at start of sweep
+
 		if (vm->gcnextmode == GC_FULLMODE)
 			vm->gcbarrieron = 0;
-		return work + mem_sweepbegin(th) * GCSWEEPCOST;
+		return work;
 	}
 
     // Sweep unreferenced symbols first
@@ -561,16 +558,20 @@ Aint mem_gconestep(Value th) {
 	// Sweep all other unreferenced objects
 	case GCSsweep: {
 		if (vm->sweepgc) {
-			vm->sweepgc = mem_sweeplist(th, vm->sweepgc, GCSWEEPMAX);
+			vm->sweepgc = mem_sweeplist(th, vm->sweepgc, 0);
 			return GCSWEEPMAX*GCSWEEPCOST;
 		}
 		else {
-			/* sweep main thread */
-			MemInfo *mt = (MemInfo*) vm(th)->main_thread;
-			mem_sweeplist(th, &mt, 1);
 			mem_sweepcleanup(th);
-			vm->gcmode = vm->gcnextmode;
+
+			vmLog("Completed %s garbage collection cycle. %d marked, %d freed.", 
+				vm->gcmode==GC_GENMODE? "generational" : "full",
+				vm->gcnbrmarks, vm->gcnbrfrees);
+
 			vm->gcstate = GCSbegin;  // finish collection
+			vm->gcmode = vm->gcnextmode;
+			vm->gcnextmode = 0;
+			vm->gctrigger = vm->gcnbrnew - vm->gcnewtrigger;
 			return GCSWEEPCOST;
 		}
 	}
@@ -580,9 +581,9 @@ Aint mem_gconestep(Value th) {
 
 /** Finish (or perform) a full garbage collection cycle */
 void mem_gcfullcycle(Value th) {
-	while (vm(th)->gcstate == GCSpause)
+	while (vm(th)->gcstate == GCSbegin)
 		mem_gconestep(th);
-	while (vm(th)->gcstate == GCSpause)
+	while (vm(th)->gcstate != GCSbegin)
 		mem_gconestep(th);
 }
 
@@ -590,28 +591,6 @@ void mem_gcfullcycle(Value th) {
 void mem_gcuntilstate(Value th, int statesmask) {
 	while (!testbit(statesmask, vm(th)->gcstate))
 		mem_gconestep(th);
-}
-
-/** Perform a single step in generational mode */
-void mem_gcgenstep(Value th) {
-	assert(vm(th)->gcstate == GCSmark);
-	if (vm(th)->gcestimate == 0) {  // signal for another major collection?
-		mem_gcfull(th, 0);  // perform a full regular collection
-		vm(th)->gcestimate = gettotalbytes(th);  // update control
-	}
-	else {
-		Auint estimate = vm(th)->gcestimate;
-		mem_gcfullcycle(th);  // run complete (minor) cycle
-		vm(th)->gcstate = GCSmark;  // skip restart
-		int x = gettotalbytes(th);
-		int y = (estimate / 100) * vm(th)->gcmajorinc;
-		if (gettotalbytes(th) > (estimate / 100) * vm(th)->gcmajorinc)
-			vm(th)->gcestimate = 0;  // signal for a major collection
-		else
-			vm(th)->gcestimate = estimate;  // keep estimate from last major coll.
-	}
-	mem_setpause(th, gettotalbytes(th));
-	assert(vm(th)->gcstate == GCSmark);
 }
 
 /** Perform a single incremental mode garbage collection step */
@@ -625,9 +604,13 @@ void mem_gcnormalstep(Value th) {
 	stepwork = (stepwork < MAX_MEM / stepmul) ? stepwork * stepmul : MAX_MEM;
 
 	// Always perform at least one single step
+	vm(th)->gcstepunits = GCMAXSTEPCOST;
+	int substeps = 0;
 	do {
+		substeps++;
 		stepwork -= mem_gconestep(th);
-	} while (stepwork > -GCSTEPSIZE && vm(th)->gcstate != GCSpause);
+	} while (vm(th)->gcstepunits > 0 && vm(th)->gcstate!=GCSbegin);
+	// while (stepwork > -GCSTEPSIZE && vm(th)->gcstate != GCSbegin);
 
 	// Adjust debts and thresholds 
 	if (vm(th)->gcstate == GCSbegin)
@@ -638,20 +621,24 @@ void mem_gcnormalstep(Value th) {
 	}
 }
 
-/** Perform a basic GC step */
-void mem_gcforcestep(Value th) {
-	if (isgenerational(th)) 
-		mem_gcgenstep(th);
-	else mem_gcnormalstep(th);
-}
+#include <Windows.h>
 
 /* Perform a step's worth of garbage collection. */
 void mem_gcstep(Value th) {
+	int steptype = vm(th)->gcstate;
+	LARGE_INTEGER freq, start, end, dur;
+	QueryPerformanceFrequency(&freq);
+	QueryPerformanceCounter(&start);
+
 	if (vm(th)->gcrunning) 
-		mem_gcforcestep(th);
+		mem_gcnormalstep(th);
 	else 
 		// If GC not running, reduce how often gcstep is called
 		mem_gcsetdebt(th, -GCSTEPSIZE);
+
+	QueryPerformanceCounter(&end);
+	dur.QuadPart = (end.QuadPart - start.QuadPart)*1000000 / freq.QuadPart;
+	vmLog("GC steps %d-%d took: %llu usec", steptype, vm(th)->gcstate, dur.QuadPart);
 }
 
 /** Perform a full garbage collection cycle.
@@ -673,15 +660,15 @@ void mem_gcfull(Value th, int isemergency) {
 
 	// If there might be black objects, sweep all objects to turn them back to white
 	// (since white has not changed, nothing will be collected)
-	if (enforceinvariant(th)) {
-		mem_sweepbegin(th);
+	if (vm(th)->gcbarrieron) {
+		//mem_sweepbegin(th);
 	}
 	// finish any pending sweep phase to start a new cycle
-	mem_gcuntilstate(th, bitmask(GCSpause));
+	mem_gcuntilstate(th, bitmask(GCSbegin));
 
 	// Start and run entire collection
-	mem_gcuntilstate(th, ~bitmask(GCSpause));
-	mem_gcuntilstate(th, bitmask(GCSpause));
+	mem_gcuntilstate(th, ~bitmask(GCSbegin));
+	mem_gcuntilstate(th, bitmask(GCSbegin));
 
 	// If we had been in generational mode, keep it in propagate phase
 	if (origmode == GC_GENMODE) {
@@ -721,7 +708,7 @@ void mem_gcsetmode(Value th, int mode) {
 		/* sweep all objects to turn them back to white
 			(as white has not changed, nothing extra will be collected) */
 		vm(th)->gcmode = GC_FULLMODE;
-		mem_sweepbegin(th);
+		//mem_sweepbegin(th);
 		mem_gcuntilstate(th, ~GCSsweepphases);
 	}
 }

@@ -48,16 +48,30 @@ extern "C" {
 		MemInfoGray *gray;			//!< list of gray objects
 		MemInfo *threads;			//!< list of all threads
 
-		Auint totalbytes;			//!< number of bytes currently allocated - GCdebt
-		Aint gcdebt;				//!< bytes allocated, not yet compensated by the collector
-		Auint gcmemtrav;			//!< cumulative size of all objects marked black
-		Auint gcestimate;			//!< an estimate of the non-garbage memory in use
-
 		Auint sweepsymgc;			//!< position of sweep in symbol table
+
+		// Metrics used to govern when GC runs
+		int gctrigger;				//!< Memory alloc will trigger GC step when this >= 0
+		int gcstepdelay;			//!< How many alloc's to wait between steps
+		int gcnbrnew;				//!< number of new objects created since last GC cycle
+		int gcnbrold;				//!< number of old objects created since last gen GC cycle
+		int gcnewtrigger;			//!< Start a new GC cycle after this exceeds gcnbrnew
+		int gcoldtrigger;			//!< Make next GC cycle full if this exceeds gcnbrold
+		int gcstepunits;			//!< How many work units left to consume in GC step
+
+		// Statistics gathering for GC
+		int gcnbrmarks;				//!< How many objects were marked this cycle
+		int gcnbrfrees;				//!< How many objects were freed during cycle's sweep
+		int gcmicrodt;				//!< The clock's micro-seconds measured at start of cycle
 
 		int gcpause;				//!< size of pause between successive GCs 
 		int gcmajorinc;				//!< pause between major collections (only in gen. mode)
 		int gcstepmul;				//!< GC `granularity' 
+
+		Auint totalbytes;			//!< number of bytes currently allocated - GCdebt
+		Aint gcdebt;				//!< bytes allocated, not yet compensated by the collector
+		Auint gcmemtrav;			//!< cumulative size of all objects marked black
+		Auint gcestimate;			//!< an estimate of the non-garbage memory in use
 
 		char gcmode;				//!< Collection mode: Normal, Emergency, Gen
 		char gcnextmode;			//!< Collection mode for next cycle

@@ -202,9 +202,10 @@ void *mem_frealloc(void *block, Auint size);
 
 
 /** Confirm it is a white object, then mark it black/gray */
-#define mem_markobj(th, obj) \
+#define mem_markobj(th, obj) {\
+	vm(th)->gcnbrmarks++; \
 	if (isPtr(obj) && iswhite((MemInfo*)obj)) \
-		mem_markobjraw(th, (MemInfo*)obj);
+	mem_markobjraw(th, (MemInfo*)obj);}
 
 /** Perform this mark check every time a Value is put into a parent Value (other than a thread/stack).
   It ensures white values placed in already marked black objects are saved from being swept away. */
@@ -221,7 +222,8 @@ void mem_keepalive(Value Thread, MemInfo* blk);
 
 /** Before allocating more memory, do a GC step if done with pause */
 #define mem_gccheck(th) \
-	{/*if (vm(th)->gcdebt >= 0)*/ \
+	{if (++vm(th)->gctrigger >=0) \
+	/*if (vm(th)->gcdebt >= 0)*/ \
 	mem_gcstep(th);}
 
 /** Free all allocated objects, ahead of VM shut-down */
