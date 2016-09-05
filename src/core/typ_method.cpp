@@ -1,4 +1,4 @@
-/** Defines the properties for the Method type.
+/** Method type methods and properties
  *
  * @file
  *
@@ -16,7 +16,7 @@ extern "C" {
 /* 'Method.new', the Acorn compiler is defined in acn_main.cpp */
 
 /** '()': Run the method with self as null, passing all parameters */
-int typ_method_get(Value th) {
+int method_get(Value th) {
 	pushValue(th, aNull);
 	insertLocal(th, 1); // Insert null as self
 	getCall(th, getTop(th)-1, BCVARRET); // Pass all parameters
@@ -24,30 +24,30 @@ int typ_method_get(Value th) {
 }
 
 /** 'arity': Return the number of fixed parameters the method expects */
-int typ_method_arity(Value th) {
+int method_arity(Value th) {
 	pushValue(th, anInt(methodNParms(getLocal(th, 0))));
 	return 1;
 }
 
 /** 'varargs?': Return true if method accepts a variable number of parameters. */
-int typ_method_varargs(Value th) {
+int method_varargs(Value th) {
 	pushValue(th, methodFlags(getLocal(th, 0)) & METHOD_FLG_VARPARM? aTrue : aFalse);
 	return 1;
 }
 
 /** Initialize the Method type and its properties in Global */
-void typ_method_init(Value th) {
+void core_method_init(Value th) {
 	vmlit(TypeMethc) = pushType(th, vmlit(TypeType), 4);
 		pushSym(th, "Nethod");
 		popProperty(th, 0, "_name");
 		vmlit(TypeMethm) = pushMixin(th, vmlit(TypeType), aNull, 8);
 			pushSym(th, "*Method");
 			popProperty(th, 1, "_name");
-			pushCMethod(th, typ_method_get);
+			pushCMethod(th, method_get);
 			popProperty(th, 1, "()");
-			pushCMethod(th, typ_method_arity);
+			pushCMethod(th, method_arity);
 			popProperty(th, 1, "arity");
-			pushCMethod(th, typ_method_varargs);
+			pushCMethod(th, method_varargs);
 			popProperty(th, 1, "varargs?");
 		popProperty(th, 0, "_newtype");
 		pushCMethod(th, acn_newmethod);

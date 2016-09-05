@@ -19,6 +19,7 @@ extern "C" {
 
 void vm_litinit(Value th); // Initializer for literals
 void vm_stdinit(Value th); // Initializer for standard symbols
+void core_init(Value th); // Initialize all core types
 
 /** Used by vm_init to build random seed */
 #define memcpy_Auint(i,val) \
@@ -73,7 +74,7 @@ AVM_API Value newVM(void) {
 	mem_markChk(th, vm, vm->global);
 	((ThreadInfo*) th)->global = vm->global; // For now, main thread needs global too
 	vm_litinit(th); // Load reserved and standard symbols into literal list
-	glo_init(th); // Load up global table and literal list with core types
+	core_init(th); // Load up global table and literal list with core types
 	setType(th, vm->global, vmlit(TypeIndexm)); // Fix up type info for global table
 
 	// Initialize byte-code standard methods and the Acorn compiler
@@ -252,6 +253,32 @@ void vm_stdinit(Value th) {
 		idx++;
 		mapp++;
 	}
+}
+
+void core_int_init(Value th);
+void core_list_init(Value th);
+void core_index_init(Value th);
+void core_type_init(Value th);
+
+void core_resource_init(Value th);
+void core_method_init(Value th);
+void core_file_init(Value th);
+
+/** Initialize all core types */
+void core_init(Value th) {
+
+	core_type_init(th); // Type must be first, so other types can use this as their type
+	vmlit(TypeAll) = pushType(th, aNull, 0);
+	popGloVar(th, "All");
+
+	core_int_init(th);
+	core_list_init(th);
+	core_index_init(th);
+
+	// Load resource before the types it uses
+	core_resource_init(th);
+	core_method_init(th);
+	core_file_init(th);
 }
 
 #ifdef __cplusplus

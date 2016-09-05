@@ -12,7 +12,13 @@ add_library(acornvm SHARED src/avmlib/avm_array.cpp src/avmlib/avm_gc.cpp
 	src/avmlib/avm_thread.cpp src/avmlib/avm_value.cpp src/avmlib/avm_vm.cpp
 	src/acorn/acn_gen.cpp src/acorn/acn_lexer.cpp src/acorn/acn_main.cpp 
 	src/acorn/acn_parser.cpp
-	src/globals/glo_init.cpp src/globals/typ_file.cpp src/globals/typ_method.cpp
-	src/globals/typ_resource.cpp)
+	src/core/typ_file.cpp
+	src/core/typ_index.cpp
+	src/core/typ_integer.cpp
+	src/core/typ_list.cpp
+	src/core/typ_method.cpp
+	src/core/typ_resource.cpp
+	src/core/typ_type.cpp
+)
 
 

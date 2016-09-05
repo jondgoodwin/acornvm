@@ -1,4 +1,4 @@
-/** Implements the Resource type.
+/** Resource type methods and properties
  * The resource instance is an array holding the resource's url information.
  * The resource type and instance mixin have properties for manipulating
  * actual resources found at those addresses. These work through the resource's
@@ -275,7 +275,7 @@ void getResource(Value th, Value *resarray) {
 }
 
 /** Create a new Resource using a url string and baseurl context */
-int typ_resource_new(Value th) {
+int resource_new(Value th) {
 	// Get url and baseurl parameters
 	Value urlval, baseurl;
 	if (getTop(th)<2 || (!isStr(urlval = getLocal(th,1)) && !isSym(urlval))) {
@@ -293,7 +293,7 @@ int typ_resource_new(Value th) {
 }
 
 /** Load and decode a resource using a url string and baseurl context, returning its value */
-int typ_resource_get(Value th) {
+int resource_get(Value th) {
 	// Get url and baseurl parameters
 	Value urlval, baseurl;
 	if (getTop(th)<2 || (!isStr(urlval = getLocal(th,1)) && !isSym(urlval))) {
@@ -312,43 +312,43 @@ int typ_resource_get(Value th) {
 }
 
 /** Load and decode a resource instance, returning its value */
-int typ_resource_inst_get(Value th) {
+int resource_inst_get(Value th) {
 	getResource(th, arr_info(getLocal(th, 0))->arr);
 	return 1;
 }
 
 /** Return the symbol containing the resource's normalized url */
-int typ_resource_inst_url(Value th) {
+int resource_inst_url(Value th) {
 	Value *resarray = arr_info(getLocal(th, 0))->arr;
 	pushValue(th, resarray[ResNormUrl]);
 	return 1;
 }
 
 /** Return the symbol containing the resource's fragment */
-int typ_resource_inst_frag(Value th) {
+int resource_inst_frag(Value th) {
 	Value *resarray = arr_info(getLocal(th, 0))->arr;
 	pushValue(th, resarray[ResFragment]);
 	return 1;
 }
 
 /** Initialize the Resource type */
-void typ_resource_init(Value th) {
+void core_resource_init(Value th) {
 	vmlit(TypeResc) = pushType(th, vmlit(TypeType), 8);
 		pushSym(th, "Resource");
 		popProperty(th, 0, "_name");
 		vmlit(TypeResm) = pushMixin(th, vmlit(TypeType), aNull, 5);
 			pushSym(th, "*Resource");
 			popProperty(th, 1, "_name");
-			pushCMethod(th, typ_resource_inst_get);
+			pushCMethod(th, resource_inst_get);
 			popProperty(th, 1, "()");
-			pushCMethod(th, typ_resource_inst_frag);
+			pushCMethod(th, resource_inst_frag);
 			popProperty(th, 1, "fragment");
-			pushCMethod(th, typ_resource_inst_url);
+			pushCMethod(th, resource_inst_url);
 			popProperty(th, 1, "url");
 		popProperty(th, 0, "_newtype");
-		pushCMethod(th, typ_resource_new);
+		pushCMethod(th, resource_new);
 		popProperty(th, 0, "New");
-		pushCMethod(th, typ_resource_get);
+		pushCMethod(th, resource_get);
 		popProperty(th, 0, "()");
 		pushTbl(th, vmlit(TypeIndexm), 10);
 		popProperty(th, 0, "schemes");

@@ -1,4 +1,4 @@
-/** Implements the File type
+/** File type methods and properties
  *
  * @file
  *
@@ -16,7 +16,7 @@ extern "C" {
 #endif
 
 /** '()': Get contents for passed filename path string */
-int typ_file_get(Value th) {
+int file_get(Value th) {
 	// Get string value of filename path
 	Value fnval;
 	if (getTop(th)<2 || (!isStr(fnval = getLocal(th,1)) && !isSym(fnval))) {
@@ -54,11 +54,11 @@ int typ_file_get(Value th) {
 }
 
 /** Initialize the File type */
-void typ_file_init(Value th) {
+void core_file_init(Value th) {
 	Value typ = pushType(th, vmlit(TypeType), 4);
 		pushSym(th, "File");
 		popProperty(th, 0, "_name");
-		pushCMethod(th, typ_file_get);
+		pushCMethod(th, file_get);
 		popProperty(th, 0, "()");
 	popGloVar(th, "File");
 

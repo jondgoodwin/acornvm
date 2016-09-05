@@ -31,9 +31,6 @@ namespace avm {
 extern "C" {
 #endif
 
-/** Initializes all core types */
-void glo_init(Value th);
-
 #ifdef __cplusplus
 } // end "C"
 } // end namespace
