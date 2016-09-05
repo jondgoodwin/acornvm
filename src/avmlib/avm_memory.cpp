@@ -46,7 +46,7 @@ void *mem_gcrealloc(Value th, void *block, Auint osize, Auint nsize) {
 
 	// Make sure it worked, adjust GC debt and return address of new block
 	assert((nsize == 0) == (newblock == NULL));
-	vm(th)->gcdebt += nsize - realosize;
+	vm(th)->totalbytes += nsize - realosize;
 	return newblock;
 }
 

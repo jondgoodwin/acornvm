@@ -71,8 +71,7 @@ typedef int (*CDataFinalizerFn)(Value o);
 /** Mark all in-use string values for garbage collection 
  * Increments how much allocated memory the string uses. */
 #define strMark(th, s) \
-	{mem_markobj(th, (s)->type); \
-	vm(th)->gcmemtrav += str_memsize(s);}
+	{mem_markobj(th, (s)->type);}
 
 /** Point to string information, by recasting a Value pointer */
 #define str_info(val) (assert_exp(isEnc(val,StrEnc), (StrInfo*) val))

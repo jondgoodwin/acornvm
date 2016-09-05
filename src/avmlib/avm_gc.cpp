@@ -70,7 +70,7 @@ void mem_init(VmInfo *vm) {
 	vm->gcnextmode = 0;
 	vm->gcstate = GCSbegin;
 	vm->gcbarrieron = 0;
-	vm->currentwhite = bit2mask(WHITE0BIT, FIXEDBIT);
+	vm->currentwhite = bitmask(WHITE0BIT);
 	vm->gray = NULL;
 
 	vm->objlist = NULL;
@@ -84,12 +84,7 @@ void mem_init(VmInfo *vm) {
 	vm->gctrigger = -vm->gcnewtrigger;
 	vm->gcstepdelay = 1;
 
-	vm->gcestimate = 0;
-	vm->gcdebt = 0;
 	vm->totalbytes = sizeof(VmInfo);
-	vm->gcpause = AVM_GCPAUSE;
-	vm->gcmajorinc = AVM_GCMAJOR;
-	vm->gcstepmul = AVM_GCMUL;
 }
 
 /* ====================================================================== */
@@ -173,16 +168,12 @@ void mem_markChk(Value th, Value parent, Value val) {
 void mem_markobjraw(Value th, MemInfo *mem) {
 	VmInfo* vm = vm(th);
 	assert(vm->gcbarrieron);
-	Aint size = 0;
 	white2gray(mem);
 	switch (mem->enctyp) {
 
 	// Mark to black all symbols (which have no embedded Values).
 	// size is used to update gcmemtrav is size of black-marked mrmory areas.
-	case SymEnc: {
-		size = sym_memsize(sym_size(mem));
-		break;
-	}
+	case SymEnc: break;
 
     // We mark to gray the collections that have have embedded values
     // Push it on top of gray list for later handling by mem_marktopgray()
@@ -210,7 +201,6 @@ void mem_markobjraw(Value th, MemInfo *mem) {
 
 	// For non-collections, mark object black and accumulate its size
 	gray2black(mem);
-	vm->gcmemtrav += size;
 }
 
 /** Pop gray object, marking it black and marking any values in it
@@ -258,9 +248,8 @@ void mem_markallgray(Value th) {
 }
 
 /** Mark everything that should not be interrupted by ongoing object changes */
-Aint mem_markatomic(Value th) {
+void mem_markatomic(Value th) {
 	assert(!iswhite((ThreadInfo*)th));
-	Aint work = -(Aint) vm(th)->gcmemtrav;  // start counting work
 
 	// Clear out any grays that might have accumulated
 	mem_markallgray(th);
@@ -286,9 +275,6 @@ Aint mem_markatomic(Value th) {
 		threads = &(*threads)->next;
 	}
 	mem_markallgray(th);
-
-	work += vm(th)->gcmemtrav;  /* complete counting */
-	return work;  /* estimate of memory marked by 'atomic' */
 }
 
 /* Keep value alive, if dead but not yet collected */
@@ -437,39 +423,11 @@ void mem_freeAll(Value th) {
  *
 */
 
-/** Total byte + gcdebt = how many bytes of allocated memory we have */
-#define gettotalbytes(th) (vm(th)->totalbytes + vm(th)->gcdebt)
-
-/** Reset GCdebt so that (totalbytes + GCdebt) stays equivalent.
- * garbage collection only occurs when gcdebt >= 0 */
-void mem_gcsetdebt(Value th, Aint debt) {
-	vm(th)->totalbytes -= (debt - vm(th)->gcdebt);
-	vm(th)->gcdebt = debt;
-}
-
-/** Set a reasonable "time" to wait before starting a new GC cycle.
- * Collection will start when allocated memory use hits a calculated threshold
- * of 'estimate*gcpause/PAUSEADJ'.
- * In incremental mode, estimate is how much memory was marked (kept) in last cycle.
- * With gcpause at 200 and PAUSEADJ at 100, this means wait until used memory doubles. */
-void mem_setpause(Value th, Aint estimate) {
-	Aint debt, threshold;
-	Aint oldest = estimate;
-	Aint pauseadj = PAUSEADJ;
-	Aint pau = vm(th)->gcpause;
-	estimate = estimate / PAUSEADJ;  // adjust 'estimate'
-	threshold = (vm(th)->gcpause < MAX_MEM / estimate)  // overflow?
-            ? estimate * vm(th)->gcpause  // no overflow
-            : MAX_MEM;  // overflow; truncate to maximum
-	debt = -(Aint) (threshold - gettotalbytes(th));
-	mem_gcsetdebt(th, debt);
-}
-
 /** Perform a single step of the collection process based on its current state
  * This is the heart of the incremental collection process, progressively stepping the 
  * collector through the mark and sweep phases.
  * Returns the amount of memory traversed during the step. */
-Aint mem_gconestep(Value th) {
+void mem_gconestep(Value th) {
 	VmInfo *vm = vm(th);
 
 	// Perform next step based on the current state of the garbage collector
@@ -487,29 +445,26 @@ Aint mem_gconestep(Value th) {
 		// Start incremental marking
 		vm->gcstate = GCSmark;
 		vm->gcbarrieron = 1;
-		vm->gcmemtrav = 0;
 
 		// If we are doing full GC, start with root (the VM)
 		if (vm->gcmode == GC_FULLMODE) {
 			vm->gray = NULL;
 			vmMark(th, (VmInfo *)vm(th));
-			vm->gcmemtrav = sym_tblsz(th); // Indicate we traversed symbol table
 		}
-		return vm->gcmemtrav;
+		return;
 	}
 
 	// Marks gray objects one-at-a-time
 	// When all gray objects are marked, do the atomic marking then start sweep phase
 	case GCSmark: {
 		if (vm->gray) {
-			Aint oldtrav = vm->gcmemtrav;
 			mem_marktopgray(th);
-			return vm->gcmemtrav - oldtrav;  /* memory traversed in this step */
+			return;
 		}
 
 		// Done with all gray marking, pause for a bit
 		vm->gcstate = GCSatomic;
-		return 0;
+		return;
 	}
 
 	// Mark the write-unprotected threads in uninterrupted fashion (stop the world)
@@ -527,10 +482,7 @@ Aint mem_gconestep(Value th) {
 		vm->gcnbrnew = 0;
 
 		// Do atomic (finalization) marking
-		Aint work;
-		vm->gcestimate = vm->gcmemtrav;  // save what was counted
-		work = mem_markatomic(th);  // add what was traversed by 'atomic'
-		vm->gcestimate += work;  // estimate of total memory traversed
+		mem_markatomic(th);  // add what was traversed by 'atomic'
 
 		// Begin sweep phase
 		vm->gcstate = GCSsweepsymbol;
@@ -541,7 +493,7 @@ Aint mem_gconestep(Value th) {
 
 		if (vm->gcnextmode == GC_FULLMODE)
 			vm->gcbarrieron = 0;
-		return work;
+		return;
 	}
 
     // Sweep unreferenced symbols first
@@ -552,31 +504,62 @@ Aint mem_gconestep(Value th) {
 		vm->sweepsymgc += i;
 		if (vm->sweepsymgc >= vm->sym_table.nbrAvail)  /* no more symbols to sweep? */
 			vm->gcstate = GCSsweep;
-		return i * GCSWEEPCOST;
+		return;
     }
 
 	// Sweep all other unreferenced objects
 	case GCSsweep: {
 		if (vm->sweepgc) {
 			vm->sweepgc = mem_sweeplist(th, vm->sweepgc, 0);
-			return GCSWEEPMAX*GCSWEEPCOST;
+			return;
 		}
 		else {
 			mem_sweepcleanup(th);
 
+#ifdef GCLOG
 			vmLog("Completed %s garbage collection cycle. %d marked, %d freed.", 
 				vm->gcmode==GC_GENMODE? "generational" : "full",
 				vm->gcnbrmarks, vm->gcnbrfrees);
+#endif
 
 			vm->gcstate = GCSbegin;  // finish collection
 			vm->gcmode = vm->gcnextmode;
 			vm->gcnextmode = 0;
 			vm->gctrigger = vm->gcnbrnew - vm->gcnewtrigger;
-			return GCSWEEPCOST;
+			return;
 		}
 	}
-    default: assert(0); return 0;
+    default: assert(0); return;
 	}
+}
+
+#ifdef GCLOG
+#include <Windows.h>
+#endif
+
+/* Perform a step's worth of garbage collection. */
+void mem_gcstep(Value th) {
+	if (!vm(th)->gcrunning)
+		return;
+
+#ifdef GCLOG
+	int steptype = vm(th)->gcstate;
+	LARGE_INTEGER freq, start, end, dur;
+	QueryPerformanceFrequency(&freq);
+	QueryPerformanceCounter(&start);
+#endif
+
+	// Always perform at least one single step
+	vm(th)->gcstepunits = GCMAXSTEPCOST;
+	do {
+		mem_gconestep(th);
+	} while (vm(th)->gcstepunits > 0 && vm(th)->gcstate!=GCSbegin);
+
+#ifdef GCLOG
+	QueryPerformanceCounter(&end);
+	dur.QuadPart = (end.QuadPart - start.QuadPart)*1000000 / freq.QuadPart;
+	vmLog("GC steps %d-%d took: %llu usec", steptype, vm(th)->gcstate, dur.QuadPart);
+#endif
 }
 
 /** Finish (or perform) a full garbage collection cycle */
@@ -587,130 +570,37 @@ void mem_gcfullcycle(Value th) {
 		mem_gconestep(th);
 }
 
-/** advance the garbage collector until it reaches a state allowed by 'statemask' */
-void mem_gcuntilstate(Value th, int statesmask) {
-	while (!testbit(statesmask, vm(th)->gcstate))
-		mem_gconestep(th);
-}
-
-/** Perform a single incremental mode garbage collection step */
-void mem_gcnormalstep(Value th) {
-	Aint stepwork, stepmul;
-
-	// convert debt from Kb to 'work units' (avoid zero debt and overflows)
-	stepwork = (vm(th)->gcdebt / STEPMULADJ) + 1;
-	stepmul = vm(th)->gcstepmul;
-	if (stepmul < 40) stepmul = 40;  // avoid ridiculous low values (and 0)
-	stepwork = (stepwork < MAX_MEM / stepmul) ? stepwork * stepmul : MAX_MEM;
-
-	// Always perform at least one single step
-	vm(th)->gcstepunits = GCMAXSTEPCOST;
-	int substeps = 0;
-	do {
-		substeps++;
-		stepwork -= mem_gconestep(th);
-	} while (vm(th)->gcstepunits > 0 && vm(th)->gcstate!=GCSbegin);
-	// while (stepwork > -GCSTEPSIZE && vm(th)->gcstate != GCSbegin);
-
-	// Adjust debts and thresholds 
-	if (vm(th)->gcstate == GCSbegin)
-		mem_setpause(th, vm(th)->gcestimate);  // pause until next cycle
-	else {
-		stepwork = (stepwork / stepmul) * STEPMULADJ;  // convert 'work units' to Kb
-		mem_gcsetdebt(th, stepwork);
-	}
-}
-
-#include <Windows.h>
-
-/* Perform a step's worth of garbage collection. */
-void mem_gcstep(Value th) {
-	int steptype = vm(th)->gcstate;
-	LARGE_INTEGER freq, start, end, dur;
-	QueryPerformanceFrequency(&freq);
-	QueryPerformanceCounter(&start);
-
-	if (vm(th)->gcrunning) 
-		mem_gcnormalstep(th);
-	else 
-		// If GC not running, reduce how often gcstep is called
-		mem_gcsetdebt(th, -GCSTEPSIZE);
-
-	QueryPerformanceCounter(&end);
-	dur.QuadPart = (end.QuadPart - start.QuadPart)*1000000 / freq.QuadPart;
-	vmLog("GC steps %d-%d took: %llu usec", steptype, vm(th)->gcstate, dur.QuadPart);
-}
-
 /** Perform a full garbage collection cycle.
  * It will be automatically called in emergency mode if memory fills up.
  * If emergency, do not call finalizers, which could change stack positions
  */
 void mem_gcfull(Value th, int isemergency) {
 
-	// Save original gc mode
-	int origmode = vm(th)->gcmode;
-	assert(origmode != GC_EMERGENCY);
+	// If we are in GC cycle past where next cycle can be decided,
+	// then just finish the cycle
+	if (vm(th)->gcstate >= GCSatomic)
+		mem_gcfullcycle(th);
 
 	// Reset GC mode based on isemergency
 	if (isemergency)
-		vm(th)->gcmode = GC_EMERGENCY;
+		vm(th)->gcnextmode = GC_EMERGENCY;
 	else {
-		vm(th)->gcmode = GC_FULLMODE;
+		vm(th)->gcnextmode = GC_FULLMODE;
 	}
 
-	// If there might be black objects, sweep all objects to turn them back to white
-	// (since white has not changed, nothing will be collected)
-	if (vm(th)->gcbarrieron) {
-		//mem_sweepbegin(th);
-	}
-	// finish any pending sweep phase to start a new cycle
-	mem_gcuntilstate(th, bitmask(GCSbegin));
-
-	// Start and run entire collection
-	mem_gcuntilstate(th, ~bitmask(GCSbegin));
-	mem_gcuntilstate(th, bitmask(GCSbegin));
-
-	// If we had been in generational mode, keep it in propagate phase
-	if (origmode == GC_GENMODE) {
-		mem_gcuntilstate(th, bitmask(GCSmark));
-	}
-
-	// Reset to original mode
-	vm(th)->gcmode = origmode;
-	mem_setpause(th, vm(th)->totalbytes + vm(th)->gcdebt);
+	mem_gcfullcycle(th); // Do/finish a cycle in current mode
+	mem_gcfullcycle(th); // This is the requested full/emergency cycle
 }
 
 
 /** Start garbage collection */
 void mem_gcstart(Value th) {
-	mem_gcsetdebt(th, 0);
 	vm(th)->gcrunning = 1;
 }
 
 /** Stop garbage collection */
 void mem_gcstop(Value th) {
 	vm(th)->gcrunning = 0;
-}
-
-/** change GC mode to generational (GC_GENMODE) or incremental (GC_FULLMODE) */
-void mem_gcsetmode(Value th, int mode) {
-	if (mode == vm(th)->gcmode) return;  /* nothing to change */
-
-	// Change to generational mode
-	if (mode == GC_GENMODE) {
-		/* make sure gray lists are consistent */
-		mem_gcuntilstate(th, bitmask(GCSmark));
-		vm(th)->gcestimate = gettotalbytes(th);
-		vm(th)->gcmode = GC_GENMODE;
-	}
-	// change to incremental mode
-	else {  
-		/* sweep all objects to turn them back to white
-			(as white has not changed, nothing extra will be collected) */
-		vm(th)->gcmode = GC_FULLMODE;
-		//mem_sweepbegin(th);
-		mem_gcuntilstate(th, ~GCSsweepphases);
-	}
 }
 
 #ifdef __cplusplus

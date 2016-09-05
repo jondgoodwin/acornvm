@@ -133,11 +133,10 @@ enum EncType {
 #define WHITE0BIT	0  //!< object is white (type 0)
 #define WHITE1BIT	1  //!< object is white (type 1)
 #define BLACKBIT	2  //!< object is black
-#define FINALIZEDBIT	3  //!< object has been separated for finalization
-#define SEPARATED	4  //!< object is in 'finobj' list or in 'tobefnz'
-#define FIXEDBIT	5  //!< object is fixed (should not be collected) 
-#define OLDBIT		6  //!< object is old (only in generational mode)
-// bit 7 is currently used by tests (checkmemory)
+#define OLDBIT		3  //!< object is old (only in generational mode)
+#define FINALIZEDBIT	4  //!< object has been separated for finalization
+#define SEPARATED	5  //!< object is in 'finobj' list or in 'tobefnz'
+
 #define WHITEBITS	bit2mask(WHITE0BIT, WHITE1BIT)	//!< Both white colors together
 
 #define iswhite(x)      testbits((x)->marked, WHITEBITS) //!< Return true if object is white
@@ -223,8 +222,7 @@ void mem_keepalive(Value Thread, MemInfo* blk);
 /** Before allocating more memory, do a GC step if done with pause */
 #define mem_gccheck(th) \
 	{if (++vm(th)->gctrigger >=0) \
-	/*if (vm(th)->gcdebt >= 0)*/ \
-	mem_gcstep(th);}
+		mem_gcstep(th);}
 
 /** Free all allocated objects, ahead of VM shut-down */
 void mem_freeAll(Value th);

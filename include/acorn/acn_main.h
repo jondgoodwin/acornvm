@@ -55,8 +55,7 @@ typedef struct LexInfo {
 #define lexMark(th, o) \
 	{mem_markobj(th, (o)->token); \
 	mem_markobj(th, (o)->source); \
-	mem_markobj(th, (o)->url); \
-	vm(th)->gcmemtrav += sizeof(LexInfo);}
+	mem_markobj(th, (o)->url);}
 
 /** Free all of a lexinfo's allocated memory */
 #define lexFree(th, o) \
@@ -84,8 +83,7 @@ typedef struct CompInfo {
 	{if ((o)->lex) mem_markobj(th, (o)->lex); \
 	if ((void *)(o)->ast) mem_markobj(th, (o)->ast); \
 	if ((o)->method) mem_markobj(th, (o)->method); \
-	mem_markobj(th, (o)->prevcomp); \
-	vm(th)->gcmemtrav += sizeof(CompInfo);}
+	mem_markobj(th, (o)->prevcomp);}
 
 /** Free all of a compinfo's allocated memory */
 #define compFree(th, o) \

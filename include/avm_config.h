@@ -31,20 +31,6 @@
 #define GCSWEEPLIVECOST 1
 /** Unit cost for freeing a dead object during a GC sweep */
 #define GCSWEEPDEADCOST 12
-/** Controls how long the collector waits before starting a new cycle. 
- * Larger values make the collector less aggressive. 
- * Values smaller than 100 mean the collector will not wait to start a new cycle. 
- * A value of 200 means that the collector waits for the total memory in use to double 
- * before starting a new cycle. */
-#define AVM_GCPAUSE	200  /* 200% */
-/** When generational garbage collection should do a major vs. minor collection cycle */
-#define AVM_GCMAJOR	200  /* 200% */
-/** Controls the relative speed of the collector relative to memory allocation. 
- * Larger values make the collector more aggressive but also increase the size of each incremental step. 
- * Values smaller than 100 make the collector too slow and can result 
- * in the collector never finishing a cycle. 
- * The default is 200, which means that the collector runs at "twice" the speed of memory allocation. */
-#define AVM_GCMUL	200 /* GC runs 'twice the speed' of memory allocation */
 
 /** Minimum expected room on data stack for c-methods */
 #define STACK_MINSIZE 20

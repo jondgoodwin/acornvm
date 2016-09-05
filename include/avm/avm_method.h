@@ -175,7 +175,7 @@ typedef struct BMethodInfo {
 	if (!isCMethod(m) && ((BMethodInfo*)m)->nbrlocals>0) \
 		for (AuintIdx i=0; i<((BMethodInfo*)m)->nbrlocals; i++) \
 			mem_markobj(th, ((BMethodInfo*)m)->locals[i]); \
-	vm(th)->gcmemtrav += isCMethod(m)? sizeof(CMethodInfo) : sizeof(BMethodInfo);}
+	}
 
 /** Free all of an part's allocated memory */
 #define methodFree(th, m) \

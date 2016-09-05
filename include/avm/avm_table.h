@@ -77,7 +77,7 @@ typedef struct TblInfo {
 		if (n->key != aNull) { \
 			mem_markobj(th, n->key); \
 			mem_markobj(th, n->val); \
-		} vm(th)->gcmemtrav += sizeof(TblInfo) + sizeof(Node) * (1<<(t)->lAvailNodes);}
+		}}
 
 /** Free all of an array's allocated memory */
 #define tblFree(th, t) \

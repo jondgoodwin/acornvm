@@ -64,14 +64,7 @@ extern "C" {
 		int gcnbrfrees;				//!< How many objects were freed during cycle's sweep
 		int gcmicrodt;				//!< The clock's micro-seconds measured at start of cycle
 
-		int gcpause;				//!< size of pause between successive GCs 
-		int gcmajorinc;				//!< pause between major collections (only in gen. mode)
-		int gcstepmul;				//!< GC `granularity' 
-
-		Auint totalbytes;			//!< number of bytes currently allocated - GCdebt
-		Aint gcdebt;				//!< bytes allocated, not yet compensated by the collector
-		Auint gcmemtrav;			//!< cumulative size of all objects marked black
-		Auint gcestimate;			//!< an estimate of the non-garbage memory in use
+		Auint totalbytes;			//!< number of bytes currently allocated
 
 		char gcmode;				//!< Collection mode: Normal, Emergency, Gen
 		char gcnextmode;			//!< Collection mode for next cycle
@@ -88,8 +81,7 @@ extern "C" {
 		{mem_markobj(th, (v)->main_thread); \
 		mem_markobj(th, (v)->global); \
 		mem_markobj(th, (v)->literals); \
-		mem_markobj(th, (v)->stdidx); \
-		vm(th)->gcmemtrav += sizeof(VmInfo);}
+		mem_markobj(th, (v)->stdidx);}
 
 	/** Point to standard symbol from index */
 	#define vmStdSym(th,idx) (vm(th)->stdsym[idx])

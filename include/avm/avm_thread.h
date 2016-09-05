@@ -67,8 +67,7 @@ typedef struct ThreadInfo {
 #define thrMark(th, t) \
 	{for (Value *stkp = (t)->stk_top - 1; stkp >= (t)->stack; stkp--) \
 		mem_markobj(th, *stkp); \
-	mem_markobj(th, (t)->global); \
-	vm(th)->gcmemtrav += sizeof(ThreadInfo) + sizeof(Value) * (t)->size;}
+	mem_markobj(th, (t)->global);}
 
 /** Free all of an array's allocated memory */
 #define thrFree(th, t) \

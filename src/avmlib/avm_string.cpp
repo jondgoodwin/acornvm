@@ -134,7 +134,7 @@ void strSwapBuffer(Value th, Value val, char *buffer, AuintIdx len) {
 	str->size = str->avail = len - 1; // One less to follow convention for buffers we allocate
 
 	// Keep GC memory accounting accurate
-	vm(th)->gcdebt += len;
+	vm(th)->totalbytes += len;
 }
 
 /*	Replace part of a string with the c-string contents starting at pos.

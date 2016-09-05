@@ -93,7 +93,7 @@ void vmClose(Value th) {
 	mem_reallocvector(th, vm->stdsym, nStdSym, 0, Value);
 	sym_free(th);
 	thrFreeStacks(th);
-	assert(vm(th)->totalbytes + vm(th)->gcdebt == sizeof(VmInfo));
+	assert(vm(th)->totalbytes == sizeof(VmInfo));
 	mem_frealloc(vm(th), 0);  /* free main block */
 	logInfo(AVM_RELEASE " ended.");
 }

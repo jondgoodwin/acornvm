@@ -46,8 +46,7 @@ typedef struct ArrInfo {
 	{mem_markobj(th, (a)->type); \
 	if ((a)->size > 0) \
 		for (Value *arrp = &(a)->arr[(a)->size-1]; arrp >= (a)->arr; arrp--) \
-			mem_markobj(th, *arrp); \
-	vm(th)->gcmemtrav += sizeof(ArrInfo) + sizeof(Value) * (a)->avail;}
+			mem_markobj(th, *arrp);}
 
 /** Free all of an array's allocated memory */
 #define arrFree(th, a) \
