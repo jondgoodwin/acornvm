@@ -121,6 +121,11 @@ void parseValue(CompInfo* comp, Value astseg) {
 	else if (lexMatchNext(comp->lex, "self")) {
 		astAddValue(th, astseg, vmlit(SymSelf));
 	}
+	else if (lexMatchNext(comp->lex, "(")) {
+		parseExp(comp, astseg);
+		if (!lexMatchNext(comp->lex, ")"))
+			lexLog(comp->lex, "Expected ')'.");
+	}
 	// A method definition starts its own compilation context
 	else if (lexMatch(comp->lex, "[")) {
 		pushValue(th, vmlit(SymNew));
@@ -178,7 +183,7 @@ void parseTerm(CompInfo* comp, Value astseg) {
 void parsePrefixExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
 	if (lexMatchNext(comp->lex, "-")) {
-		parseTerm(comp, astseg);
+		parsePrefixExp(comp, astseg);
 
 		// Optimize taking the negative of a literal number
 		Value selfseg = astGetLast(th, astseg);
@@ -198,7 +203,7 @@ void parsePrefixExp(CompInfo* comp, Value astseg) {
 		Value newseg = astAddSeg(th, getseg, vmlit(SymCallProp), 5);
 		astAddSeg2(th, newseg, vmlit(SymGlobal), vmlit(SymResource));
 		astAddSeg2(th, newseg, vmlit(SymLit), vmlit(SymNew));
-		parseTerm(comp, newseg);
+		parsePrefixExp(comp, newseg);
 		astAddValue(th, newseg, vmlit(SymBaseurl));
 		astAddSeg2(th, getseg, vmlit(SymLit), vmlit(SymParas));
 	}
@@ -206,10 +211,59 @@ void parsePrefixExp(CompInfo* comp, Value astseg) {
 		parseTerm(comp, astseg);
 }
 
+/** Parse the '**' operator */
+void parsePowerExp(CompInfo* comp, Value astseg) {
+	Value th = comp->th;
+	parsePrefixExp(comp, astseg);
+	Value op = comp->lex->token;
+	while (lexMatchNext(comp->lex, "**")) {
+		Value newseg = astInsSeg(th, astseg, vmlit(SymCallProp), 4);
+		astAddSeg2(th, newseg, vmlit(SymLit), op);
+		parsePrefixExp(comp, newseg);
+	}
+}
+
+/** Parse the '*', '/' or '%' binary operator */
+void parseMultDivExp(CompInfo* comp, Value astseg) {
+	Value th = comp->th;
+	parsePowerExp(comp, astseg);
+	Value op;
+	while ((op=comp->lex->token) && ((lexMatchNext(comp->lex, "*")) 
+		|| lexMatchNext(comp->lex, "/") || lexMatchNext(comp->lex, "%"))) {
+		Value newseg = astInsSeg(th, astseg, vmlit(SymCallProp), 4);
+		astAddSeg2(th, newseg, vmlit(SymLit), op);
+		parsePowerExp(comp, newseg);
+	}
+}
+
+/** Parse the '+' or '-' binary operator */
+void parseAddSubExp(CompInfo* comp, Value astseg) {
+	Value th = comp->th;
+	parseMultDivExp(comp, astseg);
+	int isAdd;
+	while ((isAdd = lexMatchNext(comp->lex, "+")) || lexMatchNext(comp->lex, "-")) {
+		Value newseg = astInsSeg(th, astseg, vmlit(SymCallProp), 4);
+		astAddSeg2(th, newseg, vmlit(SymLit), isAdd? vmlit(SymPlus) : vmlit(SymMinus));
+		parseMultDivExp(comp, newseg);
+	}
+}
+
+/** Parse the comparison operators */
+void parseCompExp(CompInfo* comp, Value astseg) {
+	Value th = comp->th;
+	parseAddSubExp(comp, astseg);
+	Value op = comp->lex->token;
+	if (lexMatchNext(comp->lex, "<=>")) {
+		Value newseg = astInsSeg(th, astseg, vmlit(SymCallProp), 4);
+		astAddSeg2(th, newseg, vmlit(SymLit), op);
+		parseAddSubExp(comp, newseg);
+	}
+}
+
 /** Parse a 'this' expression/block or append/prepend operator */
 void parseThisExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
-	parsePrefixExp(comp, astseg);
+	parseCompExp(comp, astseg);
 	bool appendflag = lexMatchNext(comp->lex, "<<");
 	if (lexMatch(comp->lex, "{")) {
 		astseg = astInsSeg(th, astseg, vmlit(SymThisBlock), 3);

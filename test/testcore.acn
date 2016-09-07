@@ -1,0 +1,43 @@
+﻿# Integer arithmetic tests
+$test.Equal(-(-1), 1, "-(-1) == 1")
+$test.Equal((-1).Abs, 1, "(-1).Abs == 1")
+$test.Equal(--1, 1, "--1 == 1")
+$test.Equal(5+2, 7, "5+2==7")
+$test.Equal(5-3+16-1-1, 16, "5-3+16-1-1==16")
+$test.Equal(5*5, 25, "5*5=25")
+$test.Equal(7%5, 2, "7%5=2")
+$test.Equal(4+4/2*3-4, 6, "4+4/2*3-4==6")
+$test.Equal(2**3**2, 64, "2**3**2=64")
+$test.Equal(2*(3+2), 10, "2*(3+2)==10")
+$test.Equal((-2).Next, -1, "(-2).Next == -1")
+
+# Integer coercion
+$test.Equal(+Integer(" 34"), 34, "+Integer(' 34')==34")
+$test.Equal(+Integer(4.2353), 4, "+Integer(4.2353)")
+$test.Equal(+Integer(5), 5, "+Integer(5)==5")
+$test.Equal(3*5.14, 15, "3*5.14==15")
+
+# Integer comparison
+$test.Equal(2<=>3, -1, "2<3")
+$test.Equal(2<=>2.1, 0, "2==2.1")
+$test.Equal(2<=>'sym', null, "(2<=>'sym')==null")
+$test.Equal(5 .Max(1), 5, "5 .Max(1)==5")
+$test.Equal(5 .Min(-14), -14, "5 .Min(-14)==-14")
+
+# Integer bitwise operations
+$test.Equal(0x23 .And(0xE1).Or(0x80).Xor(0x0F).Not, -0xAE-1, "0x23 .And(0xE1).Or(0x80).Xor(0x0F).Not==-0xAE-1")
+$test.Equal(3 .Shr(1).Shl(2), 4, "3 .Shr(1).Shl(2)==4")
+
+# Float arithmetic tests
+$test.Equal(-(-1.), 1., "-(-1.) == 1.")
+$test.Equal((-1.).Abs, 1., "(-1.).Abs == 1.")
+$test.Equal(--1., 1., "--1. == 1.")
+$test.Equal(5.+2., 7., "5.+2.=7.")
+$test.Equal(5.*5., 25., "5.*5.=25.")
+$test.Equal(7.%5., 2., "7.%5.=2.")
+$test.Equal(2.**3.**2., 64., "2.**3.**2.=64.")
+$test.Equal((-2.).Next, -1., "(-2.).Next == -1.")
+
+$test.Equal(0. .Cos, 1., "(0.).Cos == 1.")
+
+0x3C0 .Char # Unicode for pi

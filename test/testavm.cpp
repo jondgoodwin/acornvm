@@ -15,11 +15,13 @@ using namespace avm;
 void testCapi(void);
 void testGen(void);
 void testType(void);
+void testCore(void);
 
 void testAll(void) {
 	testCapi();
 	testGen();
 	testType();
+	testCore();
 }
 
 #include <locale.h>

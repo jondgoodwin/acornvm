@@ -256,6 +256,7 @@ void vm_stdinit(Value th) {
 }
 
 void core_int_init(Value th);
+void core_float_init(Value th);
 void core_list_init(Value th);
 void core_index_init(Value th);
 void core_type_init(Value th);
@@ -272,6 +273,7 @@ void core_init(Value th) {
 	popGloVar(th, "All");
 
 	core_int_init(th);
+	core_float_init(th);
 	core_list_init(th);
 	core_index_init(th);
 
