@@ -21,6 +21,12 @@ extern "C" {
 	int self = toAint(getLocal(th,0)); \
 	int var2 = toAint(getLocal(th,1));
 	
+/** Return true if self is an Integer */
+int int_isint(Value th) {
+	pushValue(th, isInt(getLocal(th,0))? aTrue : aNull);
+	return 1;
+}
+
 /** Negate (2's complement) */
 int int_neg(Value th) {
 	pushValue(th, anInt(-toAint(getLocal(th,0))));
@@ -228,6 +234,8 @@ void core_int_init(Value th) {
 			pushSym(th, "*Integer");
 			popProperty(th, 1, "_name");
 
+			pushCMethod(th, int_isint);
+			popProperty(th, 1, "Integer?");
 			pushCMethod(th, int_neg);
 			popProperty(th, 1, "-@");
 			pushCMethod(th, int_next);

@@ -255,6 +255,8 @@ void vm_stdinit(Value th) {
 	}
 }
 
+void core_null_init(Value th);
+void core_bool_init(Value th);
 void core_int_init(Value th);
 void core_float_init(Value th);
 void core_list_init(Value th);
@@ -272,6 +274,8 @@ void core_init(Value th) {
 	vmlit(TypeAll) = pushType(th, aNull, 0);
 	popGloVar(th, "All");
 
+	core_null_init(th);
+	core_bool_init(th);
 	core_int_init(th);
 	core_float_init(th);
 	core_list_init(th);

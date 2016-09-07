@@ -31,6 +31,12 @@ int float_isnan(Value th) {
 	return 1;
 }
 
+/** Return true if self is an Float */
+int float_isfloat(Value th) {
+	pushValue(th, isFloat(getLocal(th,0))? aTrue : aNull);
+	return 1;
+}
+
 /** sign */
 int float_sign(Value th) {
 	Afloat self = toAfloat(getLocal(th, 0));
@@ -240,6 +246,8 @@ void core_float_init(Value th) {
 			pushSym(th, "*Float");
 			popProperty(th, 1, "_name");
 
+			pushCMethod(th, float_isfloat);
+			popProperty(th, 1, "Integer?");
 			pushCMethod(th, float_isnan);
 			popProperty(th, 1, "Nan?");
 			pushCMethod(th, float_sign);

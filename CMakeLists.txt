@@ -24,6 +24,8 @@ add_library(acornvm SHARED
 	src/acorn/acn_main.cpp 
 	src/acorn/acn_parser.cpp
 
+	src/core/typ_null.cpp
+	src/core/typ_bool.cpp
 	src/core/typ_integer.cpp
 	src/core/typ_float.cpp
 	src/core/typ_file.cpp

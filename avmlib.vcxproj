@@ -45,12 +45,14 @@
     <ClCompile Include="src\avmlib\avm_thread.cpp" />
     <ClCompile Include="src\avmlib\avm_value.cpp" />
     <ClCompile Include="src\avmlib\avm_vm.cpp" />
+    <ClCompile Include="src\core\typ_bool.cpp" />
     <ClCompile Include="src\core\typ_file.cpp" />
     <ClCompile Include="src\core\typ_float.cpp" />
     <ClCompile Include="src\core\typ_index.cpp" />
     <ClCompile Include="src\core\typ_integer.cpp" />
     <ClCompile Include="src\core\typ_list.cpp" />
     <ClCompile Include="src\core\typ_method.cpp" />
+    <ClCompile Include="src\core\typ_null.cpp" />
     <ClCompile Include="src\core\typ_resource.cpp" />
     <ClCompile Include="src\core\typ_type.cpp" />
   </ItemGroup>
