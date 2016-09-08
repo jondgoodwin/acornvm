@@ -85,7 +85,7 @@ Value genTestPgm(Value th, int pgm) {
 	case 2:
 		genAddParm(comp, self);
 		genMaxStack(comp, 6);
-		genAddInstr(comp, BCINS_AJ(OpJNNull, 0, 2));
+		genAddInstr(comp, BCINS_AJ(OpJTrue, 0, 2));
 		genAddInstr(comp, BCINS_ABx(OpLoadLit, 1, genAddLit(comp, anInt(5))));
 		genAddInstr(comp, BCINS_AJ(OpJump, 0, 1));
 		genAddInstr(comp, BCINS_ABx(OpLoadLit, 1, genAddLit(comp, anInt(1))));

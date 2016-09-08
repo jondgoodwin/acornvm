@@ -1,4 +1,15 @@
-﻿# Integer arithmetic tests
+﻿if 2<3
+	$test.Equal(1, 2, "If works")
+elif 1===1
+	$test.Equal(1, 2, "If works")
+elif true
+	job = 2
+elif job ~= 'abc'
+	job = 4
+else
+	job = 3
+
+# Integer arithmetic tests
 $test.Equal(-(-1), 1, "-(-1) == 1")
 $test.Equal((-1).Abs, 1, "(-1).Abs == 1")
 $test.Equal(--1, 1, "--1 == 1")

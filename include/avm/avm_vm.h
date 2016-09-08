@@ -128,6 +128,15 @@ extern "C" {
 		SymMinus,	//!< '-'
 		SymMult,	//!< '*'
 		SymDiv,		//!< '/'
+		SymRocket,	//!< '<=>'
+		SymEquiv,	//!< '==='
+		SymMatchOp,	//!< '~='
+		SymLt,		//!< '<'
+		SymLe,		//!< '<='
+		SymGt,		//!< '>'
+		SymGe,		//!< '>='
+		SymEq,		//!< '=='
+		SymNe,		//!< '!='
 
 		// Methods that are not compiler symbols
 		// Byte-code (and parser) standard methods

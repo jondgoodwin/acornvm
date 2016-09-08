@@ -367,36 +367,60 @@ void methodRunBC(Value th) {
 		case OpJFalse:
 			if (isFalse(*rega)) ci->ip += bc_j(i); break;
 
-		// OpJSame: if R(A)!===R(B) then ip++. Jump follows.
+		// OpJSame: if R(A)===R(A+1) then ip += sBx.
 		case OpJSame:
-			if (!isSame(*rega, *(stkbeg+bc_b(i)))) ci->ip++; break;
+			if (!isSame(*rega, *(rega+1))) ci->ip++; break;
 
-		// OpJDiff: if R(A)===R(B) then ip++. Jump follows.
+		// OpJDiff: if R(A)!===R(A+1) then ip += sBx
 		case OpJDiff:
-			if (isSame(*rega, *(stkbeg+bc_b(i)))) ci->ip++; break;
+			if (isSame(*rega, *(rega+1))) ci->ip++; break;
 
-		// OpJEq: if R(A)==0 or not Integer then ip+= sBx.
+		// OpJEq: if R(A)==0 then ip+= sBx.
 		case OpJEq:
-			if (!isInt(*rega) || *rega == anInt(0)) ci->ip += bc_j(i); break;
+			if (*rega == anInt(0)) ci->ip += bc_j(i); break;
+
+		// OpJEqN: if R(A)==0 or null then ip+= sBx.
+		case OpJEqN:
+			if (*rega == anInt(0) || *rega == aNull) ci->ip += bc_j(i); break;
 
 		// OpJNe: if R(A)!=0 or not Integer then ip+= sBx.
 		case OpJNe:
-			if (!isInt(*rega) || *rega != anInt(0)) ci->ip += bc_j(i); break;
+			if (*rega != anInt(0)) ci->ip += bc_j(i); break;
 
-		// OpJLt: if R(A)<0 or not Integer then ip+= sBx.
+		// OpJNeN: if R(A)!=0 or not Integer then ip+= sBx.
+		case OpJNeN:
+			if (*rega != anInt(0) || *rega == aNull) ci->ip += bc_j(i); break;
+
+		// OpJLt: if R(A)<0 then ip+= sBx.
 		case OpJLt:
+			if (isInt(*rega) && toAint(*rega) < 0) ci->ip += bc_j(i); break;
+
+		// OpJLtN: if R(A)<0 or null then ip+= sBx.
+		case OpJLtN:
 			if (!isInt(*rega) || toAint(*rega) < 0) ci->ip += bc_j(i); break;
 
-		// OpJLe: if R(A)<=0 or not Integer then ip+= sBx.
+		// OpJLe: if R(A)<=0 then ip+= sBx.
 		case OpJLe:
+			if (isInt(*rega) && toAint(*rega) <= 0) ci->ip += bc_j(i); break;
+
+		// OpJLeN: if R(A)<=0 or null then ip+= sBx.
+		case OpJLeN:
 			if (!isInt(*rega) || toAint(*rega) <= 0) ci->ip += bc_j(i); break;
 
-		// OpJGt: if R(A)>0 or not Integer then ip+= sBx.
+		// OpJGt: if R(A)>0 then ip+= sBx.
 		case OpJGt:
+			if (isInt(*rega) && toAint(*rega) > 0) ci->ip += bc_j(i); break;
+
+		// OpJGtN: if R(A)>0 or null then ip+= sBx.
+		case OpJGtN:
 			if (!isInt(*rega) || toAint(*rega) > 0) ci->ip += bc_j(i); break;
 
-		// OpJGe: if R(A)>=0 or not Integer then ip+= sBx.
+		// OpJGe: if R(A)>=0 then ip+= sBx.
 		case OpJGe:
+			if (isInt(*rega) && toAint(*rega) >= 0) ci->ip += bc_j(i); break;
+
+		// OpJGeN: if R(A)>=0 or null then ip+= sBx.
+		case OpJGeN:
 			if (!isInt(*rega) || toAint(*rega) >= 0) ci->ip += bc_j(i); break;
 
 		// LoadStd: R(A+1) := R(B); R(A) = StdMeth(C)
@@ -703,6 +727,12 @@ void methSerialize(Value th, Value str, int indent, Value method) {
 		case OpJLe: methALSerialize(th, str, "JLe ", i, anInt(ip+bc_j(i)+1)); break;
 		case OpJGt: methALSerialize(th, str, "JGt ", i, anInt(ip+bc_j(i)+1)); break;
 		case OpJGe: methALSerialize(th, str, "JGe ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJEqN: methALSerialize(th, str, "JEqN ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJNeN: methALSerialize(th, str, "JNeN ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJLtN: methALSerialize(th, str, "JLtN ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJLeN: methALSerialize(th, str, "JLeN ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJGtN: methALSerialize(th, str, "JGtN ", i, anInt(ip+bc_j(i)+1)); break;
+		case OpJGeN: methALSerialize(th, str, "JGeN ", i, anInt(ip+bc_j(i)+1)); break;
 		case OpLoadStd: methABSSerialize(th, str, "LoadStd ", i, vmStdSym(th, bc_c(i))); break;
 		case OpForPrep: methABSSerialize(th, str, "ForPrep ", i, vmStdSym(th, bc_c(i))); break;
 		case OpRptPrep: methABSSerialize(th, str, "RptPrep ", i, vmStdSym(th, bc_c(i))); break;

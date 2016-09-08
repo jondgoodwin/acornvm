@@ -100,8 +100,22 @@ void genMaxStack(CompInfo *comp, AuintIdx reg) {
 		comp->method->maxstacksize = reg+1;
 }
 
+/** Get a node from an AST segment */
+#define astGet(th, astseg, idx) (arrGet(th, astseg, idx))
+
+void genExp(CompInfo *comp, Value astseg);
+void genStmts(CompInfo *comp, Value astseg);
+
+/** Return next available register to load values into */
+unsigned int genNextReg(CompInfo *comp) {
+	// Keep track of high-water mark for later stack allocation purposes
+	if (comp->method->maxstacksize < comp->nextreg+1)
+		comp->method->maxstacksize = comp->nextreg+1;
+	return comp->nextreg++;
+}
+
 /** Get the destination where Jump is going */
-int genGetJump (CompInfo *comp, int ip) {
+int genGetJump(CompInfo *comp, int ip) {
 	int offset = bc_j(comp->method->code[ip]);
 	if (offset == BCNO_JMP)  /* point to itself represents end of list */
 		return BCNO_JMP;  /* end of list */
@@ -110,7 +124,7 @@ int genGetJump (CompInfo *comp, int ip) {
 }
 
 /** Set the Jump instruction at ip to jump to dest instruction */
-void genSetJump (CompInfo *comp, int ip, int dest) {
+void genSetJump(CompInfo *comp, int ip, int dest) {
 	Instruction *jmp = &comp->method->code[ip];
 	int offset = dest-(ip+1);
 	assert(dest != BCNO_JMP);
@@ -128,18 +142,75 @@ void genSetJumpList(CompInfo *comp, int listip, int dest) {
 	}
 }
 
-/** Get a node from an AST segment */
-#define astGet(th, astseg, idx) (arrGet(th, astseg, idx))
+/** Generate a jump that goes forward, possibly as part of an jump chain */
+int genFwdJump(CompInfo *comp, int op, int reg, int ipchain) {
+	// If part of a jmp chain, add this jump to the chain
+	if (ipchain != BCNO_JMP) {
+		// Find last jump in chain
+		int jumpip;
+		int nextip = ipchain;
+		do {
+			jumpip = nextip;
+			nextip = genGetJump(comp, jumpip);
+		} while (nextip != BCNO_JMP);
+		// Fix it to point to jump we are about to generate
+		genSetJump(comp, jumpip, comp->method->size);
+	}
+	else
+		ipchain = comp->method->size; // New chain starts with this jump
+	genAddInstr(comp, BCINS_AJ(op, reg, BCNO_JMP));
+	return ipchain;
+}
 
-void genExp(CompInfo *comp, Value astseg);
-void genStmts(CompInfo *comp, Value astseg);
+/** Generate conditional expression & jump(s) if condition fails.
+  Return IP of first jump for expression failure */
+int genJumpExp(CompInfo *comp, Value astseg, bool isnot) {
+	Value th = comp->th;
+	unsigned int svnextreg = comp->nextreg;
+	Value condop = isArr(astseg)? astGet(th, astseg, 0) : astseg;
 
-/** Return next available register to load values into */
-unsigned int genNextReg(CompInfo *comp) {
-	// Keep track of high-water mark for later stack allocation purposes
-	if (comp->method->maxstacksize < comp->nextreg+1)
-		comp->method->maxstacksize = comp->nextreg+1;
-	return comp->nextreg++;
+	// Comparison ops (e.g., == or <) based on rocket operator - generation code comes later.
+	int jumpop;
+	if (condop == vmlit(SymLt)) jumpop = isnot? OpJLt : OpJGeN;
+	else if (condop == vmlit(SymLe)) jumpop = isnot? OpJLe : OpJGtN;
+	else if (condop == vmlit(SymGt)) jumpop = isnot? OpJGt : OpJLeN;
+	else if (condop == vmlit(SymGe)) jumpop = isnot? OpJGe : OpJLtN;
+	else if (condop == vmlit(SymEq)) jumpop = isnot? OpJEq : OpJNeN;
+	else if (condop == vmlit(SymNe)) jumpop = isnot? OpJNe : OpJEqN;
+
+	// '===' exact equivalence
+	else if (condop == vmlit(SymEquiv)) {
+		genExp(comp, astGet(th, astseg, 1));
+		genExp(comp, astGet(th, astseg, 2));
+		comp->nextreg = svnextreg;
+		return genFwdJump(comp, isnot? OpJSame : OpJDiff, svnextreg, BCNO_JMP);
+	}
+
+	// '~=' pattern match
+	else if (condop == vmlit(SymMatchOp)) {
+		genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, vmlit(SymMatchOp))));
+		genExp(comp, astGet(th, astseg, 2)); // '~=' uses right hand value for object call
+		genExp(comp, astGet(th, astseg, 1));
+		genAddInstr(comp, BCINS_ABC(OpGetCall, svnextreg, comp->nextreg - svnextreg-1, 1));
+		comp->nextreg = svnextreg;
+		return genFwdJump(comp, isnot? OpJTrue : OpJFalse, svnextreg, BCNO_JMP);
+	}
+
+	// Otherwise, an expression to be interpreted as false/null or true (anything else)
+	// (which includes explicit use of <==>)
+	else {
+		genExp(comp, astseg);
+		comp->nextreg = svnextreg;
+		return genFwdJump(comp, isnot? OpJTrue : OpJFalse, svnextreg, BCNO_JMP);
+	}
+
+	// Generate code for rocket-based comparisons
+	genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, vmlit(SymRocket))));
+	genExp(comp, astGet(th, astseg, 1));
+	genExp(comp, astGet(th, astseg, 2));
+	genAddInstr(comp, BCINS_ABC(OpGetCall, svnextreg, comp->nextreg - svnextreg-1, 1));
+	comp->nextreg = svnextreg;
+	return genFwdJump(comp, jumpop, svnextreg, BCNO_JMP);
 }
 
 /** Generate code for some kind of property 'get' */
@@ -223,17 +294,50 @@ void genExp(CompInfo *comp, Value astseg) {
 	}
 }
 
+/** Generate all if/elif/else blocks */
+void genIf(CompInfo *comp, Value astseg) {
+	Value th = comp->th;
+
+	int jumpEndIp = BCNO_JMP;	// Instruction pointer to first jump to end of if
+
+	// Process all condition/block pairs in astseg
+	AuintIdx ifindx = 1;		// Index into astseg for each pair
+	do {
+		// Generate conditional jump for bypassing block on condition failure
+		Value condast = astGet(th, astseg, ifindx);
+		int jumpNextIp;	// Instruction pointer to jump to next elif/else block
+		if (condast != vmlit(SymElse))
+			jumpNextIp = genJumpExp(comp, condast, 0);
+		genStmts(comp, astGet(th, astseg, ifindx+1)); // Generate block
+		// Generate/fix jumps after clause's block
+		if (condast != vmlit(SymElse)) {
+			if (ifindx+2 < getSize(astseg))
+				jumpEndIp = genFwdJump(comp, OpJump, 0, jumpEndIp);
+			genSetJumpList(comp, jumpNextIp, comp->method->size); // Fix jumps to next elif/else block
+		}
+		ifindx += 2;
+	} while (ifindx < getSize(astseg));
+	genSetJumpList(comp, jumpEndIp, comp->method->size); // Fix jumps to end of 'if' 
+}
+
 /** Generate a sequence of statements */
 void genStmts(CompInfo *comp, Value astseg) {
 	Value th = comp->th;
 	unsigned int svnextreg = comp->nextreg;
 	for (AuintIdx i=1; i<getSize(astseg); i++) {
-		// Do append/prepend for all statements, if requested
+		Value aststmt = astGet(comp->th, astseg, i);
+		// Do append/prepend of value generated by the statement, if 'this' block requested this
 		if (comp->thisop != aNull) {
 			genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, comp->thisop)));
 			genAddInstr(comp, BCINS_ABC(OpLoadReg, genNextReg(comp), comp->thisreg, 0));			
 		}
-		genExp(comp, astGet(comp->th, astseg, i));
+
+		// Handle various kinds of statements
+		Value op = isArr(astseg)? astGet(th, aststmt, 0) : aststmt;
+		if (op==vmlit(SymIf)) genIf(comp, aststmt); 
+		else genExp(comp, aststmt);
+
+		// Finish append/prepend
 		if (comp->thisop != aNull)
 			genAddInstr(comp, BCINS_ABC(OpGetCall, svnextreg, comp->nextreg - svnextreg-1, 0));
 		comp->nextreg = svnextreg;
