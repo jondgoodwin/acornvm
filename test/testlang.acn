@@ -1,0 +1,15 @@
+# Acorn language tests
+
+$test.True(true, "true is True")
+
+if !1===1
+	$test.True(false, "!1===1")
+if !true
+	$test.True(false, "!true")
+if !(2<3 && 1<2 || 0<1 && 0<4)
+	$test.True(false, "!(2<3 && 1<2 || 0<1 && 0<4)")
+
+job = 0
+while job<5
+	job = job + 1
+$test.Equal(job, 5, "while increments job 5 times")

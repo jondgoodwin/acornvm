@@ -14,6 +14,7 @@ using namespace avm;
 
 static long tests = 0;
 static long fails = 0;
+
 int test_equal(Value th) {
 	tests++;
 	if (getTop(th)<4) {
@@ -31,16 +32,49 @@ int test_equal(Value th) {
 	return 0;
 }
 
+int test_true(Value th) {
+	tests++;
+	if (getTop(th)<3) {
+		printf("Insufficient parameters for $test.True\n");
+		fails++;
+		return 0;
+	}
+	Value val = getLocal(th, 1);
+	Value msg = getLocal(th, 2);
+	if (isFalse(val)) {
+		printf("'%s' test failed!\n", toStr(msg));
+		fails++;
+	}
+	return 0;
+}
+
 /** Initialize $test */
 void core_test_init(Value th) {
 	pushType(th, aNull, 4);
 		pushCMethod(th, test_equal);
 		popProperty(th, 0, "Equal");
+		pushCMethod(th, test_true);
+		popProperty(th, 0, "True");
 	popGloVar(th, "$test");
 	return;
 }
 
+void testLang(void) {
+	fails = tests = 0;
+	Value th = newVM();
+	core_test_init(th);
+
+	pushSym(th, "()");
+	pushGloVar(th, "Resource");
+	pushString(th, aNull, "file://./testlang.acn");
+	getCall(th, 2, 0);
+
+	vmClose(th);
+	printf("All %ld Language tests completed. %ld failed.\n", tests, fails);
+}
+
 void testCore(void) {
+	fails = tests = 0;
 	Value th = newVM();
 	core_test_init(th);
 

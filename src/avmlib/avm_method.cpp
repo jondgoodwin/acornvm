@@ -369,11 +369,11 @@ void methodRunBC(Value th) {
 
 		// OpJSame: if R(A)===R(A+1) then ip += sBx.
 		case OpJSame:
-			if (!isSame(*rega, *(rega+1))) ci->ip++; break;
+			if (isSame(*rega, *(rega+1))) ci->ip += bc_j(i); break;
 
 		// OpJDiff: if R(A)!===R(A+1) then ip += sBx
 		case OpJDiff:
-			if (isSame(*rega, *(rega+1))) ci->ip++; break;
+			if (!isSame(*rega, *(rega+1))) ci->ip += bc_j(i); break;
 
 		// OpJEq: if R(A)==0 then ip+= sBx.
 		case OpJEq:

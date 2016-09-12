@@ -15,12 +15,14 @@ using namespace avm;
 void testCapi(void);
 void testGen(void);
 void testType(void);
+void testLang(void);
 void testCore(void);
 
 void testAll(void) {
 	testCapi();
 	testGen();
 	testType();
+	testLang();
 	testCore();
 }
 

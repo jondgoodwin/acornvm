@@ -267,10 +267,42 @@ void parseCompExp(CompInfo* comp, Value astseg) {
 	}
 }
 
-/* Parse conditional logic operators */
+/* Parse 'not' conditional logic operator */
+void parseNotExp(CompInfo* comp, Value astseg) {
+	Value th = comp->th;
+	bool takenot = false;
+	while ((lexMatchNext(comp->lex, "!")) || lexMatchNext(comp->lex, "not"))
+		takenot = !takenot;
+	if (takenot) {
+		Value newseg = astAddSeg(th, astseg, vmlit(SymNot), 2);
+		parseCompExp(comp, newseg);
+	}
+	else
+		parseCompExp(comp, astseg);
+}
+
+/* Parse 'and' conditional logic operator */
+void parseAndExp(CompInfo* comp, Value astseg) {
+	Value th = comp->th;
+	parseNotExp(comp, astseg);
+	if ((lexMatchNext(comp->lex, "&&")) || lexMatchNext(comp->lex, "and")) {
+		Value newseg = astInsSeg(th, astseg, vmlit(SymAnd), 3);
+		do {
+			parseNotExp(comp, newseg);
+		} while ((lexMatchNext(comp->lex, "&&")) || lexMatchNext(comp->lex, "and"));
+	}
+}
+
+/* Parse 'or' conditional logic operator */
 void parseLogicExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
-	parseCompExp(comp, astseg);
+	parseAndExp(comp, astseg);
+	if ((lexMatchNext(comp->lex, "||")) || lexMatchNext(comp->lex, "or")) {
+		Value newseg = astInsSeg(th, astseg, vmlit(SymOr), 3);
+		do {
+			parseAndExp(comp, newseg);
+		} while ((lexMatchNext(comp->lex, "||")) || lexMatchNext(comp->lex, "or"));
+	}
 }
 
 /** Parse a 'this' expression/block or append/prepend operator */
@@ -312,6 +344,17 @@ void parseExp(CompInfo* comp, Value astseg) {
 	parseAssgnExp(comp, astseg);
 }
 
+void parseSemi(CompInfo* comp, Value astseg) {
+	if (!lexMatchNext(comp->lex, ";")&&comp->lex->toktype!=Eof_Token) {
+		lexLog(comp->lex, "Unexpected token in statement. Ignoring all until block or ';'.");
+		while (comp->lex->toktype != Eof_Token && !lexMatch(comp->lex, "}") && !lexMatchNext(comp->lex, ";"))
+			if (lexMatch(comp->lex, "{"))
+				parseBlock(comp, astseg);
+			else
+				lexGetNextToken(comp->lex);
+	}
+}
+
 /** Parse a sequence of statements, each ending with ';' */
 void parseStmts(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
@@ -322,25 +365,27 @@ void parseStmts(CompInfo* comp, Value astseg) {
 			newseg = astAddSeg(th, astseg, vmlit(SymIf), 3);
 			parseLogicExp(comp, newseg);
 			parseBlock(comp, newseg);
+			parseSemi(comp, astseg);
 			while (lexMatchNext(comp->lex, "elif")) {
 				parseLogicExp(comp, newseg);
 				parseBlock(comp, newseg);
+				parseSemi(comp, astseg);
 			}
 			if (lexMatchNext(comp->lex, "else")) {
 				astAddValue(th, newseg, vmlit(SymElse));
 				parseBlock(comp, newseg);
+				parseSemi(comp, astseg);
 			}
+		}
+		else if (lexMatchNext(comp->lex, "while")) {
+			newseg = astAddSeg(th, astseg, vmlit(SymWhile), 3);
+			parseLogicExp(comp, newseg);
+			parseBlock(comp, newseg);
+			parseSemi(comp, astseg);
 		}
 		else {
 			parseExp(comp, astseg);
-			if (!lexMatchNext(comp->lex, ";")&&comp->lex->toktype!=Eof_Token) {
-				lexLog(comp->lex, "Unexpected token in statement. Ignoring all until block or ';'.");
-				while (comp->lex->toktype != Eof_Token && !lexMatch(comp->lex, "}") && !lexMatchNext(comp->lex, ";"))
-					if (lexMatch(comp->lex, "{"))
-						parseBlock(comp, astseg);
-					else
-						lexGetNextToken(comp->lex);
-			}
+			parseSemi(comp, astseg);
 		}
 	}
 	return;
@@ -353,7 +398,6 @@ void parseBlock(CompInfo* comp, Value astseg) {
 	parseStmts(comp, astseg);
 	if (!lexMatchNext(comp->lex, "}"))
 		lexLog(comp->lex, "Expected '}'");
-	lexMatchNext(comp->lex, ";");
 	return;
 }
 

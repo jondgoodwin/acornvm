@@ -143,12 +143,12 @@ void genSetJumpList(CompInfo *comp, int listip, int dest) {
 }
 
 /** Generate a jump that goes forward, possibly as part of an jump chain */
-int genFwdJump(CompInfo *comp, int op, int reg, int ipchain) {
+void genFwdJump(CompInfo *comp, int op, int reg, int *ipchain) {
 	// If part of a jmp chain, add this jump to the chain
-	if (ipchain != BCNO_JMP) {
+	if (*ipchain != BCNO_JMP) {
 		// Find last jump in chain
 		int jumpip;
-		int nextip = ipchain;
+		int nextip = *ipchain;
 		do {
 			jumpip = nextip;
 			nextip = genGetJump(comp, jumpip);
@@ -157,33 +157,37 @@ int genFwdJump(CompInfo *comp, int op, int reg, int ipchain) {
 		genSetJump(comp, jumpip, comp->method->size);
 	}
 	else
-		ipchain = comp->method->size; // New chain starts with this jump
+		*ipchain = comp->method->size; // New chain starts with this jump
 	genAddInstr(comp, BCINS_AJ(op, reg, BCNO_JMP));
-	return ipchain;
 }
 
-/** Generate conditional expression & jump(s) if condition fails.
-  Return IP of first jump for expression failure */
-int genJumpExp(CompInfo *comp, Value astseg, bool isnot) {
+/** Generate conditional tests & appropriate jump(s), handled recursively for boolean operators.
+	failjump is ip for first jump past the code to run on condition's success.
+	passjump is ip for first jump directly to condition's success.
+	notflag is true if under influence of 'not' operator: reversing jumps and and/or.
+	lastjump specifies how last jump should behave: true for fail jump, false for passjump. true reverses jump condition. */
+void genJumpExp(CompInfo *comp, Value astseg, int *failjump, int *passjump, bool notflag, bool lastjump) {
 	Value th = comp->th;
 	unsigned int svnextreg = comp->nextreg;
 	Value condop = isArr(astseg)? astGet(th, astseg, 0) : astseg;
+	bool revjump = notflag ^ lastjump;		// Reverse jump based on not flag and lastjump
 
 	// Comparison ops (e.g., == or <) based on rocket operator - generation code comes later.
 	int jumpop;
-	if (condop == vmlit(SymLt)) jumpop = isnot? OpJLt : OpJGeN;
-	else if (condop == vmlit(SymLe)) jumpop = isnot? OpJLe : OpJGtN;
-	else if (condop == vmlit(SymGt)) jumpop = isnot? OpJGt : OpJLeN;
-	else if (condop == vmlit(SymGe)) jumpop = isnot? OpJGe : OpJLtN;
-	else if (condop == vmlit(SymEq)) jumpop = isnot? OpJEq : OpJNeN;
-	else if (condop == vmlit(SymNe)) jumpop = isnot? OpJNe : OpJEqN;
+	if (condop == vmlit(SymLt)) jumpop = revjump? OpJGeN : OpJLt;
+	else if (condop == vmlit(SymLe)) jumpop = revjump? OpJGtN : OpJLe;
+	else if (condop == vmlit(SymGt)) jumpop = revjump? OpJLeN : OpJGt;
+	else if (condop == vmlit(SymGe)) jumpop = revjump? OpJLtN : OpJGe;
+	else if (condop == vmlit(SymEq)) jumpop = revjump? OpJNeN : OpJEq;
+	else if (condop == vmlit(SymNe)) jumpop = revjump? OpJEqN : OpJNe;
 
 	// '===' exact equivalence
 	else if (condop == vmlit(SymEquiv)) {
 		genExp(comp, astGet(th, astseg, 1));
 		genExp(comp, astGet(th, astseg, 2));
 		comp->nextreg = svnextreg;
-		return genFwdJump(comp, isnot? OpJSame : OpJDiff, svnextreg, BCNO_JMP);
+		genFwdJump(comp, revjump? OpJDiff : OpJSame, svnextreg, lastjump? failjump : passjump);
+		return;
 	}
 
 	// '~=' pattern match
@@ -193,7 +197,36 @@ int genJumpExp(CompInfo *comp, Value astseg, bool isnot) {
 		genExp(comp, astGet(th, astseg, 1));
 		genAddInstr(comp, BCINS_ABC(OpGetCall, svnextreg, comp->nextreg - svnextreg-1, 1));
 		comp->nextreg = svnextreg;
-		return genFwdJump(comp, isnot? OpJTrue : OpJFalse, svnextreg, BCNO_JMP);
+		genFwdJump(comp, revjump? OpJFalse : OpJTrue, svnextreg,  lastjump? failjump : passjump);
+		return;
+	}
+
+	else if (condop == vmlit(SymNot)) {
+		genJumpExp(comp, astGet(th, astseg, 1), failjump, passjump, !notflag, lastjump);
+		return;
+	}
+
+	else if (condop == vmlit(SymOr) || condop == vmlit(SymAnd)) {
+		bool isAnd = (condop == vmlit(SymAnd)) ^ notflag; // Treat it as 'And' (or 'Or')?
+		AuintIdx segi = 1;
+		if (isAnd) {
+			while (segi < getSize(astseg)-1) {
+				genJumpExp(comp, astGet(th, astseg, segi++), failjump, passjump, notflag, true);
+			}
+			genJumpExp(comp, astGet(th, astseg, segi), failjump, passjump, notflag, lastjump);
+			return;
+		}
+		else {
+			int newpassjump = BCNO_JMP;
+			while (segi < getSize(astseg)-1) {
+				int newfailjump = BCNO_JMP;
+				genJumpExp(comp, astGet(th, astseg, segi++), &newfailjump, &newpassjump, notflag, false);
+				genSetJump(comp, newfailjump, comp->method->size);
+			}
+			genJumpExp(comp, astGet(th, astseg, segi), failjump, &newpassjump, notflag, lastjump);
+			genSetJumpList(comp, newpassjump, comp->method->size); // Fix 'or' jumps to here
+			return;
+		}
 	}
 
 	// Otherwise, an expression to be interpreted as false/null or true (anything else)
@@ -201,7 +234,8 @@ int genJumpExp(CompInfo *comp, Value astseg, bool isnot) {
 	else {
 		genExp(comp, astseg);
 		comp->nextreg = svnextreg;
-		return genFwdJump(comp, isnot? OpJTrue : OpJFalse, svnextreg, BCNO_JMP);
+		genFwdJump(comp, revjump? OpJFalse : OpJTrue, svnextreg,  lastjump? failjump : passjump);
+		return;
 	}
 
 	// Generate code for rocket-based comparisons
@@ -210,7 +244,7 @@ int genJumpExp(CompInfo *comp, Value astseg, bool isnot) {
 	genExp(comp, astGet(th, astseg, 2));
 	genAddInstr(comp, BCINS_ABC(OpGetCall, svnextreg, comp->nextreg - svnextreg-1, 1));
 	comp->nextreg = svnextreg;
-	return genFwdJump(comp, jumpop, svnextreg, BCNO_JMP);
+	genFwdJump(comp, jumpop, svnextreg,  lastjump? failjump : passjump);
 }
 
 /** Generate code for some kind of property 'get' */
@@ -305,18 +339,30 @@ void genIf(CompInfo *comp, Value astseg) {
 	do {
 		// Generate conditional jump for bypassing block on condition failure
 		Value condast = astGet(th, astseg, ifindx);
-		int jumpNextIp;	// Instruction pointer to jump to next elif/else block
+		int jumpNextIp = BCNO_JMP;	// Instruction pointer to jump to next elif/else block
 		if (condast != vmlit(SymElse))
-			jumpNextIp = genJumpExp(comp, condast, 0);
+			genJumpExp(comp, condast, &jumpNextIp, NULL, false, true);
 		genStmts(comp, astGet(th, astseg, ifindx+1)); // Generate block
 		// Generate/fix jumps after clause's block
 		if (condast != vmlit(SymElse)) {
 			if (ifindx+2 < getSize(astseg))
-				jumpEndIp = genFwdJump(comp, OpJump, 0, jumpEndIp);
+				genFwdJump(comp, OpJump, 0, &jumpEndIp);
 			genSetJumpList(comp, jumpNextIp, comp->method->size); // Fix jumps to next elif/else block
 		}
 		ifindx += 2;
 	} while (ifindx < getSize(astseg));
+	genSetJumpList(comp, jumpEndIp, comp->method->size); // Fix jumps to end of 'if' 
+}
+
+/** Generate while block */
+void genWhile(CompInfo *comp, Value astseg) {
+	Value th = comp->th;
+
+	int jumpBegIp = comp->method->size;
+	int jumpEndIp = BCNO_JMP;
+	genJumpExp(comp, astGet(th, astseg, 1), &jumpEndIp, NULL, false, true);
+	genStmts(comp, astGet(th, astseg, 2)); // Generate block
+	genAddInstr(comp, BCINS_AJ(OpJump, 0, jumpBegIp-comp->method->size-1));
 	genSetJumpList(comp, jumpEndIp, comp->method->size); // Fix jumps to end of 'if' 
 }
 
@@ -335,6 +381,7 @@ void genStmts(CompInfo *comp, Value astseg) {
 		// Handle various kinds of statements
 		Value op = isArr(astseg)? astGet(th, aststmt, 0) : aststmt;
 		if (op==vmlit(SymIf)) genIf(comp, aststmt); 
+		else if (op==vmlit(SymWhile)) genWhile(comp, aststmt);
 		else genExp(comp, aststmt);
 
 		// Finish append/prepend
