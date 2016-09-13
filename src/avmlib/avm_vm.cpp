@@ -166,6 +166,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymLBrace, "{"},
 	{SymRBrace, "}"},
 	{SymSemicolon, ";"},
+	{SymQuestion, "?"},
 
 	// Compiler symbols that are also methods
 	{SymAppend, "<<"},

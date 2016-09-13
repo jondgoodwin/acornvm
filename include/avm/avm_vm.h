@@ -118,9 +118,10 @@ extern "C" {
 		SymWhile,		//!< 'while'
 		SymWorker,		//!< 'worker'
 		SymYield,		//!< 'yield'
-		SymLBrace,	//!< '{'
-		SymRBrace,	//!< '}'
+		SymLBrace,		//!< '{'
+		SymRBrace,		//!< '}'
 		SymSemicolon,	//!< ';'
+		SymQuestion,	//!< '?'
 
 		// Compiler symbols that are also methods
 		SymAppend,	//!< '<<'

@@ -1,6 +1,10 @@
 # Acorn language tests
 
 $test.True(true, "true is True")
+$test.Equal(null || 'x', 'x', "(null or 'x')==='x'")
+$test.Equal(null and 'x', null, "(null and 'x')===null")
+$test.Equal(0<1 and 1<2, true, "(0<1 and 1<2)===true")
+$test.Equal(2<1 ? 'a' else 'b', 'b', "2<1 ? 'a' else 'b' == 'b'")
 
 if !1===1
 	$test.True(false, "!1===1")

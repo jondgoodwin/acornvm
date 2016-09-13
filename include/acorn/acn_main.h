@@ -71,10 +71,13 @@ typedef struct CompInfo {
 	BMethodInfo* method;	//!< Method whose byte-code is being built
 	Value prevcomp;			//!< Compiler for method that defined this method
 
+	// Generation context
 	Value thisop;			//!< Operator to use on every 'this' block stmt
 
 	unsigned int nextreg;	//!< Next register available for use
 	unsigned int thisreg;	//!< Register holding 'this' value
+	int whileBegIp;			//!< ip of current while block's first instruction
+	int whileEndIp;			//!< ip of first jump statement to end of current while block
 } CompInfo;
 
 /** Mark values for garbage collection 

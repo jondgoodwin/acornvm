@@ -159,8 +159,10 @@ void parseTerm(CompInfo* comp, Value astseg) {
 				astAddSeg2(th, propseg, vmlit(SymLit), comp->lex->token);
 				lexGetNextToken(comp->lex);
 			}
-			else
+			else {
+				astAddSeg2(th, propseg, vmlit(SymLit), aNull);
 				lexLog(comp->lex, "Expected property expression after '.'");
+			}
 		}
 		// Process parameter list
 		if (lexMatchNext(comp->lex, "(")) {
@@ -305,10 +307,26 @@ void parseLogicExp(CompInfo* comp, Value astseg) {
 	}
 }
 
+/* Parse '?' 'else' ternary operator */
+void parseTernaryExp(CompInfo* comp, Value astseg) {
+	Value th = comp->th;
+	parseLogicExp(comp, astseg);
+	if ((lexMatchNext(comp->lex, "?"))) {
+		Value newseg = astInsSeg(th, astseg, vmlit(SymQuestion), 4);
+		parseLogicExp(comp, newseg);
+		if (lexMatchNext(comp->lex, "else"))
+			parseLogicExp(comp, newseg);
+		else {
+			astAddSeg2(th, newseg, vmlit(SymLit), aNull);
+			lexLog(comp->lex, "Expected 'else' in ternary expression");
+		}
+	}
+}
+
 /** Parse a 'this' expression/block or append/prepend operator */
 void parseThisExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
-	parseCompExp(comp, astseg);
+	parseTernaryExp(comp, astseg);
 	bool appendflag = lexMatchNext(comp->lex, "<<");
 	if (lexMatch(comp->lex, "{")) {
 		astseg = astInsSeg(th, astseg, vmlit(SymThisBlock), 3);
@@ -361,6 +379,7 @@ void parseStmts(CompInfo* comp, Value astseg) {
 	astseg = astAddSeg(th, astseg, vmlit(SymSemicolon), 16);
 	Value newseg;
 	while (comp->lex->toktype != Eof_Token && !lexMatch(comp->lex, "}")) {
+		Value stmt = comp->lex->token;
 		if (lexMatchNext(comp->lex, "if")) {
 			newseg = astAddSeg(th, astseg, vmlit(SymIf), 3);
 			parseLogicExp(comp, newseg);
@@ -381,6 +400,16 @@ void parseStmts(CompInfo* comp, Value astseg) {
 			newseg = astAddSeg(th, astseg, vmlit(SymWhile), 3);
 			parseLogicExp(comp, newseg);
 			parseBlock(comp, newseg);
+			parseSemi(comp, astseg);
+		}
+		else if (lexMatchNext(comp->lex, "break") || lexMatchNext(comp->lex, "continue")) {
+			if (lexMatchNext(comp->lex, "if")) {
+				newseg = astAddSeg(th, astseg, vmlit(SymIf), 3); 
+				parseLogicExp(comp, newseg);
+			}
+			else
+				newseg = astseg;
+			astAddSeg(th, newseg, stmt, 1);
 			parseSemi(comp, astseg);
 		}
 		else {

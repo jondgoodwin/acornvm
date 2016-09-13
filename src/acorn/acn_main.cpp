@@ -43,6 +43,7 @@ Value newCompiler(Value th, Value *dest, Value src, Value url) {
 	mem_markChk(th, comp, comp->method);
 
 	comp->nextreg = 0;
+	comp->whileBegIp = -1;
 
 	return *dest;
 }
