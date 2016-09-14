@@ -1,5 +1,7 @@
 # Acorn language tests
 
+a=3 if !a
+
 $test.True(true, "true is True")
 $test.Equal(null || 'x', 'x', "(null or 'x')==='x'")
 $test.Equal(null and 'x', null, "(null and 'x')===null")

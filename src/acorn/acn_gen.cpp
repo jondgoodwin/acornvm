@@ -273,16 +273,43 @@ void genAssign(CompInfo *comp, Value lval, Value rval) {
 	Value th = comp->th;
 	Value lvalop = astGet(th, lval, 0);
 
-	// Handle simple rvals: register to register
-
 	// Handle assignments that require we load rval (and other stuff) first
 	unsigned int rreg = comp->nextreg; // Save where we put rvals
-	if (vmlit(SymGlobal) == lvalop) {
+	if (vmlit(SymLocal) == lvalop) {
+		// Optimize load straight into register, if possible
+		// (But don't do it if we need a consistent register to find the value in)
+		Value rvalop = astGet(th, rval, 0);
+		int localreg = toAint(astGet(th, lval, 1));
+		if (isSym(rval)) {
+			if (vmlit(SymThis) == rval)
+				genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, comp->thisreg, 0));
+			else if (vmlit(SymSelf) == rval)
+				genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, 0, 0));
+			else if (vmlit(SymBaseurl) == rval)
+				genAddInstr(comp, BCINS_ABx(OpLoadLit, localreg, genAddLit(comp, comp->lex->url)));
+		} else {
+			if (vmlit(SymLit) == rvalop) {
+				Value litval = astGet(th, rval, 1);
+				if (litval==aNull)
+					genAddInstr(comp, BCINS_ABC(OpLoadPrim, localreg, 0, 0));
+				else if (litval==aFalse)
+					genAddInstr(comp, BCINS_ABC(OpLoadPrim, localreg, 1, 0));
+				else if (litval==aTrue)
+					genAddInstr(comp, BCINS_ABC(OpLoadPrim, localreg, 2, 0));
+				else
+					genAddInstr(comp, BCINS_ABx(OpLoadLit, localreg, genAddLit(comp, litval)));
+			} else if (vmlit(SymLocal) == rvalop) {
+				genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, toAint(astGet(th, rval, 1)), 0));
+			} else if (vmlit(SymGlobal) == rvalop) {
+				genAddInstr(comp, BCINS_ABx(OpGetGlobal, localreg, genAddLit(comp, astGet(th, rval, 1))));
+			} else {
+				genExp(comp, rval);
+				genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, rreg, 0));
+			}
+		}
+	} else if (vmlit(SymGlobal) == lvalop) {
 		genExp(comp, rval);
 		genAddInstr(comp, BCINS_ABx(OpSetGlobal, rreg, genAddLit(comp, astGet(th, lval, 1))));
-	} else if (vmlit(SymLocal) == lvalop) {
-		genExp(comp, rval);
-		genAddInstr(comp, BCINS_ABC(OpLoadReg, toAint(astGet(th, lval, 1)), rreg, 0));
 	} else if (vmlit(SymActProp) == lvalop) {
 		genDoProp(comp, lval, OpSetActProp, rval);
 	} else if (vmlit(SymRawProp) == lvalop) {
@@ -320,7 +347,15 @@ void genExp(CompInfo *comp, Value astseg) {
 	} else {
 		Value op = astGet(th, astseg, 0);
 		if (vmlit(SymLit) == op) {
-			genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, astGet(th, astseg, 1))));
+			Value litval = astGet(th, astseg, 1);
+			if (litval==aNull)
+				genAddInstr(comp, BCINS_ABC(OpLoadPrim, genNextReg(comp), 0, 0));
+			else if (litval==aFalse)
+				genAddInstr(comp, BCINS_ABC(OpLoadPrim, genNextReg(comp), 1, 0));
+			else if (litval==aTrue)
+				genAddInstr(comp, BCINS_ABC(OpLoadPrim, genNextReg(comp), 2, 0));
+			else
+				genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, litval)));
 		} else if (vmlit(SymLocal) == op) {
 			genAddInstr(comp, BCINS_ABC(OpLoadReg, genNextReg(comp), toAint(astGet(th, astseg,1)), 0));
 		} else if (vmlit(SymGlobal) == op) {

@@ -142,7 +142,10 @@ void parseValue(CompInfo* comp, Value astseg) {
 void parseTerm(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
 	bool newflag = lexMatchNext(comp->lex, "+");
-	parseValue(comp, astseg);
+	if (lexMatch(comp->lex, "."))
+		astAddValue(th, astseg, vmlit(SymThis));
+	else
+		parseValue(comp, astseg);
 	// Handle suffix chains
 	while (newflag || lexMatch(comp->lex, ".") || lexMatch(comp->lex, "(")) {
 		Value propseg = astInsSeg(th, astseg, vmlit(SymActProp), 4); // may adjust later
@@ -295,7 +298,7 @@ void parseAndExp(CompInfo* comp, Value astseg) {
 	}
 }
 
-/* Parse 'or' conditional logic operator */
+/** Parse 'or' conditional logic operator */
 void parseLogicExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
 	parseAndExp(comp, astseg);
@@ -307,7 +310,20 @@ void parseLogicExp(CompInfo* comp, Value astseg) {
 	}
 }
 
-/* Parse '?' 'else' ternary operator */
+/** Parse 'if', 'while' or 'each' suffix */
+void parseSuffix(CompInfo* comp, Value astseg) {
+	Value th = comp->th;
+	Value token = comp->lex->token;
+	if (lexMatchNext(comp->lex, "if") || lexMatchNext(comp->lex, "while")) {
+		Value newseg = astInsSeg(th, astseg, token, 4);
+		parseLogicExp(comp, newseg);
+		// swap elements 1 and 2, so condition follows 'if'/'while'
+		arrSet(th, newseg, 3, astGet(th, newseg, 1));
+		arrDel(th, newseg, 1, 1);
+	}
+}
+
+/** Parse '?' 'else' ternary operator */
 void parseTernaryExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
 	parseLogicExp(comp, astseg);
@@ -414,6 +430,7 @@ void parseStmts(CompInfo* comp, Value astseg) {
 		}
 		else {
 			parseExp(comp, astseg);
+			parseSuffix(comp, astseg);
 			parseSemi(comp, astseg);
 		}
 	}
