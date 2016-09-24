@@ -31,6 +31,36 @@ int list_add(Value th) {
 	return 0;
 }
 
+/** Get array element at specified integer position */
+int list_get(Value th) {
+	if (getTop(th)<2 || !isInt(getLocal(th, 1)))
+		return 0;
+	pushValue(th, arrGet(th, getLocal(th,0), toAint(getLocal(th, 1))));
+	return 1;
+}
+
+/** Set array element at specified integer position */
+int list_set(Value th) {
+	if (getTop(th)<3 || !isInt(getLocal(th, 2)))
+		return 0;
+	arrSet(th, getLocal(th,0), toAint(getLocal(th, 2)), getLocal(th, 1));
+	return 0;
+}
+
+/** Return number of elements in list */
+int list_getsize(Value th) {
+	pushValue(th, anInt(getSize(getLocal(th, 0))));
+	return 1;
+}
+
+/** Set size of list */
+int list_setsize(Value th) {
+	if (getTop(th)<2 || !isInt(getLocal(th, 1)))
+		return 0;
+	arrForceSize(th, getLocal(th, 0), toAint(getLocal(th, 1)));
+	return 0;
+}
+
 /** Get next item from a List */
 int list_next(Value th) {
 	Value arr = getLocal(th,0);
@@ -49,6 +79,14 @@ void core_list_init(Value th) {
 		vmlit(TypeListm) = pushMixin(th, vmlit(TypeType), aNull, 20);
 			pushSym(th, "*List");
 			popProperty(th, 1, "_name");
+			pushCMethod(th, list_get);
+			pushCMethod(th, list_set);
+			pushClosure(th, 2);
+			popProperty(th, 1, "()");
+			pushCMethod(th, list_getsize);
+			pushCMethod(th, list_setsize);
+			pushClosure(th, 2);
+			popProperty(th, 1, "size");
 			pushCMethod(th, list_add);
 			popProperty(th, 1, "<<");
 			pushCMethod(th, list_next);

@@ -339,43 +339,43 @@ void parseTernaryExp(CompInfo* comp, Value astseg) {
 	}
 }
 
-/** Parse a 'this' expression/block or append/prepend operator */
-void parseThisExp(CompInfo* comp, Value astseg) {
-	Value th = comp->th;
-	parseTernaryExp(comp, astseg);
-	bool appendflag = lexMatchNext(comp->lex, "<<");
-	if (lexMatch(comp->lex, "{")) {
-		astseg = astInsSeg(th, astseg, vmlit(SymThisBlock), 3);
-		astAddValue(th, astseg, appendflag? vmlit(SymAppend) : aNull);
-		parseBlock(comp, astseg);
-	}
-}
-
 /** Parse an assignment or property setting expression */
 void parseAssgnExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
-	parseThisExp(comp, astseg);
+	parseTernaryExp(comp, astseg);
 	if (lexMatchNext(comp->lex, "=")) {
 		astseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
-		parseThisExp(comp, astseg);
+		parseTernaryExp(comp, astseg);
 	}
 	else if (lexMatchNext(comp->lex, ":")) {
 		// ('=', ('activeprop', 'this', property), value)
 		astseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
 		astInsSeg2(th, astseg, vmlit(SymActProp), vmlit(SymThis), 3);
-		parseThisExp(comp, astseg);
+		parseTernaryExp(comp, astseg);
 	}
 	else if (lexMatchNext(comp->lex, ":=")) {
 		// ('=', ('rawprop', 'this', property), value)
 		astseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
 		astInsSeg2(th, astseg, vmlit(SymRawProp), vmlit(SymThis), 3);
-		parseThisExp(comp, astseg);
+		parseTernaryExp(comp, astseg);
 	}
 }
 
 /** Parse an expression */
 void parseExp(CompInfo* comp, Value astseg) {
 	parseAssgnExp(comp, astseg);
+}
+
+/** Parse a 'this' expression/block or append/prepend operator */
+void parseThisExp(CompInfo* comp, Value astseg) {
+	Value th = comp->th;
+	parseExp(comp, astseg);
+	bool appendflag = lexMatchNext(comp->lex, "<<");
+	if (lexMatch(comp->lex, "{")) {
+		astseg = astInsSeg(th, astseg, vmlit(SymThisBlock), 3);
+		astAddValue(th, astseg, appendflag? vmlit(SymAppend) : aNull);
+		parseBlock(comp, astseg);
+	}
 }
 
 void parseSemi(CompInfo* comp, Value astseg) {
@@ -429,7 +429,7 @@ void parseStmts(CompInfo* comp, Value astseg) {
 			parseSemi(comp, astseg);
 		}
 		else {
-			parseExp(comp, astseg);
+			parseThisExp(comp, astseg);
 			parseSuffix(comp, astseg);
 			parseSemi(comp, astseg);
 		}

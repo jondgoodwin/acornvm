@@ -1,4 +1,6 @@
 # Acorn language tests
+a=+List <<
+	3
 
 a=3 if !a
 

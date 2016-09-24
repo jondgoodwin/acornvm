@@ -237,9 +237,17 @@ int float_new(Value th) {
 	return 1;
 }
 
+uint32_t int_pcgrng(Value th);
+	
+/** Return a random number from 0 to 1 */
+int float_rand(Value th) {
+	pushValue(th, aFloat((Afloat) ldexp((double) int_pcgrng(th), -32)));
+	return 1;
+}
+
 /** Initialize the Integer type */
 void core_float_init(Value th) {
-	vmlit(TypeFloc) = pushType(th, vmlit(TypeType), 4);
+	vmlit(TypeFloc) = pushType(th, vmlit(TypeType), 8);
 		pushSym(th, "Float");
 		popProperty(th, 0, "_name");
 		vmlit(TypeFlom) = pushMixin(th, vmlit(TypeType), aNull, 32);
@@ -281,8 +289,6 @@ void core_float_init(Value th) {
 			pushCMethod(th, float_min);
 			popProperty(th, 1, "Min");
 
-			pushValue(th, aFloat((Afloat) M_PI));
-			popProperty(th, 1, "pi");
 			pushCMethod(th, float_rad);
 			popProperty(th, 1, "Rad");
 			pushCMethod(th, float_sin);
@@ -298,8 +304,6 @@ void core_float_init(Value th) {
 			pushCMethod(th, float_atan);
 			popProperty(th, 1, "Atan");
 
-			pushValue(th, aFloat((Afloat) M_E));
-			popProperty(th, 1, "e");
 			pushCMethod(th, float_log);
 			popProperty(th, 1, "Log");
 			pushCMethod(th, float_ln);
@@ -315,6 +319,12 @@ void core_float_init(Value th) {
 
 		pushCMethod(th, float_new);
 		popProperty(th, 0, "New");
+		pushCMethod(th, float_rand);
+		popProperty(th, 0, "Random");
+		pushValue(th, aFloat((Afloat) M_PI));
+		popProperty(th, 0, "pi");
+		pushValue(th, aFloat((Afloat) M_E));
+		popProperty(th, 0, "e");
 	popGloVar(th, "Float");
 	return;
 }

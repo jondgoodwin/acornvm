@@ -205,6 +205,46 @@ int int_biggest(Value th) {
 	return 1;
 }
 
+/** PCG algorithm for calculating next random number.
+	Adapted from algorithm invented by Melissa O'Neill.
+	See www.pcg-random.org for detailed information. */
+uint32_t int_pcgrng(Value th) {
+    uint64_t oldpcgstate = vm(th)->pcgrng_state;
+    vm(th)->pcgrng_state = vm(th)->pcgrng_inc + oldpcgstate * 6364136223846793005ULL;
+    uint32_t shiftrot = oldpcgstate >> 59u;
+    uint32_t xorsh = (uint32_t) (((oldpcgstate >> 18u) ^ oldpcgstate) >> 27u);
+    return (xorsh >> shiftrot) | (xorsh << ((uint32_t)(-(int32_t)shiftrot) & 31));
+}
+
+/** Seed the pseudo-random number generation. 
+	time() is used if no seed specified. */
+#include <time.h>
+int int_seedrand(Value th) {
+	unsigned int seed=0;
+	if (getTop(th)<2)
+		seed = (unsigned int) time(NULL);
+	else if (isInt(getLocal(th, 1)))
+		seed = (unsigned int) toAint(getLocal(th, 1));
+	vm(th)->pcgrng_state = seed;
+	return 0;
+}
+
+/** Return a pseudo-random number. 
+	If a bound integer is passed, the return value will be from 0 to bound-1 */
+int int_rand(Value th) {
+	if (getTop(th)<2 || !isInt(getLocal(th, 1))) {
+		pushValue(th, anInt(int_pcgrng(th))); // unbounded integer
+		return 1;
+	}
+	// Bounded integer
+	unsigned int bound = (unsigned int) toAint(getLocal(th, 1));
+	unsigned int threshold = ((unsigned int)-(int)bound) % bound;
+	unsigned int r;
+	while ((r=rand()) < threshold); // Eliminate possible rounding bias
+	pushValue(th, anInt(r));
+	return 1;
+}
+
 /* Coerce symbol, string or float to integer */
 int int_new(Value th) {
 	pushValue(th, aNull); // Default value if we fail to coerce
@@ -227,7 +267,7 @@ int int_new(Value th) {
 
 /** Initialize the Integer type */
 void core_int_init(Value th) {
-	vmlit(TypeIntc) = pushType(th, vmlit(TypeType), 4);
+	vmlit(TypeIntc) = pushType(th, vmlit(TypeType), 8);
 		pushSym(th, "Integer");
 		popProperty(th, 0, "_name");
 		vmlit(TypeIntm) = pushMixin(th, vmlit(TypeType), aNull, 30);
@@ -279,12 +319,17 @@ void core_int_init(Value th) {
 
 			pushCMethod(th, int_char);
 			popProperty(th, 1, "Char");
+
 		popProperty(th, 0, "_newtype");
 
 		pushCMethod(th, int_biggest);
 		popProperty(th, 0, "biggest");
 		pushCMethod(th, int_new);
 		popProperty(th, 0, "New");
+		pushCMethod(th, int_seedrand);
+		popProperty(th, 1, "RandomSeed");
+		pushCMethod(th, int_rand);
+		popProperty(th, 1, "Random");
 	popGloVar(th, "Integer");
 	return;
 }

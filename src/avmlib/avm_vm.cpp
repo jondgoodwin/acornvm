@@ -58,6 +58,10 @@ AVM_API Value newVM(void) {
 	thrInit(&vm->main_thr, vm, STACK_NEWSIZE);
 	vm->threads = (MemInfo*) &vm->main_thr;
 
+	// Initialize PCG random number generator to starting values
+	vm->pcgrng_state = 0x853c49e6748fea9bULL;
+	vm->pcgrng_inc = 0xda3e39cb94b95bdbULL;
+
 	// Compute a randomized seed, using address space layout to increaase randomness
 	// Seed is used to help calculate randomly distributed symbol hashes
 	char seedstr[4 * sizeof(Auint)];

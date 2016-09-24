@@ -31,6 +31,9 @@ extern "C" {
 	typedef struct VmInfo {
 		MemCommonInfoGray;			//!< Common header for value-containing object
 
+		uint64_t pcgrng_state;		//!< PCG random-number generator state
+		uint64_t pcgrng_inc;		//!< PCG random-number generator inc value
+
 		Value global;				//!< VM's "built in" Global hash table
 
 		Value main_thread;			//!< VM's main thread

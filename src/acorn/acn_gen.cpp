@@ -317,7 +317,6 @@ void genAssign(CompInfo *comp, Value lval, Value rval) {
 	} else if (vmlit(SymCallProp) == lvalop) {
 		genDoProp(comp, lval, OpSetCall, rval);
 	}
-	comp->nextreg = rreg;
 }
 
 /** Return true if the expression makes no use of any logical or comparative operators */
@@ -369,9 +368,10 @@ void genExp(CompInfo *comp, Value astseg) {
 		} else if (vmlit(SymThisBlock) == op) {
 			unsigned int svthis = comp->thisreg;
 			Value svthisop = comp->thisop;
-			comp->thisreg = comp->nextreg;
-			comp->thisop = astGet(th, astseg, 2);
+			int thisreg = comp->nextreg;
 			genExp(comp, astGet(th, astseg, 1));
+			comp->thisreg = thisreg;
+			comp->thisop = astGet(th, astseg, 2);
 			genStmts(comp, astGet(th, astseg, 3));
 			comp->thisop = svthisop;
 			comp->thisreg = svthis;
