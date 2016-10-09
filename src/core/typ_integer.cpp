@@ -216,6 +216,14 @@ uint32_t int_pcgrng(Value th) {
     return (xorsh >> shiftrot) | (xorsh << ((uint32_t)(-(int32_t)shiftrot) & 31));
 }
 
+/** Return random number from 0 to bound-1 */
+uint32_t int_boundrand(Value th, uint32_t bound) {
+	uint32_t threshold = ((uint32_t)-(int32_t)bound) % bound;
+	uint32_t r;
+	while ((r=int_pcgrng(th)) < threshold); // Eliminate possible rounding bias
+	return r % bound;
+}
+
 /** Seed the pseudo-random number generation. 
 	time() is used if no seed specified. */
 #include <time.h>
@@ -236,12 +244,7 @@ int int_rand(Value th) {
 		pushValue(th, anInt(int_pcgrng(th))); // unbounded integer
 		return 1;
 	}
-	// Bounded integer
-	unsigned int bound = (unsigned int) toAint(getLocal(th, 1));
-	unsigned int threshold = ((unsigned int)-(int)bound) % bound;
-	unsigned int r;
-	while ((r=rand()) < threshold); // Eliminate possible rounding bias
-	pushValue(th, anInt(r));
+	pushValue(th, anInt(int_boundrand(th, (unsigned int) toAint(getLocal(th, 1)))));
 	return 1;
 }
 

@@ -48,6 +48,13 @@ int test_true(Value th) {
 	return 0;
 }
 
+int test_serialize(Value th) {
+	pushSerialized(th, getLocal(th, 1));
+	puts(toStr(getFromTop(th, 0)));
+	popValue(th);
+	return 0;
+}
+
 /** Initialize $test */
 void core_test_init(Value th) {
 	pushType(th, aNull, 4);
@@ -55,6 +62,8 @@ void core_test_init(Value th) {
 		popProperty(th, 0, "Equal");
 		pushCMethod(th, test_true);
 		popProperty(th, 0, "True");
+		pushCMethod(th, test_serialize);
+		popProperty(th, 0, "Serialize");
 	popGloVar(th, "$test");
 	return;
 }

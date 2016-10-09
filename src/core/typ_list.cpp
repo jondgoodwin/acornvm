@@ -15,27 +15,86 @@ extern "C" {
 
 /** Create a new List. Parameters fill the List */
 int list_new(Value th) {
-	int arrsz = getTop(th)-1;
-	Value arr = pushArray(th, vmlit(TypeListm), arrsz);
-	int idx = 0;
-	while (arrsz--) {
-		arrSet(th, arr, idx, getLocal(th, idx+1));
-		idx++;
+	if (getTop(th)==2 && isInt(getLocal(th, 1))) {
+		pushArray(th, vmlit(TypeListm), toAint(getLocal(th, 1)));
+	}
+	else {
+		int arrsz = getTop(th)-1;
+		Value arr = pushArray(th, vmlit(TypeListm), arrsz);
+		int idx = 0;
+		while (arrsz--) {
+			arrSet(th, arr, idx, getLocal(th, idx+1));
+			idx++;
+		}
 	}
 	return 1;
 }
 
-/** Add to a List */
-int list_add(Value th) {
-	arrAdd(th, getLocal(th,0), getLocal(th,1));
+/** Return true if list has no elements */
+int list_isempty(Value th) {
+	pushValue(th, arr_size(getLocal(th, 0))==0? aTrue : aFalse);
+	return 1;
+}
+
+/** Append to a List */
+int list_append(Value th) {
+	Value arr = getLocal(th,0);
+	AuintIdx idx = 1;
+	while (idx < getTop(th))
+		arrAdd(th, arr, getLocal(th,idx++));
 	return 0;
+}
+
+/** Add to the beginning of a List */
+int list_prepend(Value th) {
+	Value arr = getLocal(th,0);
+	AuintIdx idx = 1;
+	while (idx < getTop(th))
+		arrIns(th, arr, 0, 1, getLocal(th, idx++));
+	return 0;
+}
+
+/** Insert array element(s) at specified integer position */
+int list_insert(Value th) {
+	if (getTop(th)<2 || !isInt(getLocal(th, 1)))
+		return 0;
+	AuintIdx pos = toAint(getLocal(th,1));
+	Value arr = getLocal(th,0);
+	for (AuintIdx idx = 2; idx < getTop(th); idx++)
+		arrIns(th, arr, pos+idx-2, 1, getLocal(th, idx));
+	setTop(th, 1);
+	return 1;
+}
+
+/** Remove and return a value from the end of the List */
+int list_pop(Value th) {
+	Value arr = getLocal(th,0);
+	AintIdx size;
+	if ((size = arr_size(arr))==0)
+		return 0;
+	pushValue(th, arrGet(th, arr, --size));
+	arrSetSize(th, arr, size);
+	return 1;
+}
+
+/** Remove and return a value from the start of the List */
+int list_shift(Value th) {
+	Value arr = getLocal(th,0);
+	if (arr_size(arr)==0)
+		return 0;
+	pushValue(th, arrGet(th, arr, 0));
+	arrDel(th, arr, 0, 1);
+	return 1;
 }
 
 /** Get array element at specified integer position */
 int list_get(Value th) {
 	if (getTop(th)<2 || !isInt(getLocal(th, 1)))
 		return 0;
-	pushValue(th, arrGet(th, getLocal(th,0), toAint(getLocal(th, 1))));
+	AintIdx idx = toAint(getLocal(th,1));
+	if (idx<0)
+		idx += arr_size(getLocal(th,0));
+	pushValue(th, arrGet(th, getLocal(th,0), idx));
 	return 1;
 }
 
@@ -43,8 +102,87 @@ int list_get(Value th) {
 int list_set(Value th) {
 	if (getTop(th)<3 || !isInt(getLocal(th, 2)))
 		return 0;
-	arrSet(th, getLocal(th,0), toAint(getLocal(th, 2)), getLocal(th, 1));
+	AintIdx idx = toAint(getLocal(th,2));
+	if (idx<0)
+		idx += arr_size(getLocal(th,0));
+	arrSet(th, getLocal(th,0), idx, getLocal(th, 1));
 	return 0;
+}
+
+/** Remove array element(s) from first specified position to second position */
+int list_remove(Value th) {
+	if (getTop(th)<2 || !isInt(getLocal(th, 1)))
+		return 0;
+	Value arr = getLocal(th, 0);
+	AintIdx size = arr_size(arr);
+	AintIdx pos = toAint(getLocal(th,1));
+	if (pos<0) pos += size;
+	AintIdx len = getTop(th)>2 && isInt(getLocal(th,2))? toAint(getLocal(th,2)) : 1;
+
+	arrDel(th, getLocal(th,0), pos, len);
+	return 1;
+}
+
+/** Create and return new list containing a shallow copy of the elements from original list.
+	One can specify the position (default 0) and length (to end of list) of the elements to copy from the original list. */
+int list_copy(Value th) {
+	Value arr = getLocal(th, 0);
+	AintIdx size = arr_size(arr);
+	AintIdx pos = getTop(th)>1 && isInt(getLocal(th,1))? toAint(getLocal(th,1)) : 0;
+	if (pos<0) pos += size;
+	AintIdx len = getTop(th)>2 && isInt(getLocal(th,2))? toAint(getLocal(th,2)) : size-pos+1;
+
+	Value arr2 = pushArray(th, vmlit(TypeListm), toAint(len));
+	arrSub(th, arr2, 0, len, arr, pos, len);
+	return 1;
+}
+
+/** Copy specified elements from second list into self, replacing element's at specified positions */
+int list_sub(Value th) {
+	if (getTop(th)<6 || !isInt(getLocal(th,1)) || !isInt(getLocal(th,2))
+		|| !isArr(getLocal(th, 3)) || !isInt(getLocal(th, 4)) || !isInt(getLocal(th,5)))
+		return 0;
+	Value arr = getLocal(th, 0);
+	AintIdx size = arr_size(arr);
+	AintIdx pos = toAint(getLocal(th,1));
+	if (pos<0) pos += size;
+	AintIdx len = toAint(getLocal(th,2));
+	Value arr2 = getLocal(th, 3);
+	AintIdx size2 = arr_size(arr2);
+	AintIdx pos2 = toAint(getLocal(th,4));
+	if (pos2<0) pos2 += size2;
+	AintIdx len2 = toAint(getLocal(th,6));
+
+	arrSub(th, arr, pos, len, arr2, pos2, len2);
+	return 1;
+}
+
+/** Append second list's contents to end of self */
+int list_merge(Value th) {
+	if (getTop(th)<2 || !isArr(getLocal(th, 1)))
+		return 0;
+	Value arr = getLocal(th, 0);
+	AintIdx size = arr_size(arr);
+	Value arr2 = getLocal(th, 1);
+	AintIdx size2 = arr_size(arr2);
+
+	arrSub(th, arr, size, 0, arr2, 0, size2);
+	return 1;
+}
+
+/** Fill elements of list to a specified value. The first value is the fill value.
+	The starting position for the fill is the second parameter.
+	Its default is 0. If negative, it is relative to the size of the list.
+	The last parameter specifies the number of elements to fill. Unspecified, it fills to the end of the list. */
+int list_fill(Value th) {
+	Value arr = getLocal(th, 0);
+	AintIdx size = arr_size(arr);
+	Value fillvalue = getTop(th)>1? getLocal(th,1) : aNull;
+	AintIdx pos = getTop(th)>2 && isInt(getLocal(th,2))? toAint(getLocal(th,2)) : 0;
+	if (pos<0) pos += size;
+	AintIdx len = getTop(th)>3 && isInt(getLocal(th,3))? toAint(getLocal(th,3)) : size-pos+1;
+	arrRpt(th, arr, pos, len, fillvalue);
+	return 1;
 }
 
 /** Return number of elements in list */
@@ -55,6 +193,14 @@ int list_getsize(Value th) {
 
 /** Set size of list */
 int list_setsize(Value th) {
+	if (getTop(th)<2 || !isInt(getLocal(th, 1)))
+		return 0;
+	arrSetSize(th, getLocal(th, 0), toAint(getLocal(th, 1)));
+	return 0;
+}
+
+/** Force size of list */
+int list_forcesize(Value th) {
 	if (getTop(th)<2 || !isInt(getLocal(th, 1)))
 		return 0;
 	arrForceSize(th, getLocal(th, 0), toAint(getLocal(th, 1)));
@@ -71,26 +217,131 @@ int list_next(Value th) {
 	return 2;
 }
 
+/* Reverse the order of elements */
+int list_reverse(Value th) {
+	Value arr = getLocal(th, 0);
+	AuintIdx size = arr_size(arr);
+	AuintIdx limit = (size-1)>>1;
+	for (AuintIdx i = size-1; i > limit; i--) {
+		AuintIdx j = size-i-1;
+		pushValue(th, arrGet(th, arr, i));
+		arrSet(th, arr, i, arrGet(th, arr, j));
+		arrSet(th, arr, j, getFromTop(th, 0));
+		popValue(th);
+	}
+	setTop(th,1);
+	return 1;
+}
+
+/* Sort the list into a random order */
+unsigned int int_boundrand(Value th, unsigned int bound);
+int list_randomize(Value th) {
+	Value arr = getLocal(th, 0);
+	AuintIdx size = arr_size(arr);
+	for (AuintIdx i = size-1; i >= 1; i--) {
+		AuintIdx j = int_boundrand(th, i);
+		pushValue(th, arrGet(th, arr, i));
+		arrSet(th, arr, i, arrGet(th, arr, j));
+		arrSet(th, arr, j, getFromTop(th, 0));
+		popValue(th);
+	}
+	return 0;
+}
+
+/* Sort the list using passed method or '<=>' */
+int list_sort(Value th) {
+	ArrInfo* arr = arr_info(getLocal(th,0));
+	Value compop = getTop(th)>1? getLocal(th,0) : vmlit(SymRocket);
+
+	for (AuintIdx i = 1; i<arr_size(arr); i++) {
+		Value newval = pushValue(th, arrGet(th, arr, i));
+		// Binary search to determine where to insert
+		AuintIdx low = 0;
+		AuintIdx high = i-1;
+		AuintIdx j;
+		while (1) {
+			// Compare midway between high and low
+			j = low + ((high-low)>>1);
+			pushValue(th, compop);
+			pushValue(th, newval);
+			pushValue(th, arrGet(th, arr, j));
+			getCall(th, 2, 1);
+			Value comp = popValue(th);
+
+			if (comp==anInt(0)) {
+				j++; // equal inserts right after
+				break;
+			}
+			// newval < j's compare value
+			if (comp==anInt(-1)) {
+				if (j==low)
+					break;
+				high = j-1;
+			}
+			// newval > j's compare value (or uncomparable)
+			else if (j++==high)
+				break;
+			else
+				low = j;
+		}
+		if (j<i) {
+			arrSub(th, arr, j+1, i-j, arr, j, i-j); // move up
+			arrSet(th, arr, j, newval); // insert
+		}
+		popValue(th);
+	}
+	setTop(th, 1);
+	return 1;
+}
+
 /** Initialize the List type */
 void core_list_init(Value th) {
 	vmlit(TypeListc) = pushType(th, vmlit(TypeType), 4);
 		pushSym(th, "List");
 		popProperty(th, 0, "_name");
-		vmlit(TypeListm) = pushMixin(th, vmlit(TypeType), aNull, 20);
+		vmlit(TypeListm) = pushMixin(th, vmlit(TypeType), aNull, 32);
 			pushSym(th, "*List");
 			popProperty(th, 1, "_name");
+			pushCMethod(th, list_isempty);
+			popProperty(th, 1, "Empty?");
 			pushCMethod(th, list_get);
 			pushCMethod(th, list_set);
 			pushClosure(th, 2);
 			popProperty(th, 1, "()");
+			pushCMethod(th, list_remove);
+			popProperty(th, 1, "Remove");
+			pushCMethod(th, list_copy);
+			popProperty(th, 1, "Copy");
+			pushCMethod(th, list_sub);
+			popProperty(th, 1, "Sub");
+			pushCMethod(th, list_fill);
+			popProperty(th, 1, "Fill");
 			pushCMethod(th, list_getsize);
 			pushCMethod(th, list_setsize);
 			pushClosure(th, 2);
 			popProperty(th, 1, "size");
-			pushCMethod(th, list_add);
+			pushCMethod(th, list_forcesize);
+			popProperty(th, 1, "Resize");
+			pushCMethod(th, list_append);
 			popProperty(th, 1, "<<");
+			pushCMethod(th, list_prepend);
+			popProperty(th, 1, ">>");
+			pushCMethod(th, list_merge);
+			popProperty(th, 1, "Merge");
+			pushCMethod(th, list_insert);
+			popProperty(th, 1, "Insert");
+			pushCMethod(th, list_pop);
+			popProperty(th, 1, "Pop");
+			pushCMethod(th, list_shift);
+			popProperty(th, 1, "Shift");
 			pushCMethod(th, list_next);
 			popProperty(th, 1, "next");
+			pushCMethod(th, list_randomize);
+			popProperty(th, 1, "Randomize");
+			pushCMethod(th, list_reverse);
+			popProperty(th, 1, "Reverse");
+			pushCMethod(th, list_sort);
+			popProperty(th, 1, "Sort");
 		popProperty(th, 0, "_newtype");
 		pushCMethod(th, list_new);
 		popProperty(th, 0, "New");

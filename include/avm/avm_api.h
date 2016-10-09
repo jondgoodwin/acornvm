@@ -81,6 +81,9 @@ AVM_API int isClosure(Value val);
 /** Ensure array has room for len Values, allocating memory as needed.
  * Allocated space will not shrink. Changes nothing about array's contents. */
 AVM_API void arrMakeRoom(Value th, Value val, AuintIdx len);
+/** Set the number of elements in the array, growing it if needed.
+ * If less than current number array size, array is not shrunk. */
+AVM_API void arrSetSize(Value th, Value arr, AuintIdx len);
 /** Force allocated and used array to a specified size, truncating 
  * or expanding as needed. Growth space is initialized to aNull. */
 AVM_API void arrForceSize(Value th, Value val, AuintIdx len);

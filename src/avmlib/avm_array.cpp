@@ -71,6 +71,16 @@ void arrMakeRoom(Value th, Value arr, AuintIdx len) {
 	}
 }
 
+/* Set the number of elements in the array, growing it if needed.
+ * If less than current number array size, array is not shrunk. */
+void arrSetSize(Value th, Value arr, AuintIdx len) {
+	ArrInfo *a = arr_info(arr);
+	AuintIdx size = arr_size(arr);
+	if (len>size)
+		arrMakeRoom(th, arr, len);
+	arr_size(arr) = len;
+}
+
 /* Force allocated and used array to a specified size, truncating 
  * or expanding as needed. Growth space is initialized to aNull. */
 void arrForceSize(Value th, Value val, AuintIdx len) {
