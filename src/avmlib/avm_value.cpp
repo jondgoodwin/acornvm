@@ -44,6 +44,8 @@ void setType(Value th, Value val, Value type) {
 		return;
 
 	((MemInfoT*)val)->type = type;
+	if (isTbl(val) && ((TblInfo*)val)->flags1 & ProtoType)
+		((TblInfo*)val)->inheritype = type;
 	mem_markChk(th, val, type);
 }
 

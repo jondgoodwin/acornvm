@@ -97,6 +97,13 @@ int float_remainder(Value th) {
 	return 1;
 }
 
+/** The modulus after dividing two floats */
+int float_modulus(Value th) {
+	returnNullIfVar2NotFloat();
+	pushValue(th, aFloat(self - var2*floor(self/var2)));
+	return 1;
+}
+
 /** Power of two floats */
 int float_power(Value th) {
 	returnNullIfVar2NotFloat();
@@ -277,6 +284,8 @@ void core_float_init(Value th) {
 			popProperty(th, 1, "/");
 			pushCMethod(th, float_remainder);
 			popProperty(th, 1, "%");
+			pushCMethod(th, float_modulus);
+			popProperty(th, 1, "Modulus");
 			pushCMethod(th, float_power);
 			popProperty(th, 1, "**");
 			pushCMethod(th, float_sqrt);

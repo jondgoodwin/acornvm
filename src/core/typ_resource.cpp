@@ -41,7 +41,7 @@ enum UrlState {
 /** Build a new resource (an array) by creating a normalized url 
   from url and baseurl (for resolving a relative address).
   It then populates the resource array with extracts from the normalized url */
-void newResource(Value th, Value url, Value baseurl, Value *resarray) {
+void newResource(Value th, const char *url, Value baseurl, Value *resarray) {
 	AintIdx stktop = getTop(th);
 	const char *urlscanp, *urlbeg;
 	const char *basescanp, *basebeg;
@@ -56,7 +56,7 @@ void newResource(Value th, Value url, Value baseurl, Value *resarray) {
 	size_t extl;
 
 	// **** Scan url to identify key pieces
-	urlbeg = urlscanp = authp = toStr(url);
+	urlbeg = urlscanp = authp = url;
 	int urlstate = UScheme;
 	const char *lastdotp = NULL;
 	const char *queryp = NULL;
@@ -243,10 +243,30 @@ void newResource(Value th, Value url, Value baseurl, Value *resarray) {
 	mem_gcrealloc(th, newstr, maxsz, 0);
 }
 
+/** Deserialize the stream pushed on stack and remember its value */
+void deserialize(Value th, Value *resarray, Value cache) {
+	int streamvidx = getTop(th)-1;
+
+	// Convert stream into usable content, using extension's type
+	pushValue(th, vmlit(SymNew));
+	pushValue(th, resarray[ResExtType]);
+	pushLocal(th, streamvidx);
+	pushValue(th, resarray[ResNormUrl]);
+	pushValue(th, resarray[ResFragment]);
+	getCall(th, 4, 1);
+
+	// Save resource's value in cache
+	if (getFromTop(th, 0)!=aNull)
+		tblSet(th, cache, resarray[ResNormUrl], getFromTop(th, 0));
+}
+
+#define MINIZ_NO_STDIO
+#define MINIZ_NO_ARCHIVE_WRITING_APIS
+#include "miniz.c"
 /** Use the normalized url, scheme type and extension type to get the resource.
   It will be a Text value found at the top of the stack. */
 void getResource(Value th, Value *resarray) {
-	// If it was retrieved already and is found in the cache, return it
+	// If it was retrieved already and is found in the cache, return its known value
 	pushGloVar(th, "Resource");
 	Value cache = pushProperty(th, getTop(th)-1, "cache");
 	Value resval = tblGet(th, cache, resarray[ResNormUrl]);
@@ -257,21 +277,65 @@ void getResource(Value th, Value *resarray) {
 		return;
 	}
 
-	// equivalent to: +(ResExtType)((ResSchemeType)(ResNormUrl), ResNormUrl, ResFragment)
+	// Retrieve and push a byte stream for the named resource using scheme's type
+	int streamvidx = getTop(th);
 	vmLog("Retrieving resource: %s", toStr(resarray[ResNormUrl]));
-	pushValue(th, vmlit(SymNew));
-	pushValue(th, resarray[ResExtType]);
 	pushValue(th, vmlit(SymParas));
 	pushValue(th, resarray[ResSchemeType]);
 	pushValue(th, resarray[ResNormUrl]);
 	getCall(th, 2, 1);
-	pushValue(th, resarray[ResNormUrl]);
-	pushValue(th, resarray[ResFragment]);
-	getCall(th, 4, 1);
 
-	// Save it in cache
-	if (getFromTop(th, 0)!=aNull)
-		tblSet(th, cache, resarray[ResNormUrl], getFromTop(th, 0));
+	// If it is a zip archive, unpack it. Otherwise treat it as a single stream
+	Value streamv = getFromTop(th,0);
+	char *stream = (char*) toStr(streamv);
+	if (strncmp(stream, "PK\3\4", 4)==0) {
+		// To unpack all files in the Zip-compatible archive, first open it
+		mz_zip_archive zip_archive;
+		memset(&zip_archive, 0, sizeof(zip_archive));
+		mz_bool status = mz_zip_reader_init_mem(&zip_archive, stream, str_size(streamv), 0);
+		if (status) {
+			// Extract each file in the archive.
+			int nbrfiles = (int)mz_zip_reader_get_num_files(&zip_archive);
+			for (int i = 0; i < nbrfiles; i++) {
+				// Get file's metadata: name, comment, sizes, directory flag
+				mz_zip_archive_file_stat file_stat;
+				if (!mz_zip_reader_file_stat(&zip_archive, i, &file_stat)) {
+					vmLog("Corrupted metadata for zip archive file");
+					continue;
+				}
+
+				// Extract and decompress a non-directory file's stream
+				if (!mz_zip_reader_is_file_a_directory(&zip_archive, i)) {
+					// Create a resource instance (an array), populate it to get correct url
+					Value extresarray = pushArray(th, vmlit(TypeResm), nResVals);
+					arrSet(th, extresarray, nResVals-1, aNull); // Fill it with nulls
+					newResource(th, file_stat.m_filename, resarray[ResNormUrl], arr_info(extresarray)->arr);
+
+					vmLog("Extracting %s from resource zip", toStr(arr_info(extresarray)->arr[ResNormUrl]));
+					AuintIdx streamsz = (AuintIdx) file_stat.m_uncomp_size;
+					Value nstreamv = pushStringl(th, aNull, NULL, streamsz);
+					mz_zip_reader_extract_to_mem(&zip_archive, i, (void*)toStr(nstreamv), streamsz, 0);
+					str_size(nstreamv) = streamsz;
+					deserialize(th, arr_info(extresarray)->arr, cache);
+					popValue(th); // deserialized stream
+					popValue(th); // stream
+					popValue(th); // Resource array
+				}
+			}
+
+			// Close the archive, freeing any resources it was using
+			mz_zip_reader_end(&zip_archive);
+			popValue(th); // zip resource's stream
+
+			// Get deserialized value of the requested member of archive (if it was included!)
+			pushValue(th, tblGet(th, cache, resarray[ResNormUrl]));
+		}
+		else
+			vmLog("Resource looks like a PK zip archive, but won't open correctly");
+	}
+	else {
+		deserialize(th, resarray, cache); // will pop resource stream
+	}
 }
 
 /** Create a new Resource using a url string and baseurl context */
@@ -288,7 +352,7 @@ int resource_new(Value th) {
 	// Create the resource instance (an array), populate it, then return the pushed instance
 	Value resarray = pushArray(th, vmlit(TypeResm), nResVals);
 	arrSet(th, resarray, nResVals-1, aNull); // Fill it with nulls
-	newResource(th, urlval, baseurl, arr_info(resarray)->arr);
+	newResource(th, toStr(urlval), baseurl, arr_info(resarray)->arr);
 	return 1;
 }
 
@@ -306,7 +370,7 @@ int resource_get(Value th) {
 	// Create the resource array, populate it, then get the resource
 	Value resarray = pushArray(th, vmlit(TypeResm), nResVals);
 	arrSet(th, resarray, nResVals-1, aNull); // Fill it with nulls
-	newResource(th, urlval, baseurl, arr_info(resarray)->arr);
+	newResource(th, toStr(urlval), baseurl, arr_info(resarray)->arr);
 	getResource(th, arr_info(resarray)->arr);
 	return 1;
 }

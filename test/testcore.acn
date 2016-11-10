@@ -1,10 +1,10 @@
 ﻿arr = +List <<
 	4;3;2;1;'t';3;-1;0
 arr.Randomize
-$test.Serialize(arr)
+#$test.Serialize(arr)
 arr.Sort
 arr.Reverse
-$test.Serialize(arr)
+#$test.Serialize(arr)
 
 # Integer arithmetic tests
 $test.Equal(-(-1), 1, "-(-1) == 1")
