@@ -162,14 +162,15 @@ void newResource(Value th, const char *url, Value baseurl, Value *resarray) {
 	}
 
 	// **** Store the scheme type, mapped from schemes
+	int resourcetype = getTop(th);
+	pushGloVar(th, "Resource");
 	if (schemel==0) {
 		schemep = authl? "http" : "file"; // default scheme
 		schemel = strlen(schemep);
 	}
-	pushProperty(th, 0, "schemes"); // Get table from Resource (self)
+	pushProperty(th, resourcetype, "schemes"); // Get table from Resource
 	pushSyml(th, schemep, schemel);
 	resarray[ResSchemeType] = tblGet(th, getFromTop(th, 1), getFromTop(th, 0));
-	setTop(th, stktop); // reset stack
 
 	// *** Store the extension type, mapped from extensions
 	if (lastdotp) {
@@ -180,7 +181,7 @@ void newResource(Value th, const char *url, Value baseurl, Value *resarray) {
 		extp = "acn";
 		extl = strlen(extp);
 	}
-	pushProperty(th, 0, "extensions"); // Get table from Resource (self)
+	pushProperty(th, resourcetype, "extensions"); // Get table from Resource
 	pushSyml(th, extp, extl);
 	resarray[ResExtType] = tblGet(th, getFromTop(th, 1), getFromTop(th, 0));
 	setTop(th, stktop); // reset stack
@@ -247,6 +248,7 @@ void newResource(Value th, const char *url, Value baseurl, Value *resarray) {
 void deserialize(Value th, Value *resarray, Value cache) {
 	int streamvidx = getTop(th)-1;
 
+	int64_t start = vm_starttimer();
 	// Convert stream into usable content, using extension's type
 	pushValue(th, vmlit(SymNew));
 	pushValue(th, resarray[ResExtType]);
@@ -254,6 +256,8 @@ void deserialize(Value th, Value *resarray, Value cache) {
 	pushValue(th, resarray[ResNormUrl]);
 	pushValue(th, resarray[ResFragment]);
 	getCall(th, 4, 1);
+
+	vmLog("Deserialization took %f seconds", vm_endtimer(start));
 
 	// Save resource's value in cache
 	if (getFromTop(th, 0)!=aNull)
@@ -292,7 +296,7 @@ void getResource(Value th, Value *resarray) {
 		// To unpack all files in the Zip-compatible archive, first open it
 		mz_zip_archive zip_archive;
 		memset(&zip_archive, 0, sizeof(zip_archive));
-		mz_bool status = mz_zip_reader_init_mem(&zip_archive, stream, str_size(streamv), 0);
+		mz_bool status = mz_zip_reader_init_mem(&zip_archive, stream, str_size(streamv), MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY);
 		if (status) {
 			// Extract each file in the archive.
 			int nbrfiles = (int)mz_zip_reader_get_num_files(&zip_archive);
@@ -334,7 +338,7 @@ void getResource(Value th, Value *resarray) {
 			vmLog("Resource looks like a PK zip archive, but won't open correctly");
 	}
 	else {
-		deserialize(th, resarray, cache); // will pop resource stream
+		deserialize(th, resarray, cache);
 	}
 }
 
@@ -353,25 +357,6 @@ int resource_new(Value th) {
 	Value resarray = pushArray(th, vmlit(TypeResm), nResVals);
 	arrSet(th, resarray, nResVals-1, aNull); // Fill it with nulls
 	newResource(th, toStr(urlval), baseurl, arr_info(resarray)->arr);
-	return 1;
-}
-
-/** Load and decode a resource using a url string and baseurl context, returning its value */
-int resource_get(Value th) {
-	// Get url and baseurl parameters
-	Value urlval, baseurl;
-	if (getTop(th)<2 || (!isStr(urlval = getLocal(th,1)) && !isSym(urlval))) {
-		pushValue(th, aNull);
-		return 1;
-	}
-	if (getTop(th)<3 || (!isStr(baseurl = getLocal(th,2)) && !isSym(baseurl))) 
-		baseurl = aNull;
-
-	// Create the resource array, populate it, then get the resource
-	Value resarray = pushArray(th, vmlit(TypeResm), nResVals);
-	arrSet(th, resarray, nResVals-1, aNull); // Fill it with nulls
-	newResource(th, toStr(urlval), baseurl, arr_info(resarray)->arr);
-	getResource(th, arr_info(resarray)->arr);
 	return 1;
 }
 
@@ -404,7 +389,7 @@ void core_resource_init(Value th) {
 			pushSym(th, "*Resource");
 			popProperty(th, 1, "_name");
 			pushCMethod(th, resource_inst_get);
-			popProperty(th, 1, "()");
+			popProperty(th, 1, "Load");
 			pushCMethod(th, resource_inst_frag);
 			popProperty(th, 1, "fragment");
 			pushCMethod(th, resource_inst_url);
@@ -412,8 +397,6 @@ void core_resource_init(Value th) {
 		popProperty(th, 0, "_newtype");
 		pushCMethod(th, resource_new);
 		popProperty(th, 0, "New");
-		pushCMethod(th, resource_get);
-		popProperty(th, 0, "()");
 		pushTbl(th, vmlit(TypeIndexm), 10);
 		popProperty(th, 0, "schemes");
 		pushTbl(th, vmlit(TypeIndexm), 10);

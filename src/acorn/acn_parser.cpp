@@ -203,14 +203,14 @@ void parsePrefixExp(CompInfo* comp, Value astseg) {
 		}
 	}
 	else if (lexMatchNext(comp->lex, "@")) {
-		// ('callprop', ('callprop', glo'Resource', lit'new', parsed-value, 'baseurl'), '()')
-		Value getseg = astAddSeg(th, astseg, vmlit(SymCallProp), 3);
-		Value newseg = astAddSeg(th, getseg, vmlit(SymCallProp), 5);
+		// ('callprop', ('callprop', glo'Resource', lit'New', parsed-value, 'baseurl'), 'Load')
+		Value loadseg = astAddSeg(th, astseg, vmlit(SymCallProp), 3);
+		Value newseg = astAddSeg(th, loadseg, vmlit(SymCallProp), 5);
 		astAddSeg2(th, newseg, vmlit(SymGlobal), vmlit(SymResource));
 		astAddSeg2(th, newseg, vmlit(SymLit), vmlit(SymNew));
 		parsePrefixExp(comp, newseg);
 		astAddValue(th, newseg, vmlit(SymBaseurl));
-		astAddSeg2(th, getseg, vmlit(SymLit), vmlit(SymParas));
+		astAddSeg2(th, loadseg, vmlit(SymLit), vmlit(SymLoad));
 	}
 	else
 		parseTerm(comp, astseg);

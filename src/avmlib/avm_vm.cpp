@@ -111,6 +111,44 @@ void vm_lock(Value th) {
 void vm_unlock(Value th) {
 }
 
+/* Interval timer */
+#if _WIN32 || _WIN64
+
+#include <windows.h>
+
+int64_t vm_starttimer()
+{
+	LARGE_INTEGER li;
+	QueryPerformanceCounter(&li);
+	return li.QuadPart;
+}
+
+float vm_endtimer(int64_t starttime)
+{
+	LARGE_INTEGER now, freq;
+	QueryPerformanceCounter(&now);
+	QueryPerformanceFrequency(&freq);
+	return float(now.QuadPart-starttime)/float(freq.QuadPart);
+}
+#else
+
+#include <sys/time.h>
+int64_t vm_starttimer()
+{
+	struct time_val start;
+	gettimeofday(&start, NULL);
+	return start.tv_sec*1000000 + start.tv_usec;
+}
+
+float vm_endtimer(int64_t starttime)
+{
+	struct time_val now;
+	gettimeofday(&now, NULL);
+	int64_t end = now.tv_sec*1000000 + end.tv_usec;
+    return float(end - starttime)/1000000.0f;
+}
+#endif
+
 #include <stdarg.h>
 /* Log a message to the logfile */
 void vmLog(const char *msg, ...) {
@@ -190,6 +228,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 
 	// Methods that are not compiler symbols
 	{SymNew, "New"},
+	{SymLoad, "Load"},
 	{SymParas, "()"},
 	{SymNeg, "-@"},
 	{SymNext, "next"},

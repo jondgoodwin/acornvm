@@ -73,10 +73,12 @@ void testLang(void) {
 	Value th = newVM();
 	core_test_init(th);
 
-	pushSym(th, "()");
+	pushSym(th, "Load");
+	pushSym(th, "New");
 	pushGloVar(th, "Resource");
 	pushString(th, aNull, "file://./testlang.acn");
-	getCall(th, 2, 0);
+	getCall(th, 2, 1);
+	getCall(th, 1, 0);
 
 	vmClose(th);
 	printf("All %ld Language tests completed. %ld failed.\n", tests, fails);
@@ -87,10 +89,12 @@ void testCore(void) {
 	Value th = newVM();
 	core_test_init(th);
 
-	pushSym(th, "()");
+	pushSym(th, "Load");
+	pushSym(th, "New");
 	pushGloVar(th, "Resource");
 	pushString(th, aNull, "file://./testcore.acn");
-	getCall(th, 2, 0);
+	getCall(th, 2, 1);
+	getCall(th, 1, 0);
 
 	vmClose(th);
 	printf("All %ld Core tests completed. %ld failed.\n", tests, fails);

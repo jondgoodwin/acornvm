@@ -259,6 +259,10 @@ AVM_API int needMoreLocal(Value th, AuintIdx needed);
 AVM_API Value newVM(void);
 /** Close down the virtual machine, freeing all allocated memory */
 AVM_API void vmClose(Value th);
+/** Start a timer */
+AVM_API int64_t vm_starttimer();
+/** Stop the timer, returning a float for seconds since start */
+AVM_API float vm_endtimer(int64_t starttime);
 /** Log a message to the logfile */
 AVM_API void vmLog(const char *msg, ...);
 

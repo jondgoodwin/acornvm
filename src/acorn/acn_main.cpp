@@ -166,14 +166,16 @@ Value genTestPgm(Value th, int pgm) {
 
 	// Test File and URL stuff
 	case 5: {
-		Value fil = pushSym(th, "Resource");
-		Value get = pushSym(th, "()");
+		Value res = pushSym(th, "Resource");
+		Value load = pushSym(th, "Load");
 		Value testacn = pushString(th, vmlit(TypeTextm), "file://./test.acn");
 		genAddParm(comp, self);
-		genAddInstr(comp, BCINS_ABx(OpLoadLit, 3, genAddLit(comp, get)));
-		genAddInstr(comp, BCINS_ABx(OpGetGlobal, 4, genAddLit(comp, fil)));
-		genAddInstr(comp, BCINS_ABx(OpLoadLit, 5, genAddLit(comp, testacn)));
-		genAddInstr(comp, BCINS_ABC(OpGetCall, 3, 2, 1));
+		genAddInstr(comp, BCINS_ABx(OpLoadLit, 3, genAddLit(comp, load)));
+		genAddInstr(comp, BCINS_ABx(OpLoadLit, 4, genAddLit(comp, vmlit(SymNew))));
+		genAddInstr(comp, BCINS_ABx(OpGetGlobal, 5, genAddLit(comp, res)));
+		genAddInstr(comp, BCINS_ABx(OpLoadLit, 6, genAddLit(comp, testacn)));
+		genAddInstr(comp, BCINS_ABC(OpGetCall, 4, 2, 1));
+		genAddInstr(comp, BCINS_ABC(OpGetCall, 3, 1, 1));
 		genAddInstr(comp, BCINS_ABC(OpReturn, 1, 1, 0));
 		popValue(th);
 		popValue(th);

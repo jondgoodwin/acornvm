@@ -145,6 +145,7 @@ extern "C" {
 		// Methods that are not compiler symbols
 		// Byte-code (and parser) standard methods
 		SymNew,		//!< 'New'
+		SymLoad,	//!< 'Load'
 		SymParas,	//!< '()'
 		SymNeg,		//!< '-@'
 		SymNext,	//!< 'next'
