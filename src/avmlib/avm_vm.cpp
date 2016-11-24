@@ -116,14 +116,14 @@ void vm_unlock(Value th) {
 
 #include <windows.h>
 
-int64_t vm_starttimer()
+int64_t vmStartTimer()
 {
 	LARGE_INTEGER li;
 	QueryPerformanceCounter(&li);
 	return li.QuadPart;
 }
 
-float vm_endtimer(int64_t starttime)
+float vmEndTimer(int64_t starttime)
 {
 	LARGE_INTEGER now, freq;
 	QueryPerformanceCounter(&now);
@@ -133,14 +133,14 @@ float vm_endtimer(int64_t starttime)
 #else
 
 #include <sys/time.h>
-int64_t vm_starttimer()
+int64_t vmStartTimer()
 {
 	struct time_val start;
 	gettimeofday(&start, NULL);
 	return start.tv_sec*1000000 + start.tv_usec;
 }
 
-float vm_endtimer(int64_t starttime)
+float vmEndTimer(int64_t starttime)
 {
 	struct time_val now;
 	gettimeofday(&now, NULL);
@@ -209,6 +209,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymRBrace, "}"},
 	{SymSemicolon, ";"},
 	{SymQuestion, "?"},
+	{SymAt, "@"},
 
 	// Compiler symbols that are also methods
 	{SymAppend, "<<"},

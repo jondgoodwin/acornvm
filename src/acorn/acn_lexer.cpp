@@ -528,6 +528,38 @@ bool lexScanString(LexInfo *lex) {
 
 /** Tokenize a punctuation-oriented operator symbol.
  * By this point we take at least one character, unless multi-char op is recognized. */
+bool lexScanResource(LexInfo *lex) {
+	if (lex_thischar(lex)!='@')
+		return false;
+	Value th = lex->th;
+	lex_skipchar(lex);
+	Auchar delim = lex_thischar(lex);
+	if (delim=='\'' || delim=='"' || delim=='(' || delim<=' ') {
+		lex->token = vmlit(SymAt);
+		lex->toktype = Res_Token;
+		return true;
+	}
+
+	// Mark beginning and look for end of url
+	const char *begp = &toStr(lex->source)[lex->bytepos];
+	const char *scanp = begp;
+	while ((unsigned char)(*++scanp)>' '); // end with space, tab, cr, lf, eof, etc.
+	lex->bytepos += scanp - &toStr(lex->source)[lex->bytepos];
+
+	// Create +Resource from literal url, and return it as token
+	pushValue(th, vmlit(SymNew));
+	pushValue(th, vmlit(TypeResc));
+	pushStringl(th, aNull, begp, scanp-begp);
+	pushValue(th, lex->url);
+	getCall(th, 3, 1);
+	lex->token = getFromTop(th, 0);
+	popValue(th);
+	lex->toktype = Url_Token;
+	return true;
+}
+
+/** Tokenize a punctuation-oriented operator symbol.
+ * By this point we take at least one character, unless multi-char op is recognized. */
 bool lexScanOp(LexInfo *lex) {
 	const char *begp = &toStr(lex->source)[lex->bytepos];
 	Auchar ch1 = lex_thischar(lex);
@@ -573,11 +605,12 @@ bool lexScanOp(LexInfo *lex) {
 void lexGetNextToken(LexInfo *lex) {
 
 	// Scan until we find a token
-	(!lexScanWhite(lex) 
-		&& !lexScanEof(lex) 
-		&& !lexScanNumber(lex) 
-		&& !lexScanName(lex) 
-		&& !lexScanString(lex) 
+	(!lexScanWhite(lex)
+		&& !lexScanEof(lex)
+		&& !lexScanNumber(lex)
+		&& !lexScanName(lex)
+		&& !lexScanString(lex)
+		&& !lexScanResource(lex)
 		&& !lexScanOp(lex));
 
 #ifdef COMPILERLOG
@@ -585,6 +618,11 @@ void lexGetNextToken(LexInfo *lex) {
 	case Lit_Token: {
 		pushSerialized(lex->th, lex->token);
 		vmLog("Literal token: %s", toStr(getFromTop(lex->th, 0)));
+		popValue(lex->th);
+		} break;
+	case Url_Token: {
+		pushSerialized(lex->th, lex->token);
+		vmLog("Literal url token: %s", toStr(getFromTop(lex->th, 0)));
 		popValue(lex->th);
 		} break;
 	case Name_Token: {

@@ -17,6 +17,7 @@ extern "C" {
 /** What sort of token is in token */
 enum TokenType {
 	Lit_Token,		//!< Literal token: null, true, false, int, float, symbol, string
+	Url_Token,		//!< Literal url
 	Name_Token,		//!< Named identifier (e.g., for a variable)
 	Res_Token,		//!< Reserved word or operator
 	Eof_Token		//!< End of file

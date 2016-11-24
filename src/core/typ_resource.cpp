@@ -248,7 +248,7 @@ void newResource(Value th, const char *url, Value baseurl, Value *resarray) {
 void deserialize(Value th, Value *resarray, Value cache) {
 	int streamvidx = getTop(th)-1;
 
-	int64_t start = vm_starttimer();
+	int64_t start = vmStartTimer();
 	// Convert stream into usable content, using extension's type
 	pushValue(th, vmlit(SymNew));
 	pushValue(th, resarray[ResExtType]);
@@ -257,7 +257,7 @@ void deserialize(Value th, Value *resarray, Value cache) {
 	pushValue(th, resarray[ResFragment]);
 	getCall(th, 4, 1);
 
-	vmLog("Deserialization took %f seconds", vm_endtimer(start));
+	vmLog("Deserialization took %f seconds", vmEndTimer(start));
 
 	// Save resource's value in cache
 	if (getFromTop(th, 0)!=aNull)

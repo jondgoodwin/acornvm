@@ -103,6 +103,13 @@ void parseValue(CompInfo* comp, Value astseg) {
 		astAddSeg2(th, astseg, vmlit(SymLit), comp->lex->token);
 		lexGetNextToken(comp->lex);
 	}
+	else if (comp->lex->toktype == Url_Token) {
+		// ('callprop', ('lit', +Resource), 'Load')
+		Value loadseg = astAddSeg(th, astseg, vmlit(SymCallProp), 3);
+		astAddSeg2(th, loadseg, vmlit(SymLit), comp->lex->token);
+		astAddSeg2(th, loadseg, vmlit(SymLit), vmlit(SymLoad));
+		lexGetNextToken(comp->lex);
+	}
 	else if (comp->lex->toktype == Name_Token) {
 		const char first = (toStr(comp->lex->token))[0];
 		if (first=='$' || (first>='A' && first<='Z'))

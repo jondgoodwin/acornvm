@@ -125,6 +125,7 @@ extern "C" {
 		SymRBrace,		//!< '}'
 		SymSemicolon,	//!< ';'
 		SymQuestion,	//!< '?'
+		SymAt,			//!< '@'
 
 		// Compiler symbols that are also methods
 		SymAppend,	//!< '<<'
