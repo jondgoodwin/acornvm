@@ -167,6 +167,7 @@ typedef struct BMethodInfo {
 	AuintIdx avail;			//!< nbr of Instructions code is allocated for
 	AuintIdx litsz;			//!< Allocated size of literal list
 	AuintIdx nbrlits;		//!< Number of literals in lits
+	AuintIdx nbrext;		//!< Number of externals in lits
 	AuintIdx localsz;		//!< Allocated size of local list
 	AuintIdx nbrlocals;		//!< Number of local variables in locals
 	AuintIdx maxstacksize;	//!< Maximum size of stack needed to parms+locals

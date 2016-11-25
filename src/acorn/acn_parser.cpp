@@ -96,6 +96,33 @@ Value astInsSeg2(Value th, Value oldseg, Value astop, Value propval, AuintIdx si
 void parseBlock(CompInfo* comp, Value astseg);
 void parseExp(CompInfo* comp, Value astseg);
 
+/* Add a url literal and return its index */
+bool resource_equal(Value res1, Value res2);
+int genAddUrlLit(CompInfo *comp, Value val) {
+	BMethodInfo* f = comp->method;
+
+	// See if we already have resource with same url
+	int i = f->nbrlits;
+	while (i-- > 0)
+		if (resource_equal(f->lits[i],val))
+			return i;
+
+	// If not found, add it
+	mem_growvector(comp->th, f->lits, f->nbrlits, f->litsz, Value, INT_MAX);
+	f->lits[f->nbrlits] = val;
+	mem_markChk(comp->th, comp, val);
+	return f->nbrlits++;
+}
+
+/* Add a method literal and return its index */
+int genAddMethodLit(CompInfo *comp, Value val) {
+	BMethodInfo* f = comp->method;
+	mem_growvector(comp->th, f->lits, f->nbrlits, f->litsz, Value, INT_MAX);
+	f->lits[f->nbrlits] = val;
+	mem_markChk(comp->th, comp, val);
+	return f->nbrlits++;
+}
+
 /** Parse an atomic value: literal, variable or pseudo-variable */
 void parseValue(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
@@ -106,7 +133,7 @@ void parseValue(CompInfo* comp, Value astseg) {
 	else if (comp->lex->toktype == Url_Token) {
 		// ('callprop', ('lit', +Resource), 'Load')
 		Value loadseg = astAddSeg(th, astseg, vmlit(SymCallProp), 3);
-		astAddSeg2(th, loadseg, vmlit(SymLit), comp->lex->token);
+		astAddSeg2(th, loadseg, vmlit(SymExt), anInt(genAddUrlLit(comp, comp->lex->token)));
 		astAddSeg2(th, loadseg, vmlit(SymLit), vmlit(SymLoad));
 		lexGetNextToken(comp->lex);
 	}
@@ -135,11 +162,14 @@ void parseValue(CompInfo* comp, Value astseg) {
 	}
 	// A method definition starts its own compilation context
 	else if (lexMatch(comp->lex, "[")) {
+		// Compile new method's parms and code block
 		pushValue(th, vmlit(SymNew));
 		pushGloVar(th, "Method");
 		pushValue(th, comp);
 		getCall(th, 2, 1);
-		astAddSeg2(th, astseg, vmlit(SymLit), getFromTop(th, 0));
+		// Stick reference to compiled method in external section of this method's literals
+		//astAddSeg2(th, astseg, vmlit(SymLit), getFromTop(th, 0));
+		astAddSeg2(th, astseg, vmlit(SymExt), anInt(genAddMethodLit(comp, getFromTop(th, 0))));
 		popValue(th);
 	}
 	return;

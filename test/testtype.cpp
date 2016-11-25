@@ -50,27 +50,33 @@ void restest(Value th, const char* url, const char *baseurl, const char *normurl
 }
 
 void testResource(Value th) {
-	// No baseurl. Make the most of url
-	restest(th, "ftp:afile.jpg", "", "ftp:afile.jpg");
+	// No baseurl. Treat url as absolute url (and fill in default scheme, resource name & extension
+	restest(th, "ftp://fileman.com/afile.jpg", "", "ftp://fileman.com/afile.jpg");
 	restest(th, "/coolbeans.gif", "", "file:///coolbeans.gif");
-	restest(th, "www.funkyworld.com", "", "http://www.funkyworld.com");
-	restest(th, "/c:/something.acn", "", "file:///c:/something.acn");
+	restest(th, "c:/something.acn", "", "file:///c:/something.acn");
+	restest(th, "./world.acn", "", "file:///./world.acn");
+	restest(th, "./scene", "", "file:///./scene.acn");
 	restest(th, "animals.edu/giraffe.acn", "", "http://animals.edu/giraffe.acn");
+	restest(th, "www.funkyworld.com", "", "http://www.funkyworld.com/world.acn");
+	restest(th, "http://www.funkyworld.com", "", "http://www.funkyworld.com/world.acn");
 	restest(th, "funkyworld.com/image.jpg", "", "http://funkyworld.com/image.jpg");
-	// If url is given scheme or authority, ignnore baseurl
-	restest(th, "http://abc.def", "http://domain.com/funkypoo", "http://abc.def");
-	restest(th, "//aworld.org", "file://another.org", "http://aworld.org");
-	restest(th, "//aworld.org/flea.ttp", "file://another.org/x.y", "http://aworld.org/flea.ttp");
+	// If url has scheme, ignore baseurl
+	restest(th, "http://abc.def/world.acn", "http://domain.com/funkypoo", "http://abc.def/world.acn");
+	restest(th, "http://abc.def", "http://domain.com/funkypoo", "http://abc.def/world.acn");
 	// Relative urls
-	restest(th, "clue.acn", "file:///c:/user/jond", "file:///c:/user/clue.acn");
-	restest(th, "afile.acn", "newworld.com", "http://newworld.com/afile.acn");
-	restest(th, "/punkymoo.acn", "http://domain.com/funkypoo.acn", "http://domain.com/punkymoo.acn");
-	restest(th, "afile.acn", "newworld.com/folder/", "http://newworld.com/folder/afile.acn");
-	restest(th, "afile.acn", "newworld.com/x.acn?query#anchor", "http://newworld.com/afile.acn");
-	restest(th, "base.acn?query#fragment", "//domain.com/funkypoo.acn", "http://domain.com/base.acn?query");
-	// Relative urls that use . and ..
-	restest(th, "../monster.acn", "//domain.com/funkypoo/palder", "http://domain.com/monster.acn");
-	restest(th, "../../monster.acn", "//domain.com/funkypoo/mealymouth", "http://domain.com/monster.acn");
+	restest(th, "clue.acn", "file:///c:/user/jond.acn", "file:///c:/user/clue.acn");
+	restest(th, "afile.acn", "http://newworld.com/world.acn", "http://newworld.com/afile.acn");
+	restest(th, "aworld.org/flea.ttp", "file://another.org/x.y", "file://another.org/aworld.org/flea.ttp");
+	restest(th, "/punkymoo", "http://domain.com/funkypoo.acn", "http://domain.com/punkymoo.acn");
+	restest(th, "/punkymoo/", "http://domain.com/funkypoo.acn", "http://domain.com/punkymoo/");
+	restest(th, "afile.acn", "http://newworld.com/folder/", "http://newworld.com/folder/afile.acn");
+	restest(th, "afile.acn", "http://newworld.com/x.acn?query#anchor", "http://newworld.com/afile.acn");
+	restest(th, "base.acn?query#fragment", "http://domain.com/funkypoo.acn", "http://domain.com/base.acn?query");
+	// Relative urls that use . and ..  and /
+	restest(th, "/monster.acn", "http://domain.com/funkypoo/palder", "http://domain.com/monster.acn");
+	restest(th, "./monster.acn", "http://domain.com/funkypoo/palder", "http://domain.com/funkypoo/monster.acn");
+	restest(th, "../monster.acn", "http://domain.com/funkypoo/palder", "http://domain.com/monster.acn");
+	restest(th, "../../monster.acn", "http://domain.com/funkypoo/x/mealymouth", "http://domain.com/monster.acn");
 }
 
 void testType(void) {

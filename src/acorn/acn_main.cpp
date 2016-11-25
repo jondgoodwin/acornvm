@@ -225,6 +225,7 @@ int acn_newmethod(Value th) {
 
 	// Return generated method
 	pushValue(th, comp->method);
+	vmLog("Comp=%p and method=%p", comp, comp->method);
 	return 1;
 }
 

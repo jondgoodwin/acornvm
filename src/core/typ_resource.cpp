@@ -46,8 +46,8 @@ void newResource(Value th, const char *url, Value baseurl, Value *resarray) {
 	const char *urlscanp, *urlbeg;
 	const char *basescanp, *basebeg;
 	const char *basefilep = NULL;
-	int basenslash = 0;
-	int isrelative = 0;
+	bool isrelative = false;
+	bool nopath = false;
 	const char *schemep;
 	size_t schemel = 0;
 	const char *authp;
@@ -57,35 +57,33 @@ void newResource(Value th, const char *url, Value baseurl, Value *resarray) {
 
 	// **** Scan url to identify key pieces
 	urlbeg = urlscanp = authp = url;
-	int urlstate = UScheme;
 	const char *lastdotp = NULL;
 	const char *queryp = NULL;
 	const char *fragp = NULL;
+	int urlstate = UScheme;
+	if (*urlscanp == '/' || *urlscanp == '.' || urlscanp[1] == ':')
+		urlstate = UPath;
 	while (*urlscanp) {
 		switch (*urlscanp) {
 		case ':':
 			if (urlstate == UScheme) {
 				urlstate = UAuth;
-				schemep = urlbeg; // url has it
+				// Capture url's scheme segment
+				schemep = urlbeg;
 				schemel = urlscanp-urlbeg;
-				authp = urlscanp;
+				// Skip past '//' which should follow
+				if (urlscanp[1] == '/' && urlscanp[2] == '/')
+					urlscanp+=2;
+				authp = urlscanp+1;
 			}
 			break;
 		case '/':
-			// Ignore optional '//' at beginning of authority
-			if (urlscanp[1] == '/' && urlscanp==&urlbeg[schemel? schemel+1 : schemel]) {
-				urlstate = UAuth;
-				authp = urlscanp + 2;
-				urlscanp++;
+			if (urlstate <= UAuth) {
+				urlstate = UPath;
+				authl = urlscanp - authp;
 			}
-			else {
-				if (urlstate <= UAuth) {
-					urlstate = UPath;
-					authl = urlscanp - authp;
-				}
-				if (urlstate == UPath)
-					lastdotp = NULL; // Reset as we only want last dot on resource name
-			}
+			if (urlstate == UPath)
+				lastdotp = NULL; // Reset as we only want last dot on resource name
 			break;
 		case '.':
 			if (urlstate == UScheme)
@@ -109,45 +107,34 @@ void newResource(Value th, const char *url, Value baseurl, Value *resarray) {
 		}
 		urlscanp++;
 	}
-	// Decide if authority specified in url
-	if (baseurl!=aNull && schemel==0 && 0!=strncmp(urlbeg, "//", 2))
-		authl = 0; // If we have baseurl but no scheme&authority, treat as relative url
-	else if (authl == 0 && urlstate <= UAuth)
-		authl = urlscanp - authp; // Otherwise capture authority when no "/" found
 
-	// If url has no scheme and authority, it is a relative url. 
-	// We must scan baseurl for the info we need to resolve the relative url.
-	if (schemel == 0 && authl == 0 && baseurl!=aNull) {
+	// If url has no scheme and baseurl was provided, it is a relative url. 
+	if (schemel == 0 && baseurl!=aNull) {
+		isrelative = true;
+		// We must scan baseurl for the info we need to resolve the relative url.
 		basescanp = authp = basebeg = (isSym(baseurl) || isStr(baseurl))? toStr(baseurl) : "";
-		isrelative = 1;
 		urlstate = UScheme;
 		while (*basescanp) {
 			switch (*basescanp) {
 			case ':':
 				if (urlstate == UScheme) {
 					urlstate = UAuth;
-					schemep = basebeg; // baseurl has it
+					// capture scheme segment of baseurl
+					schemep = basebeg;
 					schemel = basescanp-basebeg;
-					authp = basescanp;
+					// Skip past '//' which should follow
+					if (basescanp[1] == '/' && basescanp[2] == '/')
+						basescanp+=2;
+					authp = basescanp+1;
 				}
 				break;
 			case '/':
-				// Ignore optional '//' at beginning of authority
-				if (basescanp[1] == '/' && basescanp==&basebeg[schemel? schemel+1 : schemel]) {
-					urlstate = UAuth;
-					authp = basescanp + 2;
-					basescanp++;
+				if (urlstate <= UAuth) {
+					urlstate = UPath;
+					authl = basescanp - authp;
 				}
-				else {
-					if (urlstate <= UAuth) {
-						urlstate = UPath;
-						authl = basescanp - authp;
-					}
-					if (urlstate == UPath) {
-						basenslash++;
-						basefilep = basescanp+1;
-					}
-				}
+				if (urlstate == UPath)
+					basefilep = basescanp+1;
 				break;
 			case '.':
 				if (urlstate == UScheme)
@@ -160,7 +147,13 @@ void newResource(Value th, const char *url, Value baseurl, Value *resarray) {
 		if (authl == 0 && urlstate <= UAuth)
 			authl = basescanp - authp;
 	}
-
+	else {
+		// If no '/' found, consider the entire url after scheme to be the authority
+		if (authl == 0 && urlstate <= UAuth) {
+			nopath = true;
+			authl = urlscanp - authp;
+		}
+	}
 	// **** Store the scheme type, mapped from schemes
 	int resourcetype = getTop(th);
 	pushGloVar(th, "Resource");
@@ -192,8 +185,8 @@ void newResource(Value th, const char *url, Value baseurl, Value *resarray) {
 	else
 		resarray[ResFragment] = aNull;
 
-	// **** Construct the normalized url and store
-	size_t maxsz = strlen(urlbeg) + (isrelative? strlen(basebeg):0) + 20;
+	// **** Allocate string then construct the absolute url
+	size_t maxsz = strlen(urlbeg) + (isrelative? strlen(basebeg):0) + 20; // 20 > adding "http:///world.acn" defaults
 	char *newstr = (char*) mem_gcrealloc(th, NULL, 0, maxsz);
 	// Insert the scheme if we did not have it
 	if (schemep!=(isrelative? basebeg : urlbeg)) {
@@ -204,44 +197,77 @@ void newResource(Value th, const char *url, Value baseurl, Value *resarray) {
 		newstr[0]='\0';
 	// Copy over the relevant part of the relative path from baseurl
 	if (isrelative) {
-		if (strncmp(basebeg, "//", 2)==0) basebeg+=2;
-		if (basefilep) {
-			size_t newlen = strlen(newstr) + basefilep-basebeg;
-			strncpy(&newstr[strlen(newstr)], basebeg, basefilep-basebeg);
-			newstr[newlen] = '\0';
-		}
-		else {
-			strcat(newstr, basebeg);
-			strcat(newstr, "/");
-		}
-		if (*urlbeg=='/') urlbeg++;
-		// Back up when relative path uses '..'
-		char *backscanp = &newstr[strlen(newstr)-1]; // pointing to last slash
-		while (0==strncmp(urlbeg, "./", 2) || 0==strncmp(urlbeg, "../", 3)) {
-			if (*urlbeg=='.') {
-				if (basenslash>1) {
-					while (*(backscanp-1)!='/')
-						backscanp--;
-					*backscanp='\0';
-					basenslash--;
-				}
-				urlbeg++;
+		// Point to first and last slash (or null) in baseurl's path
+		const char *basefirstslashp = authp; // after authority
+		while (*basefirstslashp && *basefirstslashp!='/')
+			basefirstslashp++;
+		// last slash is before resource filename
+		const char *baselastslashp = basefilep? basefilep-1 : &basebeg[strlen(basebeg)];
+
+		// if relative url starts with '/', do not include any of the path
+		if (*urlbeg=='/') {
+			urlbeg++; // avoid dupe '/'
+			baselastslashp = basefirstslashp;
+		} else {
+			// Move last slash back as much as we can, asked for by relative url '..'s
+			while (baselastslashp!=basefirstslashp) {
+				if (*urlbeg=='.' && urlbeg[1]=='/')
+					urlbeg+=2; // ignore
+				else if (*urlbeg=='.' && urlbeg[1]=='.' && urlbeg[2]=='/') {
+					while (*--baselastslashp && *baselastslashp!='/');
+					urlbeg+=3;
+				} else
+					break;
 			}
-			urlbeg+=2;
 		}
+
+		// We can now copy from basebeg[basebeg] to baselastslashp
+		size_t newlen = strlen(newstr) + baselastslashp-basebeg+1;
+		strncpy(&newstr[strlen(newstr)], basebeg, baselastslashp-basebeg+1);
+		if (*baselastslashp==0)
+			strcat(newstr, "/");
+		else
+			newstr[newlen]= '\0';
 	}
-	else
+	else {
 		if (strncmp(urlbeg, "//", 2)==0) urlbeg += 2;
-	// Copy over the url's file path and query, minus the fragment
-	if (fragp==NULL)
+		if (authl==0 && *urlbeg!='/')
+			strcat(newstr, "/");
+	}
+	// Copy over the url's file path without query and fragment
+	if (fragp==NULL && queryp==NULL)
 		strcat(newstr, urlbeg);
+	else if (queryp) {
+		size_t strl = strlen(newstr) + queryp - urlbeg;
+		strncpy(newstr+strlen(newstr), urlbeg, queryp-urlbeg);
+		newstr[strl] = '\0';
+	}
 	else {
 		size_t strl = strlen(newstr) + fragp - urlbeg-1;
 		strncpy(newstr+strlen(newstr), urlbeg, fragp-urlbeg-1);
 		newstr[strl] = '\0';
 	}
+	// Add in /world.acn or .acn defaults as needed
+	if (nopath) strcat(newstr,"/world.acn");
+	if (lastdotp==0 && newstr[strlen(newstr)-1]!='/') strcat(newstr,".acn");
+	// Copy over query without fragment
+	if (queryp) {
+		if (fragp==NULL)
+			strcat(newstr, queryp);
+		else {
+			size_t strl = strlen(newstr) + fragp - queryp-1;
+			strncpy(newstr+strlen(newstr), queryp, fragp-urlbeg-1);
+			newstr[strl] = '\0';
+		}
+	}
 	newSym(th, &resarray[ResNormUrl], newstr, strlen(newstr));
 	mem_gcrealloc(th, newstr, maxsz, 0);
+}
+
+bool resource_equal(Value res1, Value res2) {
+	if (!isArr(res1) || !isArr(res2))
+		return false;
+	return (arr_info(res1)->arr)[ResNormUrl] == (arr_info(res2)->arr)[ResNormUrl];
 }
 
 /** Deserialize the stream pushed on stack and remember its value */
@@ -292,7 +318,7 @@ void getResource(Value th, Value *resarray) {
 	// If it is a zip archive, unpack it. Otherwise treat it as a single stream
 	Value streamv = getFromTop(th,0);
 	char *stream = (char*) toStr(streamv);
-	if (strncmp(stream, "PK\3\4", 4)==0) {
+	if (stream && strncmp(stream, "PK\3\4", 4)==0) {
 		// To unpack all files in the Zip-compatible archive, first open it
 		mz_zip_archive zip_archive;
 		memset(&zip_archive, 0, sizeof(zip_archive));

@@ -248,6 +248,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymGlobal, "global"},
 	{SymLocal, "local"},
 	{SymLit, "lit"},
+	{SymExt, "ext"},
 	{SymResource, "Resource"},
 
 	// End of literal table

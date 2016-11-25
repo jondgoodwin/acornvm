@@ -165,6 +165,7 @@ extern "C" {
 		SymGlobal,  //!< 'global'
 		SymLocal,	//!< 'local'
 		SymLit,		//!< 'lit'
+		SymExt,		//!< 'ext'
 		SymResource, //!< 'Resource'
 
 		// Core type type
