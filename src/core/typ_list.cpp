@@ -119,7 +119,25 @@ int list_remove(Value th) {
 	if (pos<0) pos += size;
 	AintIdx len = getTop(th)>2 && isInt(getLocal(th,2))? toAint(getLocal(th,2)) : 1;
 
-	arrDel(th, getLocal(th,0), pos, len);
+	arrDel(th, arr, pos, len);
+	setTop(th, 1);
+	return 1;
+}
+
+/** Remove the specified value from list, wherever found */
+int list_removeValue(Value th) {
+	if (getTop(th)<2 || !isInt(getLocal(th, 1)))
+		return 0;
+	// Scan list from end to start, looking for value
+	Value arr = getLocal(th, 0);
+	Value val = getLocal(th, 1);
+	AintIdx size = arr_size(arr);
+	for (AintIdx i=size-1; i>0; i--) {
+		// Remove list's entry if exactly the same as val
+		if (arrGet(th, arr, i)==val)
+			arrDel(th, arr, i, 1);
+	}
+	setTop(th, 1);
 	return 1;
 }
 
@@ -310,6 +328,8 @@ void core_list_init(Value th) {
 			popProperty(th, 1, "()");
 			pushCMethod(th, list_remove);
 			popProperty(th, 1, "Remove");
+			pushCMethod(th, list_removeValue);
+			popProperty(th, 1, "RemoveValue");
 			pushCMethod(th, list_copy);
 			popProperty(th, 1, "Copy");
 			pushCMethod(th, list_sub);

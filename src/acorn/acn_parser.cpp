@@ -126,10 +126,12 @@ int genAddMethodLit(CompInfo *comp, Value val) {
 /** Parse an atomic value: literal, variable or pseudo-variable */
 void parseValue(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
+	// Literal token (number, symbol, string, true, false, null)
 	if (comp->lex->toktype == Lit_Token) {
 		astAddSeg2(th, astseg, vmlit(SymLit), comp->lex->token);
 		lexGetNextToken(comp->lex);
 	}
+	// Static unquoted @url
 	else if (comp->lex->toktype == Url_Token) {
 		// ('callprop', ('lit', +Resource), 'Load')
 		Value loadseg = astAddSeg(th, astseg, vmlit(SymCallProp), 3);
@@ -137,6 +139,7 @@ void parseValue(CompInfo* comp, Value astseg) {
 		astAddSeg2(th, loadseg, vmlit(SymLit), vmlit(SymLoad));
 		lexGetNextToken(comp->lex);
 	}
+	// Local or global variable / name token
 	else if (comp->lex->toktype == Name_Token) {
 		const char first = (toStr(comp->lex->token))[0];
 		if (first=='$' || (first>='A' && first<='Z'))
@@ -146,29 +149,32 @@ void parseValue(CompInfo* comp, Value astseg) {
 		}
 		lexGetNextToken(comp->lex);
 	}
+	// 'baseurl' pseudo-variable
 	else if (lexMatchNext(comp->lex, "baseurl")) {
 		astAddValue(th, astseg, vmlit(SymBaseurl));
 	}
+	// 'this' pseudo-variable
 	else if (lexMatchNext(comp->lex, "this")) {
 		astAddValue(th, astseg, vmlit(SymThis));
 	}
+	// 'self' pseudo-variable
 	else if (lexMatchNext(comp->lex, "self")) {
 		astAddValue(th, astseg, vmlit(SymSelf));
 	}
+	// parenthetically-enclosed expression
 	else if (lexMatchNext(comp->lex, "(")) {
 		parseExp(comp, astseg);
 		if (!lexMatchNext(comp->lex, ")"))
 			lexLog(comp->lex, "Expected ')'.");
 	}
-	// A method definition starts its own compilation context
+	// Method definition
 	else if (lexMatch(comp->lex, "[")) {
-		// Compile new method's parms and code block
+		// New compilation context for method's parms and code block
 		pushValue(th, vmlit(SymNew));
 		pushGloVar(th, "Method");
 		pushValue(th, comp);
 		getCall(th, 2, 1);
-		// Stick reference to compiled method in external section of this method's literals
-		//astAddSeg2(th, astseg, vmlit(SymLit), getFromTop(th, 0));
+		// Stick returned compiled method reference in extern section of this method's literals
 		astAddSeg2(th, astseg, vmlit(SymExt), anInt(genAddMethodLit(comp, getFromTop(th, 0))));
 		popValue(th);
 	}
@@ -239,15 +245,34 @@ void parsePrefixExp(CompInfo* comp, Value astseg) {
 			astAddValue(th, litseg, vmlit(SymNeg));
 		}
 	}
+	// '@' + symbol, text or '('exp')'
 	else if (lexMatchNext(comp->lex, "@")) {
-		// ('callprop', ('callprop', glo'Resource', lit'New', parsed-value, 'baseurl'), 'Load')
-		Value loadseg = astAddSeg(th, astseg, vmlit(SymCallProp), 3);
-		Value newseg = astAddSeg(th, loadseg, vmlit(SymCallProp), 5);
-		astAddSeg2(th, newseg, vmlit(SymGlobal), vmlit(SymResource));
-		astAddSeg2(th, newseg, vmlit(SymLit), vmlit(SymNew));
-		parsePrefixExp(comp, newseg);
-		astAddValue(th, newseg, vmlit(SymBaseurl));
-		astAddSeg2(th, loadseg, vmlit(SymLit), vmlit(SymLoad));
+		// Symbol or text: treat as static, unquoted url
+		if (comp->lex->toktype == Lit_Token) {
+			assert(isStr(comp->lex->token) || isSym(comp->lex->token));
+			// +Resource(token,baseurl)
+			pushValue(th, vmlit(SymNew));
+			pushValue(th, vmlit(TypeResc));
+			pushValue(th, comp->lex->token);
+			pushValue(th, comp->lex->url);
+			getCall(th, 3, 1);
+			// ('callprop', ('lit', resource), 'Load')
+			Value loadseg = astAddSeg(th, astseg, vmlit(SymCallProp), 3);
+			astAddSeg2(th, loadseg, vmlit(SymExt), anInt(genAddUrlLit(comp, getFromTop(th, 0))));
+			astAddSeg2(th, loadseg, vmlit(SymLit), vmlit(SymLoad));
+			lexGetNextToken(comp->lex);
+			popValue(th);
+		}
+		else {
+			// ('callprop', ('callprop', glo'Resource', lit'New', parsed-value, 'baseurl'), 'Load')
+			Value loadseg = astAddSeg(th, astseg, vmlit(SymCallProp), 3);
+			Value newseg = astAddSeg(th, loadseg, vmlit(SymCallProp), 5);
+			astAddSeg2(th, newseg, vmlit(SymGlobal), vmlit(SymResource));
+			astAddSeg2(th, newseg, vmlit(SymLit), vmlit(SymNew));
+			parsePrefixExp(comp, newseg);
+			astAddValue(th, newseg, vmlit(SymBaseurl));
+			astAddSeg2(th, loadseg, vmlit(SymLit), vmlit(SymLoad));
+		}
 	}
 	else
 		parseTerm(comp, astseg);
