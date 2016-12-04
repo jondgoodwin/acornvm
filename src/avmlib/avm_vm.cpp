@@ -230,6 +230,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	// Methods that are not compiler symbols
 	{SymNew, "New"},
 	{SymLoad, "Load"},
+	{SymGet, "Get"},
 	{SymParas, "()"},
 	{SymNeg, "-@"},
 	{SymNext, "next"},

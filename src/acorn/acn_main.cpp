@@ -229,6 +229,39 @@ int acn_newmethod(Value th) {
 	return 1;
 }
 
+// Found in typ_resource.cpp
+AuintIdx resource_resolve(Value th, Value meth, Value *resource);
+
+/* Try to rresolve all static Resources (externs) in 'self's method and its extern methods.
+	Will start the loading of any static resources not already loading.
+	null is returned if link is successful, otherwise it returns number of unresolved Resources */
+int acn_linker(Value th) {
+	BMethodInfo* meth = (BMethodInfo*) getLocal(th, 0);
+
+	// Return null when there are no unresolved externs
+	if (meth->nbrexterns == 0)
+		return 0;
+
+	AuintIdx counter = 0;
+	Value *externp = meth->lits;
+	for (Aint i=0; i<meth->nbrexterns; i++) {
+		counter += resource_resolve(th, meth, externp);
+		externp++;
+	}
+
+	// Return null if all externs resolved.
+	if (counter==0) {
+		meth->nbrexterns = 0; // Mark that no more static Resources externs are to be found
+		return 0;
+	}
+	else {
+		pushValue(th, anInt(counter)); // Return count of unresolved static resources
+		return 1;
+	}
+
+	return 1;
+}
+
 /* Method to compile and run an Acorn program.
    Pass it a string containing the program source and a symbol or null for the baseurl.
    Any additional parameters are passed to the compiled method when run. */

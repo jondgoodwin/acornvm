@@ -147,6 +147,7 @@ extern "C" {
 		// Byte-code (and parser) standard methods
 		SymNew,		//!< 'New'
 		SymLoad,	//!< 'Load'
+		SymGet,		//!< 'Get'
 		SymParas,	//!< '()'
 		SymNeg,		//!< '-@'
 		SymNext,	//!< 'next'

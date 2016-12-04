@@ -316,15 +316,63 @@ void resource_setvalue(Value th, Value *resarray, Value val) {
 	popValue(th);  // Resource
 }
 
-/** Deserialize the stream pushed on stack and remember its value */
-void resource_deserialize(Value th, Value *resarray) {
-	int streamvidx = getTop(th)-1;
+/* Attempt to resolve the method's extern - return number of unresolved Resources */
+AuintIdx resource_resolve(Value th, Value meth, Value *externp) {
+	AuintIdx counter = 0;
 
+	// Handle a static resource
+	if (isArr(*externp) && ((ArrInfo*)*externp)->type == vmlit(TypeResm)) {
+		Value *resarray = arr_info(*externp)->arr;
+		int resourceidx = getTop(th);
+		pushGloVar(th, "Resource");
+		// If resource's value is known, substitute it for extern
+		Value values = pushProperty(th, resourceidx, "values");
+		if (tblHas(th, values, resarray[ResUrl])) {
+			*externp = tblGet(th, values, resarray[ResUrl]);
+			mem_markChk(th, meth, *externp);
+		}
+		else {
+			Value loaders = pushProperty(th, resourceidx, "loaders");
+			// Start loading this resource, if not already being loaded
+			if (!tblHas(th, loaders, resarray[ResUrl])) {
+				pushValue(th, vmlit(SymLoad));
+				pushValue(th, *externp);
+				getCall(th, 1, 0);
+				// If the Load finished already, get its value
+				if (tblHas(th, values, resarray[ResUrl])) {
+					*externp = tblGet(th, values, resarray[ResUrl]);
+					mem_markChk(th, meth, *externp);
+				}
+				// If not finished, indicate it is unresolved
+				else
+					counter = 1;
+			}
+			else
+				counter = 1; // Acknowledge that still-loading resource is unresolved
+			popValue(th); // .loaders
+		}
+		popValue(th); // .values
+		popValue(th); // Resource
+	}
+
+	// Recursively link an enclosed method
+	else if (isMethod(*externp)) {
+		pushSym(th, "Link");
+		pushValue(th, *externp);
+		getCall(th, 1, 1);
+		if (isInt(getFromTop(th, 0)))
+			return toAint(getFromTop(th, 0)); // include its count in ours
+	}
+	return counter;
+}
+
+/** Deserialize the stream pushed on stack and remember its value */
+void resource_deserialize(Value th, Value stream, Value *resarray) {
 	// Convert stream into usable content, using extension's type
 	int64_t start = vmStartTimer();
 	pushValue(th, vmlit(SymNew));
 	pushValue(th, resarray[ResExtType]);
-	pushLocal(th, streamvidx);
+	pushValue(th, stream);
 	pushValue(th, resarray[ResUrl]);
 	pushValue(th, resarray[ResFragment]);
 	getCall(th, 4, 1);
@@ -332,6 +380,80 @@ void resource_deserialize(Value th, Value *resarray) {
 
 	// Finalize: Save resource's value in values cache
 	resource_setvalue(th, resarray, getFromTop(th, 0));
+}
+
+/** Handle successful 'get' of resource's stream using scheme. 
+	self is null. First parameter is the stream. */
+int resource_getSuccess(Value th) {
+	int loaderidx = getTop(th);
+	pushCloVar(th, 2); // loader
+	Value res = pushProperty(th, loaderidx, "resource");
+	Value *resarray = arr_info(res)->arr;
+
+	// Deserialize stream 
+	Value streamv = getLocal(th,1);
+	char *stream = (char*) toStr(streamv);
+	if (stream) {
+		// Regular stream - not a zip archive
+		if (strncmp(stream, "PK\3\4", 4)!=0) {
+			resource_deserialize(th, streamv, resarray);
+		}
+		// For zip archive, unpack it and deserialize every file as a separate resource
+		else {
+			mz_zip_archive zip_archive;
+			memset(&zip_archive, 0, sizeof(zip_archive));
+			mz_bool status = mz_zip_reader_init_mem(&zip_archive, stream, str_size(streamv), MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY);
+			if (status) {
+				// Extract each file in the archive.
+				int nbrfiles = (int)mz_zip_reader_get_num_files(&zip_archive);
+				for (int i = 0; i < nbrfiles; i++) {
+					// Get file's metadata: name, comment, sizes, directory flag
+					mz_zip_archive_file_stat file_stat;
+					if (!mz_zip_reader_file_stat(&zip_archive, i, &file_stat)) {
+						vmLog("Corrupted metadata for zip archive file");
+						continue;
+					}
+
+					// Extract and decompress a non-directory file's stream
+					if (!mz_zip_reader_is_file_a_directory(&zip_archive, i)) {
+						// Create a resource instance (an array), populate it to get correct url
+						Value extresarray = pushArray(th, vmlit(TypeResm), nResVals);
+						arrSet(th, extresarray, nResVals-1, aNull); // Fill it with nulls
+						newResource(th, file_stat.m_filename, resarray[ResUrl], arr_info(extresarray)->arr);
+
+						vmLog("Extracting %s resource from archive", toStr(arr_info(extresarray)->arr[ResUrl]));
+						AuintIdx streamsz = (AuintIdx) file_stat.m_uncomp_size;
+						Value nstreamv = pushStringl(th, aNull, NULL, streamsz);
+						mz_zip_reader_extract_to_mem(&zip_archive, i, (void*)toStr(nstreamv), streamsz, 0);
+						str_size(nstreamv) = streamsz;
+						resource_deserialize(th, nstreamv, arr_info(extresarray)->arr);
+						popValue(th); // deserialized stream
+						popValue(th); // stream
+						popValue(th); // Resource array
+					}
+				}
+
+				// Close the archive, freeing any resources it was using
+				mz_zip_reader_end(&zip_archive);
+				popValue(th); // zip resource's stream
+			}
+			else
+				vmLog("Resource looks like a zip archive, but won't open correctly");
+		}
+	}
+
+	return 0;
+}
+
+/** Handle failure to 'get' resource's stream using scheme. 
+	self is null. First parameter should be an error message. */
+int resource_getFailure(Value th) {
+	int loaderidx = getTop(th);
+	pushCloVar(th, 2); // loader
+	Value res = pushProperty(th, loaderidx, "resource");
+	Value *resarr = arr_info(res)->arr;
+	vmLog("Failed to load resource at %s. %s", toStr(resarr[ResUrl]), toStr(getLocal(th, 1)));
+	return 0;
 }
 
 /** Load and decode a resource instance, returning its value */
@@ -356,71 +478,30 @@ int resource_inst_load(Value th) {
 
 	// Create & populate the resource's loader, then store it in Resource.loaders
 	int loaderidx = getTop(th);
-	pushType(th, aNull, 4);
+	Value loaderv = pushType(th, aNull, 4);
 	pushValue(th, getLocal(th, 0));
 	popProperty(th, loaderidx, "resource"); // Save the resource (self)
 	tblSet(th, resloaders, resarray[ResUrl], getFromTop(th, 0));
-	popValue(th);
 
-	// Retrieve and push a byte stream for the named resource using scheme's type
+	// Get/push a byte stream for the named resource using scheme's type
+	// Since 'get' might be asynchronous, pass closures for future handling of success or failure
 	int streamvidx = getTop(th);
 	vmLog("Loading resource: %s", toStr(resarray[ResUrl]));
-	pushValue(th, vmlit(SymParas));
+	pushValue(th, vmlit(SymGet));
 	pushValue(th, resarray[ResSchemeType]);
 	pushValue(th, resarray[ResUrl]);
-	getCall(th, 2, 1);
+	pushCMethod(th, resource_getSuccess);
+	pushValue(th, aNull);
+	pushValue(th, loaderv);
+	pushClosure(th, 3);
+	pushCMethod(th, resource_getFailure);
+	pushValue(th, aNull);
+	pushValue(th, loaderv);
+	pushClosure(th, 3);
+	getCall(th, 4, 1);
 
-	// If it is a zip archive, unpack it. Otherwise treat it as a single stream
-	Value streamv = getFromTop(th,0);
-	char *stream = (char*) toStr(streamv);
-	if (stream && strncmp(stream, "PK\3\4", 4)!=0) {
-		resource_deserialize(th, resarray);
-	}
-	else {
-		// To unpack all files in the Zip-compatible archive, first open it
-		mz_zip_archive zip_archive;
-		memset(&zip_archive, 0, sizeof(zip_archive));
-		mz_bool status = mz_zip_reader_init_mem(&zip_archive, stream, str_size(streamv), MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY);
-		if (status) {
-			// Extract each file in the archive.
-			int nbrfiles = (int)mz_zip_reader_get_num_files(&zip_archive);
-			for (int i = 0; i < nbrfiles; i++) {
-				// Get file's metadata: name, comment, sizes, directory flag
-				mz_zip_archive_file_stat file_stat;
-				if (!mz_zip_reader_file_stat(&zip_archive, i, &file_stat)) {
-					vmLog("Corrupted metadata for zip archive file");
-					continue;
-				}
-
-				// Extract and decompress a non-directory file's stream
-				if (!mz_zip_reader_is_file_a_directory(&zip_archive, i)) {
-					// Create a resource instance (an array), populate it to get correct url
-					Value extresarray = pushArray(th, vmlit(TypeResm), nResVals);
-					arrSet(th, extresarray, nResVals-1, aNull); // Fill it with nulls
-					newResource(th, file_stat.m_filename, resarray[ResUrl], arr_info(extresarray)->arr);
-
-					vmLog("Extracting %s resource from archive", toStr(arr_info(extresarray)->arr[ResUrl]));
-					AuintIdx streamsz = (AuintIdx) file_stat.m_uncomp_size;
-					Value nstreamv = pushStringl(th, aNull, NULL, streamsz);
-					mz_zip_reader_extract_to_mem(&zip_archive, i, (void*)toStr(nstreamv), streamsz, 0);
-					str_size(nstreamv) = streamsz;
-					resource_deserialize(th, arr_info(extresarray)->arr);
-					popValue(th); // deserialized stream
-					popValue(th); // stream
-					popValue(th); // Resource array
-				}
-			}
-
-			// Close the archive, freeing any resources it was using
-			mz_zip_reader_end(&zip_archive);
-			popValue(th); // zip resource's stream
-
-			// Get deserialized value of the requested member of archive (if it was included!)
-			pushValue(th, tblGet(th, resvalues, resarray[ResUrl]));
-		}
-		else
-			vmLog("Resource looks like a zip archive, but won't open correctly");
-	}
+	// Return deserialized value of resource
+	pushValue(th, tblGet(th, resvalues, resarray[ResUrl]));
 	return 1;
 }
 

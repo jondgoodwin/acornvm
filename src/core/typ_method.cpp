@@ -45,6 +45,8 @@ void core_method_init(Value th) {
 			popProperty(th, 1, "_name");
 			pushCMethod(th, method_get);
 			popProperty(th, 1, "()");
+			pushCMethod(th, acn_linker);
+			popProperty(th, 1, "Link");
 			pushCMethod(th, method_arity);
 			popProperty(th, 1, "arity");
 			pushCMethod(th, method_varargs);

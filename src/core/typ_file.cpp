@@ -17,9 +17,10 @@ extern "C" {
 
 /** '()': Get contents for passed filename path string */
 int file_get(Value th) {
+	int nparms = getTop(th);
 	// Get string value of filename path
 	Value fnval;
-	if (getTop(th)<2 || (!isStr(fnval = getLocal(th,1)) && !isSym(fnval))) {
+	if (nparms<2 || (!isStr(fnval = getLocal(th,1)) && !isSym(fnval))) {
 		pushValue(th, aNull);
 		return 1;
 	}
@@ -30,26 +31,35 @@ int file_get(Value th) {
 	// Open the file - return null on failure
 	FILE *file;
 	if (!(file = fopen(fn, "rb"))) {
-		vmLog("Cannot open 'file://' resource: %s", fn);
-		pushValue(th, aNull);
-		return 1;
+		// Call the failure method, passing it an error diagnostic
+		if (nparms>3 && isCallable(getLocal(th,3))) {
+			pushLocal(th, 3);
+			pushValue(th, aNull);
+			pushString(th, aNull, "File open fails.");
+			getCall(th, 2, 0);
+		}
+		return 0;
 	}
 
-	// Determine the file length
-	size_t size;
+	// Determine the file length (so we can accurately allocate buffer)
 	fseek(file, 0, SEEK_END);
-	size=ftell(file);
+	size_t size=ftell(file);
 	fseek(file, 0, SEEK_SET);
 
-	// Create the string buffer (which will be returned)
-	Value strbuf = pushStringl(th, aNull, NULL, size);
-
-	// Load the data into an allocated buffer
+	// Load the data into an allocated Text string and close file
+	Value strbuf = pushStringl(th, vmlit(TypeTextm), NULL, size);
 	fread(str_cstr(strbuf), 1, size, file);
 	str_size(strbuf) = size;
-
-	// Close the file
 	fclose(file);
+
+	// Call the success method, passing it the stream
+	if (nparms>2 && isCallable(getLocal(th,2))) {
+		pushLocal(th, 2);
+		pushValue(th, aNull);
+		pushValue(th, strbuf);
+		getCall(th, 2, 0);
+	}
+
 	return 1;
 }
 
@@ -59,7 +69,7 @@ void core_file_init(Value th) {
 		pushSym(th, "File");
 		popProperty(th, 0, "_name");
 		pushCMethod(th, file_get);
-		popProperty(th, 0, "()");
+		popProperty(th, 0, "Get");
 	popGloVar(th, "File");
 
 	// Register this type as Resource's 'file' scheme

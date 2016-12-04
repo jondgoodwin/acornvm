@@ -102,6 +102,11 @@ typedef struct CompInfo {
    It returns the compiled byte-code method. */
 int acn_newmethod(Value th);
 
+/** Try to rresolve all static Resources (externs) in 'self's method and its extern methods.
+	Will start the loading of any static resources not already loading.
+	null is returned if link is successful, otherwise it returns number of unresolved Resources */
+int acn_linker(Value th);
+
 /** Method to compile and run an Acorn program.
    Pass it a string containing the program source and a symbol or null for the baseurl.
    Any additional parameters are passed to the compiled method when run. */
