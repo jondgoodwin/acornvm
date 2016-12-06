@@ -233,6 +233,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymGet, "Get"},
 	{SymParas, "()"},
 	{SymNeg, "-@"},
+	{SymValue, "value"},
 	{SymNext, "next"},
 
 	{SymFinalizer, "_finalizer"},

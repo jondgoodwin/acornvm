@@ -112,8 +112,14 @@ void serialize(Value th, Value str, int indent, Value val) {
 				strAppend(th, str, "\"", 1);
 			}
 			return;
-		case ArrEnc: 
-			arrSerialize(th, str, indent, val);
+		case ArrEnc:
+			if (arr_info(val)->type==vmlit(TypeResm)) {
+				Value url = arrGet(th, val, 0);
+				strAppend(th, str, "@", 1);
+				strAppend(th, str, sym_cstr(url), sym_size(url));
+			}
+			else
+				arrSerialize(th, str, indent, val);
 			return;
 		case TblEnc: 
 			tblSerialize(th, str, indent, val);

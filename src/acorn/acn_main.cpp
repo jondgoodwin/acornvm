@@ -225,14 +225,13 @@ int acn_newmethod(Value th) {
 
 	// Return generated method
 	pushValue(th, comp->method);
-	vmLog("Comp=%p and method=%p", comp, comp->method);
 	return 1;
 }
 
 // Found in typ_resource.cpp
 AuintIdx resource_resolve(Value th, Value meth, Value *resource);
 
-/* Try to rresolve all static Resources (externs) in 'self's method and its extern methods.
+/* Try to resolve all static Resources (externs) in 'self's method and its extern methods.
 	Will start the loading of any static resources not already loading.
 	null is returned if link is successful, otherwise it returns number of unresolved Resources */
 int acn_linker(Value th) {

@@ -292,31 +292,8 @@ int resource_new(Value th) {
 	return 1;
 }
 
-/** Set the resolved value for a resource in Resource.values. It also:
-	- removes its loader from Resources.loaders.
-	- Tries to resolve the value for any loaders whose status is "resolve"
-	  (i.e., any method that might have been waiting for this resource's value to be determined) */
-void resource_setvalue(Value th, Value *resarray, Value val) {
-	int resourceidx = getTop(th);
-	pushGloVar(th, "Resource");
-
-	// Store value in Resource.values
-	Value resvalues = pushProperty(th, resourceidx, "values");
-	tblSet(th, resvalues, resarray[ResUrl], val);
-	popValue(th);
-
-	// Get rid of resource's loader in Resource.loaders (we are done)
-	Value resloaders = pushProperty(th, resourceidx, "loaders");
-	tblRemove(th, resloaders, resarray[ResUrl]);
-	popValue(th);
-
-	// Check if any other resource in Resource.loaders is waiting on this value to resolve
-	// TBD...
-
-	popValue(th);  // Resource
-}
-
-/* Attempt to resolve the method's extern - return number of unresolved Resources */
+/* Attempt to resolve the method's externs
+	Return number of unresolved Resources or null if all resolved */
 AuintIdx resource_resolve(Value th, Value meth, Value *externp) {
 	AuintIdx counter = 0;
 
@@ -366,7 +343,72 @@ AuintIdx resource_resolve(Value th, Value meth, Value *externp) {
 	return counter;
 }
 
-/** Deserialize the stream pushed on stack and remember its value */
+/** Set the resolved value for a resource in Resource.values. It also:
+	- removes its loader from Resources.loaders.
+	- Tries to resolve the value for any loaders who want to link 
+	  but whose references have not all been loaded
+	  (i.e., any method that might have been waiting for this resource's value to be determined) */
+void resource_setvalue(Value th, Value *resarray, Value val) {
+	int resourceidx = getTop(th);
+	pushGloVar(th, "Resource");
+	Value resvalues = pushProperty(th, resourceidx, "values");
+	Value resloaders = pushProperty(th, resourceidx, "loaders");
+
+	// Store value in Resource.values
+	tblSet(th, resvalues, resarray[ResUrl], val);
+
+	// Get rid of resource's loader in Resource.loaders (we are done)
+	tblRemove(th, resloaders, resarray[ResUrl]);
+
+	// Check all in-process resource loaders with unfinished "link" status: can we now finish link?
+	// Note - this is a rather inefficient way to do it, scanning all in-process loaders every time a resource resolves
+	// It might be more efficient to build a dependency list within every loader
+	bool scanloaders = true;
+	while (scanloaders) {
+		scanloaders = false; // In most cases only need one scan
+		Value key = aNull;
+		while ((key = tblNext(resloaders, key)) != aNull) {
+			Value loader = tblGet(th, resloaders, key);
+			Value r = pushSym(th, "resource");
+			Value url = (arr_info(tblGet(th, loader, r))->arr)[ResUrl];
+			popValue(th); // r
+
+			// If loader has a 'value' property, it is in 'link' status
+			Value method = tblGet(th, loader, vmlit(SymValue));
+			if (isMethod(method)) {
+				// Try to complete link
+				pushSym(th, "Link");
+				pushValue(th, method);
+				getCall(th, 1, 1);
+				// If link resolved all dependencies...
+				if (popValue(th)==aNull) {
+					//  run the method
+					pushValue(th, method);
+					pushValue(th, aNull);
+					getCall(th, 1, 1);
+
+					// vmLog("Value returned from running %s-->\n%s", toStr(url), toStr(pushSerialized(th, getFromTop(th, 0)))); popValue(th);
+
+					// and then save return value in "values" and delete loader
+					// For efficiency, we won't recursively call ourself (setvalue)
+					// But then we must set the flag to re-scan all loaders,
+					// since already scanned resources might have needed this value
+					scanloaders = true;  // Force re-scan of all loaders
+					tblSet(th, resvalues, url, getFromTop(th, 0));
+					tblRemove(th, resloaders, url);
+					popValue(th); // method's run value
+				}
+			}
+		}
+	}
+
+	// Clean up stack
+	popValue(th);	// .loaders
+	popValue(th);	// .values
+	popValue(th);	// Resource
+}
+
+/** Deserialize the stream and remember its value */
 void resource_deserialize(Value th, Value stream, Value *resarray) {
 	// Convert stream into usable content, using extension's type
 	int64_t start = vmStartTimer();
@@ -378,8 +420,40 @@ void resource_deserialize(Value th, Value stream, Value *resarray) {
 	getCall(th, 4, 1);
 	vmLog("Deserialization took %f seconds", vmEndTimer(start));
 
+	// Are we done and can save value, or is it a method that needs linking?
+	Value decodedval = getFromTop(th, 0);
+	if (!isMethod(decodedval)) // non-methods are done
+		resource_setvalue(th, resarray, decodedval);
+	else {
+		// A method may need a link step to resolve the values
+		// of all static resources it references
+		pushSym(th, "Link");
+		pushValue(th, decodedval);
+		getCall(th, 1, 1);
+		if (popValue(th)==aNull) {
+			// Fully linked method is done
+			pushValue(th, decodedval);
+			pushValue(th, aNull);
+			getCall(th, 1, 1);
+			// vmLog("Value returned from running %s-->\n%s", toStr(resarray[ResUrl]), toStr(pushSerialized(th, getFromTop(th, 0)))); popValue(th);
+			resource_setvalue(th, resarray, getFromTop(th, 0));
+			popValue(th);
+		}
+		else {
+			// Link is unfinished as some static references are still loading
+			// Store method in loader's 'value' property, signalling a loader in 'link' status
+			int resourceidx = getTop(th);
+			pushGloVar(th, "Resource");
+			Value loaders = pushProperty(th, resourceidx, "loaders");
+			Value loader = tblGet(th, loaders, resarray[ResUrl]);
+			tblSet(th, loader, vmlit(SymValue), decodedval);
+			popValue(th); // .loaders
+			popValue(th); // Resource
+		}
+	}
+
 	// Finalize: Save resource's value in values cache
-	resource_setvalue(th, resarray, getFromTop(th, 0));
+	popValue(th); // deserialized stream
 }
 
 /** Handle successful 'get' of resource's stream using scheme. 
@@ -404,8 +478,41 @@ int resource_getSuccess(Value th) {
 			memset(&zip_archive, 0, sizeof(zip_archive));
 			mz_bool status = mz_zip_reader_init_mem(&zip_archive, stream, str_size(streamv), MZ_ZIP_FLAG_DO_NOT_SORT_CENTRAL_DIRECTORY);
 			if (status) {
-				// Extract each file in the archive.
+				// On first pass through directory, create a loader for every file
+				// This will ensure referenced streams come from archive rather than be auto-loaded as resources
 				int nbrfiles = (int)mz_zip_reader_get_num_files(&zip_archive);
+				int resourceidx = getTop(th);
+				pushGloVar(th, "Resource");
+				Value loaders = pushProperty(th, resourceidx, "loaders");
+				for (int i = 0; i < nbrfiles; i++) {
+					// Get file's metadata: name, comment, sizes, directory flag
+					mz_zip_archive_file_stat file_stat;
+					if (!mz_zip_reader_file_stat(&zip_archive, i, &file_stat)) {
+						vmLog("Corrupted metadata for zip archive file");
+						continue;
+					}
+
+					// Create a resource instance and loader for a non-directory file's stream
+					if (!mz_zip_reader_is_file_a_directory(&zip_archive, i)) {
+						// Create the loader
+						int loaderidx = getTop(th);
+						Value loader = pushType(th, aNull, 4);
+
+						// Create a resource instance (an array) with absolute url
+						Value extresarray = pushArray(th, vmlit(TypeResm), nResVals);
+						arrSet(th, extresarray, nResVals-1, aNull); // Fill it with nulls
+						newResource(th, file_stat.m_filename, resarray[ResUrl], arr_info(extresarray)->arr);
+
+						// Save resource in loader and save loader in Resource.loaders
+						popProperty(th, loaderidx, "resource");
+						tblSet(th, loaders, (arr_info(extresarray)->arr)[ResUrl], loader);
+						popValue(th); // loader
+					}
+				}
+				popValue(th); // .loaders
+				popValue(th); // Resource
+
+				// Now extract each stream in the archive and deserialize
 				for (int i = 0; i < nbrfiles; i++) {
 					// Get file's metadata: name, comment, sizes, directory flag
 					mz_zip_archive_file_stat file_stat;
@@ -427,7 +534,6 @@ int resource_getSuccess(Value th) {
 						mz_zip_reader_extract_to_mem(&zip_archive, i, (void*)toStr(nstreamv), streamsz, 0);
 						str_size(nstreamv) = streamsz;
 						resource_deserialize(th, nstreamv, arr_info(extresarray)->arr);
-						popValue(th); // deserialized stream
 						popValue(th); // stream
 						popValue(th); // Resource array
 					}

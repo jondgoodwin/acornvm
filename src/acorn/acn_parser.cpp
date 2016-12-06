@@ -133,10 +133,7 @@ void parseValue(CompInfo* comp, Value astseg) {
 	}
 	// Static unquoted @url
 	else if (comp->lex->toktype == Url_Token) {
-		// ('callprop', ('lit', +Resource), 'Load')
-		Value loadseg = astAddSeg(th, astseg, vmlit(SymCallProp), 3);
-		astAddSeg2(th, loadseg, vmlit(SymExt), anInt(genAddUrlLit(comp, comp->lex->token)));
-		astAddSeg2(th, loadseg, vmlit(SymLit), vmlit(SymLoad));
+		astAddSeg2(th, astseg, vmlit(SymExt), anInt(genAddUrlLit(comp, comp->lex->token)));
 		lexGetNextToken(comp->lex);
 	}
 	// Local or global variable / name token
@@ -256,12 +253,10 @@ void parsePrefixExp(CompInfo* comp, Value astseg) {
 			pushValue(th, comp->lex->token);
 			pushValue(th, comp->lex->url);
 			getCall(th, 3, 1);
-			// ('callprop', ('lit', resource), 'Load')
-			Value loadseg = astAddSeg(th, astseg, vmlit(SymCallProp), 3);
-			astAddSeg2(th, loadseg, vmlit(SymExt), anInt(genAddUrlLit(comp, getFromTop(th, 0))));
-			astAddSeg2(th, loadseg, vmlit(SymLit), vmlit(SymLoad));
-			lexGetNextToken(comp->lex);
+			// ('lit', resource)
+			astAddSeg2(th, astseg, vmlit(SymExt), anInt(genAddUrlLit(comp, getFromTop(th, 0))));
 			popValue(th);
+			lexGetNextToken(comp->lex);
 		}
 		else {
 			// ('callprop', ('callprop', glo'Resource', lit'New', parsed-value, 'baseurl'), 'Load')

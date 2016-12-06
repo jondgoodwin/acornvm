@@ -150,6 +150,7 @@ extern "C" {
 		SymGet,		//!< 'Get'
 		SymParas,	//!< '()'
 		SymNeg,		//!< '-@'
+		SymValue,	//!< 'value'
 		SymNext,	//!< 'next'
 
 		SymFinalizer, //!< '_finalizer' method for CData

@@ -66,7 +66,7 @@ void core_method_init(Value th) {
 	// Register this type as Resource's 'acn' extension
 	pushGloVar(th, "Resource");
 		pushProperty(th, getTop(th) - 1, "extensions");
-			pushValue(th, AcornPgm);
+			pushValue(th, vmlit(TypeMethc));
 			popTblSet(th, getTop(th) - 2, "acn");
 		popValue(th);
 	popValue(th);

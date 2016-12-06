@@ -544,7 +544,7 @@ bool lexScanResource(LexInfo *lex) {
 	const char *begp = &toStr(lex->source)[lex->bytepos];
 	const char *scanp = begp;
 	while ((unsigned char)(*++scanp)>' '); // end with space, tab, cr, lf, eof, etc.
-	lex->bytepos += scanp - &toStr(lex->source)[lex->bytepos];
+	lex->bytepos += scanp - begp;
 
 	// Create +Resource from literal url, and return it as token
 	pushValue(th, vmlit(SymNew));
