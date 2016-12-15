@@ -261,45 +261,7 @@ int acn_linker(Value th) {
 	return 1;
 }
 
-/* Method to compile and run an Acorn program.
-   Pass it a string containing the program source and a symbol or null for the baseurl.
-   Any additional parameters are passed to the compiled method when run. */
-int acn_newprogram(Value th) {
-	// Validate pgmsrc and baseurl parameters
-	if (getTop(th)<2 || !isStr(getLocal(th,1)))
-	{
-		pushValue(th, aNull);
-		return 1;
-	}
-	if (getTop(th)<3)
-		pushValue(th, aNull);
-	int i = getTop(th);
-
-	// Compile program as a method
-	pushValue(th, vmlit(SymNew));
-	pushGloVar(th, "Method");
-	pushLocal(th, 1);
-	pushLocal(th, 2);
-	getCall(th, 3, 1);
-
-	// Call the compiled method, with self=null. 
-	// Use as parms, the ones passed to us.
-	// Return a single value
-	setLocal(th, 1, getFromTop(th, 0));
-	setLocal(th, 2, getFromTop(th, 0)); 
-	popValue(th);
-	getCall(th, getTop(th)-2, 1);
-
-#ifdef COMPILERLOG
-	Value ret = pushSerialized(th, getLocal(th, 1));
-	vmLog("Value returned from running compiled program: %s", toStr(ret));
-	popValue(th);
-#endif
-	return 1;
-}
-
 #ifdef __cplusplus
 } // extern "C"
 } // namespace avm
 #endif
-

@@ -456,16 +456,24 @@ void resource_deserialize(Value th, Value stream, Value *resarray) {
 	popValue(th); // deserialized stream
 }
 
-/** Handle successful 'get' of resource's stream using scheme. 
-	self is null. First parameter is the stream. */
-int resource_getSuccess(Value th) {
+/** Handle completed 'get' of resource's stream using scheme.
+	self is null. First parameter is the stream.
+	If stream is null, get failed and second parm is the error string. */
+int resource_getCallback(Value th) {
+	// Access closure's stored loader and resource url info
 	int loaderidx = getTop(th);
-	pushCloVar(th, 2); // loader
+	pushCloVar(th, 2);
 	Value res = pushProperty(th, loaderidx, "resource");
 	Value *resarray = arr_info(res)->arr;
 
-	// Deserialize stream 
+	// If Get failed (stream is null), return with passed error diagnostic
 	Value streamv = getLocal(th,1);
+	if (streamv==aNull) {
+		vmLog("Failed to load resource at %s. %s", toStr(resarray[ResUrl]), toStr(getLocal(th, 1)));
+		return 0;
+	}
+
+	// Deserialize stream
 	char *stream = (char*) toStr(streamv);
 	if (stream) {
 		// Regular stream - not a zip archive
@@ -551,17 +559,6 @@ int resource_getSuccess(Value th) {
 	return 0;
 }
 
-/** Handle failure to 'get' resource's stream using scheme. 
-	self is null. First parameter should be an error message. */
-int resource_getFailure(Value th) {
-	int loaderidx = getTop(th);
-	pushCloVar(th, 2); // loader
-	Value res = pushProperty(th, loaderidx, "resource");
-	Value *resarr = arr_info(res)->arr;
-	vmLog("Failed to load resource at %s. %s", toStr(resarr[ResUrl]), toStr(getLocal(th, 1)));
-	return 0;
-}
-
 /** Load and decode a resource instance, returning its value */
 int resource_inst_load(Value th) {
 	Value *resarray = arr_info(getLocal(th, 0))->arr;
@@ -587,6 +584,11 @@ int resource_inst_load(Value th) {
 	Value loaderv = pushType(th, aNull, 4);
 	pushValue(th, getLocal(th, 0));
 	popProperty(th, loaderidx, "resource"); // Save the resource (self)
+	pushCMethod(th, resource_getCallback);
+	pushValue(th, aNull);
+	pushValue(th, loaderv);
+	pushClosure(th, 3);
+	popProperty(th, loaderidx, "callback"); // Store callback so it stays alive while needed
 	tblSet(th, resloaders, resarray[ResUrl], getFromTop(th, 0));
 
 	// Get/push a byte stream for the named resource using scheme's type
@@ -596,15 +598,8 @@ int resource_inst_load(Value th) {
 	pushValue(th, vmlit(SymGet));
 	pushValue(th, resarray[ResSchemeType]);
 	pushValue(th, resarray[ResUrl]);
-	pushCMethod(th, resource_getSuccess);
-	pushValue(th, aNull);
-	pushValue(th, loaderv);
-	pushClosure(th, 3);
-	pushCMethod(th, resource_getFailure);
-	pushValue(th, aNull);
-	pushValue(th, loaderv);
-	pushClosure(th, 3);
-	getCall(th, 4, 1);
+	pushProperty(th, loaderidx, "callback");
+	getCall(th, 3, 1);
 
 	// Return deserialized value of resource
 	pushValue(th, tblGet(th, resvalues, resarray[ResUrl]));

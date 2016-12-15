@@ -15,7 +15,7 @@ namespace avm {
 extern "C" {
 #endif
 
-/** '()': Get contents for passed filename path string */
+/** Get contents for passed filename path string */
 int file_get(Value th) {
 	int nparms = getTop(th);
 	// Get string value of filename path
@@ -31,12 +31,13 @@ int file_get(Value th) {
 	// Open the file - return null on failure
 	FILE *file;
 	if (!(file = fopen(fn, "rb"))) {
-		// Call the failure method, passing it an error diagnostic
-		if (nparms>3 && isCallable(getLocal(th,3))) {
-			pushLocal(th, 3);
+		// Do callback, passing null for stream and an error diagnostic
+		if (nparms>2 && isCallable(getLocal(th,2))) {
+			pushLocal(th, 2);
+			pushValue(th, aNull);
 			pushValue(th, aNull);
 			pushString(th, aNull, "File open fails.");
-			getCall(th, 2, 0);
+			getCall(th, 3, 0);
 		}
 		return 0;
 	}

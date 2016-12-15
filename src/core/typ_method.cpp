@@ -56,13 +56,6 @@ void core_method_init(Value th) {
 		popProperty(th, 0, "New");
 	popGloVar(th, "Method");
 
-	Value AcornPgm = pushType(th, vmlit(TypeType), 2);
-		pushSym(th, "AcornProgram");
-		popProperty(th, 0, "_name");
-		pushCMethod(th, acn_newprogram);
-		popProperty(th, 0, "New");
-	popGloVar(th, "AcornProgram");
-
 	// Register this type as Resource's 'acn' extension
 	pushGloVar(th, "Resource");
 		pushProperty(th, getTop(th) - 1, "extensions");
