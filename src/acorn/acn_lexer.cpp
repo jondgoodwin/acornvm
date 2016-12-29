@@ -553,6 +553,7 @@ bool lexScanResource(LexInfo *lex) {
 	pushValue(th, lex->url);
 	getCall(th, 3, 1);
 	lex->token = getFromTop(th, 0);
+	mem_markChk(lex->th, lex, lex->token);
 	popValue(th);
 	lex->toktype = Url_Token;
 	return true;

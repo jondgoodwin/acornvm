@@ -45,7 +45,7 @@ enum UrlState {
 /** Build a new resource (an array) by creating an absolute, complete url 
   from url and baseurl (for resolving a relative address).
   It then populates the resource array with extracts from the constructed url */
-void newResource(Value th, const char *url, Value baseurl, Value *resarray) {
+void newResource(Value th, const char *url, Value baseurl, Value resource) {
 	AintIdx stktop = getTop(th);
 	const char *urlscanp, *urlbeg;
 	const char *basescanp, *basebeg;
@@ -167,7 +167,7 @@ void newResource(Value th, const char *url, Value baseurl, Value *resarray) {
 	}
 	pushProperty(th, resourcetype, "schemes"); // Get table from Resource
 	pushSyml(th, schemep, schemel);
-	resarray[ResSchemeType] = tblGet(th, getFromTop(th, 1), getFromTop(th, 0));
+	arrSet(th, resource, ResSchemeType, tblGet(th, getFromTop(th, 1), getFromTop(th, 0)));
 
 	// *** Store the extension type, mapped from extensions
 	if (lastdotp) {
@@ -180,14 +180,17 @@ void newResource(Value th, const char *url, Value baseurl, Value *resarray) {
 	}
 	pushProperty(th, resourcetype, "extensions"); // Get table from Resource
 	pushSyml(th, extp, extl);
-	resarray[ResExtType] = tblGet(th, getFromTop(th, 1), getFromTop(th, 0));
+	arrSet(th, resource, ResExtType, tblGet(th, getFromTop(th, 1), getFromTop(th, 0)));
 	setTop(th, stktop); // reset stack
 
 	// **** Build the fragment symbol
-	if (fragp)
-		newSym(th, &resarray[ResFragment], fragp, urlscanp-fragp);
+	if (fragp) {
+		pushSyml(th, fragp,urlscanp-fragp);
+		arrSet(th, resource, ResFragment, getFromTop(th, 0));
+		popValue(th);
+	}
 	else
-		resarray[ResFragment] = aNull;
+		arrSet(th, resource, ResFragment, aNull);
 
 	// **** Allocate string then construct the absolute url
 	size_t maxsz = strlen(urlbeg) + (isrelative? strlen(basebeg):0) + 20; // 20 > adding "http:///world.acn" defaults
@@ -264,7 +267,9 @@ void newResource(Value th, const char *url, Value baseurl, Value *resarray) {
 			newstr[strl] = '\0';
 		}
 	}
-	newSym(th, &resarray[ResUrl], newstr, strlen(newstr));
+	pushSyml(th, newstr, strlen(newstr));
+	arrSet(th, resource, ResUrl, getFromTop(th,0));
+	popValue(th);
 	mem_gcrealloc(th, newstr, maxsz, 0);
 }
 
@@ -288,7 +293,7 @@ int resource_new(Value th) {
 	// Create the resource instance (an array), populate it, then return the pushed instance
 	Value resarray = pushArray(th, vmlit(TypeResm), nResVals);
 	arrSet(th, resarray, nResVals-1, aNull); // Fill it with nulls
-	newResource(th, toStr(urlval), baseurl, arr_info(resarray)->arr);
+	newResource(th, toStr(urlval), baseurl, resarray);
 	return 1;
 }
 
@@ -469,7 +474,8 @@ int resource_getCallback(Value th) {
 	// If Get failed (stream is null), return with passed error diagnostic
 	Value streamv = getLocal(th,1);
 	if (streamv==aNull) {
-		vmLog("Failed to load resource at %s. %s", toStr(resarray[ResUrl]), toStr(getLocal(th, 1)));
+		vmLog("Resource load failure '%s' for %s", toStr(getLocal(th, 2)), toStr(resarray[ResUrl]));
+		resource_setvalue(th, resarray, aNull);
 		return 0;
 	}
 
@@ -509,7 +515,7 @@ int resource_getCallback(Value th) {
 						// Create a resource instance (an array) with absolute url
 						Value extresarray = pushArray(th, vmlit(TypeResm), nResVals);
 						arrSet(th, extresarray, nResVals-1, aNull); // Fill it with nulls
-						newResource(th, file_stat.m_filename, resarray[ResUrl], arr_info(extresarray)->arr);
+						newResource(th, file_stat.m_filename, resarray[ResUrl], extresarray);
 
 						// Save resource in loader and save loader in Resource.loaders
 						popProperty(th, loaderidx, "resource");
@@ -534,7 +540,7 @@ int resource_getCallback(Value th) {
 						// Create a resource instance (an array), populate it to get correct url
 						Value extresarray = pushArray(th, vmlit(TypeResm), nResVals);
 						arrSet(th, extresarray, nResVals-1, aNull); // Fill it with nulls
-						newResource(th, file_stat.m_filename, resarray[ResUrl], arr_info(extresarray)->arr);
+						newResource(th, file_stat.m_filename, resarray[ResUrl], extresarray);
 
 						vmLog("Extracting %s resource from archive", toStr(arr_info(extresarray)->arr[ResUrl]));
 						AuintIdx streamsz = (AuintIdx) file_stat.m_uncomp_size;
