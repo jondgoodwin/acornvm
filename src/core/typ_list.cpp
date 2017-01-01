@@ -42,7 +42,8 @@ int list_append(Value th) {
 	AuintIdx idx = 1;
 	while (idx < getTop(th))
 		arrAdd(th, arr, getLocal(th,idx++));
-	return 0;
+	setTop(th, 1);
+	return 1;
 }
 
 /** Add to the beginning of a List */
@@ -51,7 +52,8 @@ int list_prepend(Value th) {
 	AuintIdx idx = 1;
 	while (idx < getTop(th))
 		arrIns(th, arr, 0, 1, getLocal(th, idx++));
-	return 0;
+	setTop(th, 1);
+	return 1;
 }
 
 /** Insert array element(s) at specified integer position */
@@ -143,7 +145,7 @@ int list_removeValue(Value th) {
 
 /** Create and return new list containing a shallow copy of the elements from original list.
 	One can specify the position (default 0) and length (to end of list) of the elements to copy from the original list. */
-int list_copy(Value th) {
+int list_clone(Value th) {
 	Value arr = getLocal(th, 0);
 	AintIdx size = arr_size(arr);
 	AintIdx pos = getTop(th)>1 && isInt(getLocal(th,1))? toAint(getLocal(th,1)) : 0;
@@ -330,8 +332,8 @@ void core_list_init(Value th) {
 			popProperty(th, 1, "Remove");
 			pushCMethod(th, list_removeValue);
 			popProperty(th, 1, "RemoveValue");
-			pushCMethod(th, list_copy);
-			popProperty(th, 1, "Copy");
+			pushCMethod(th, list_clone);
+			popProperty(th, 1, "Clone");
 			pushCMethod(th, list_sub);
 			popProperty(th, 1, "Sub");
 			pushCMethod(th, list_fill);

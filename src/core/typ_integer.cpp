@@ -7,6 +7,7 @@
  */
 
 #include "avmlib.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 #ifdef __cplusplus
@@ -199,6 +200,14 @@ int int_char(Value th) {
 	return 1;
 }
 
+/* Convert an integer to a Text string */
+int int_text(Value th) {
+	char string[15];
+	sprintf(string, "%ld", toAint(getLocal(th, 0)));
+	pushString(th, vmlit(TypeTextm), string);
+	return 1;
+}
+
 /** Biggest integer */
 int int_biggest(Value th) {
 	pushValue(th, anInt(((Aint)-1)>>2));
@@ -322,6 +331,11 @@ void core_int_init(Value th) {
 
 			pushCMethod(th, int_char);
 			popProperty(th, 1, "Char");
+			pushCMethod(th, int_text);
+			popProperty(th, 1, "Text");
+
+			pushCMethod(th, int_rand);
+			popProperty(th, 1, "Random");
 
 		popProperty(th, 0, "_newtype");
 
@@ -330,9 +344,7 @@ void core_int_init(Value th) {
 		pushCMethod(th, int_new);
 		popProperty(th, 0, "New");
 		pushCMethod(th, int_seedrand);
-		popProperty(th, 1, "RandomSeed");
-		pushCMethod(th, int_rand);
-		popProperty(th, 1, "Random");
+		popProperty(th, 0, "RandomSeed");
 	popGloVar(th, "Integer");
 	return;
 }

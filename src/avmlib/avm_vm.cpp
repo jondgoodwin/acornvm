@@ -316,9 +316,13 @@ void core_null_init(Value th);
 void core_bool_init(Value th);
 void core_int_init(Value th);
 void core_float_init(Value th);
+void core_symbol_init(Value th);
+void core_text_init(Value th);
 void core_list_init(Value th);
 void core_index_init(Value th);
 void core_type_init(Value th);
+
+void core_vm_init(Value th);
 
 void core_resource_init(Value th);
 void core_method_init(Value th);
@@ -335,8 +339,12 @@ void core_init(Value th) {
 	core_bool_init(th);
 	core_int_init(th);
 	core_float_init(th);
+	core_symbol_init(th);
+	core_text_init(th);
 	core_list_init(th);
 	core_index_init(th);
+
+	core_vm_init(th);
 
 	// Load resource before the types it uses
 	core_resource_init(th);

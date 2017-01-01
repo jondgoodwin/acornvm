@@ -54,7 +54,10 @@
     <ClCompile Include="src\core\typ_method.cpp" />
     <ClCompile Include="src\core\typ_null.cpp" />
     <ClCompile Include="src\core\typ_resource.cpp" />
+    <ClCompile Include="src\core\typ_symbol.cpp" />
+    <ClCompile Include="src\core\typ_text.cpp" />
     <ClCompile Include="src\core\typ_type.cpp" />
+    <ClCompile Include="src\core\typ_vm.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <ProjectGuid>{8B302A7E-1179-481B-8EBB-C599161470F1}</ProjectGuid>

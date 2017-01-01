@@ -10,6 +10,7 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 #include <float.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #ifdef __cplusplus
@@ -252,6 +253,14 @@ int float_rand(Value th) {
 	return 1;
 }
 
+/* Convert to a Text string */
+int float_text(Value th) {
+	char fstr[30];
+	sprintf(fstr, "%#.15g", toAfloat(getLocal(th,0)));
+	pushString(th, vmlit(TypeTextm), fstr);
+	return 1;
+}
+
 /** Initialize the Integer type */
 void core_float_init(Value th) {
 	vmlit(TypeFloc) = pushType(th, vmlit(TypeType), 8);
@@ -324,6 +333,9 @@ void core_float_init(Value th) {
 			popProperty(th, 1, "Ceil");
 			pushCMethod(th, float_floor);
 			popProperty(th, 1, "Floor");
+
+			pushCMethod(th, float_text);
+			popProperty(th, 1, "Text");
 		popProperty(th, 0, "_newtype");
 
 		pushCMethod(th, float_new);

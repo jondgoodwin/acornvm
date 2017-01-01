@@ -13,3 +13,10 @@
 	$temp.george.child = "Trip"
 	$temp.which = $temp.prodigal
 	$temp
+	
+	# Test Symbol core methods: .New, .Text and <=>
+	Vm.Print(+Symbol("Extra ").Text) if +Symbol(123)==+Symbol('123') # Prints "Extra "
+	
+	Vm.Print(+Text(123)<<" or else ">>"! ")
+	Vm.Print(+Text(123.3))
+	Vm.Print("\n")

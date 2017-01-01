@@ -418,21 +418,31 @@ void parseAssgnExp(CompInfo* comp, Value astseg) {
 	}
 }
 
-/** Parse an expression */
-void parseExp(CompInfo* comp, Value astseg) {
-	parseAssgnExp(comp, astseg);
-}
-
 /** Parse a 'this' expression/block or append/prepend operator */
 void parseThisExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
-	parseExp(comp, astseg);
-	bool appendflag = lexMatchNext(comp->lex, "<<");
+	parseAssgnExp(comp, astseg);
+	Value op;
+	bool opflag = (op=comp->lex->token) 
+		&& (lexMatchNext(comp->lex, "<<") || lexMatchNext(comp->lex, ">>"));
 	if (lexMatch(comp->lex, "{")) {
-		astseg = astInsSeg(th, astseg, vmlit(SymThisBlock), 3);
-		astAddValue(th, astseg, appendflag? vmlit(SymAppend) : aNull);
-		parseBlock(comp, astseg);
+		Value newseg = astInsSeg(th, astseg, vmlit(SymThisBlock), 3);
+		astAddValue(th, newseg, opflag? op : aNull);
+		parseBlock(comp, newseg);
 	}
+	else if (opflag) {
+		do {
+			Value newseg = astInsSeg(th, astseg, vmlit(SymCallProp), 4);
+			astAddSeg2(th, newseg, vmlit(SymLit), op);
+			parseAssgnExp(comp, newseg);
+		} while ((op=comp->lex->token) 
+		&& (lexMatchNext(comp->lex, "<<") || lexMatchNext(comp->lex, ">>")));
+	}
+}
+
+/** Parse an expression */
+void parseExp(CompInfo* comp, Value astseg) {
+	parseThisExp(comp, astseg);
 }
 
 void parseSemi(CompInfo* comp, Value astseg) {
