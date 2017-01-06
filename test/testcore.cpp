@@ -22,10 +22,12 @@ int test_equal(Value th) {
 		fails++;
 		return 0;
 	}
-	Value val1 = getLocal(th, 1);
-	Value val2 = getLocal(th, 2);
 	Value msg = getLocal(th, 3);
-	if (val1 != val2) {
+	pushSym(th, "<=>");
+	pushLocal(th, 1);
+	pushLocal(th, 2);
+	getCall(th, 2, 1);
+	if (getFromTop(th, 0)!=anInt(0)) {
 		printf("'%s' test failed!\n", toStr(msg));
 		fails++;
 	}

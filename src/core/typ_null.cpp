@@ -19,6 +19,15 @@ int null_new(Value th) {
 	return 1;
 }
 
+/** <=> for null */
+int null_compare(Value th) {
+	if (getTop(th)>1 && getLocal(th, 1)==aNull) {
+		pushValue(th, anInt(0));
+		return 1;
+	}
+	return 0;
+}
+
 /** Initialize the Null type */
 void core_null_init(Value th) {
 	vmlit(TypeNullc) = pushType(th, vmlit(TypeType), 4);
@@ -27,6 +36,8 @@ void core_null_init(Value th) {
 		vmlit(TypeNullm) = pushMixin(th, vmlit(TypeType), aNull, 30);
 			pushSym(th, "*Null");
 			popProperty(th, 1, "_name");
+			pushCMethod(th, null_compare);
+			popProperty(th, 1, "<=>");
 		popProperty(th, 0, "_newtype");
 
 		pushCMethod(th, null_new);

@@ -317,6 +317,7 @@ void core_bool_init(Value th);
 void core_int_init(Value th);
 void core_float_init(Value th);
 void core_symbol_init(Value th);
+void core_range_init(Value th);
 void core_text_init(Value th);
 void core_list_init(Value th);
 void core_index_init(Value th);
@@ -340,6 +341,7 @@ void core_init(Value th) {
 	core_int_init(th);
 	core_float_init(th);
 	core_symbol_init(th);
+	core_range_init(th);
 	core_text_init(th);
 	core_list_init(th);
 	core_index_init(th);

@@ -53,6 +53,7 @@
     <ClCompile Include="src\core\typ_list.cpp" />
     <ClCompile Include="src\core\typ_method.cpp" />
     <ClCompile Include="src\core\typ_null.cpp" />
+    <ClCompile Include="src\core\typ_range.cpp" />
     <ClCompile Include="src\core\typ_resource.cpp" />
     <ClCompile Include="src\core\typ_symbol.cpp" />
     <ClCompile Include="src\core\typ_text.cpp" />

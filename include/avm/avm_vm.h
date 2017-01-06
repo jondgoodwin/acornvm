@@ -188,6 +188,8 @@ extern "C" {
 		TypeVmm,	//!< Vm mixin
 		TypeSymc,	//!< Symbol class
 		TypeSymm,	//!< Symbol mixin
+		TypeRangec, //!< Range class
+		TypeRangem, //!< Range mixin
 		TypeTextc,	//!< Text class
 		TypeTextm,	//!< Text mixin
 		TypeListc,	//!< List class

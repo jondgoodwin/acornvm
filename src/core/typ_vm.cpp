@@ -8,6 +8,7 @@
 
 #include "avmlib.h"
 #include <stdio.h>
+#include <string.h>
 
 #ifdef __cplusplus
 namespace avm {
@@ -25,7 +26,22 @@ int vm_print(Value th) {
 /** Log the Text string */
 int vm_log(Value th) {
 	if (getTop(th)>1 && isStr(getLocal(th,1))) {
-		vmLog(toStr(getLocal(th,1)));
+		const char *textp = toStr(getLocal(th,1));
+		Value serstr = pushStringl(th, aNull, NULL, 128);
+		int parmidx = 2;
+		while (*textp) {
+			const char *varp = strchr(textp, '%');
+			if (varp) {
+				strAppend(th, serstr, textp, varp-textp);
+				textp = ++varp;
+				if (parmidx<getTop(th))
+					serialize(th, serstr, 0, getLocal(th, parmidx++));
+			} else {
+				strAppend(th, serstr, textp, strlen(textp));
+				textp += strlen(textp);
+			}
+		}
+		vmLog(toStr(serstr));
 	}
 	return 0;
 }

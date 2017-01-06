@@ -19,6 +19,15 @@ int bool_new(Value th) {
 	return 1;
 }
 
+/** <=> for boolean */
+int bool_compare(Value th) {
+	if (getTop(th)>1 && getLocal(th, 1)==getLocal(th,0)) {
+		pushValue(th, anInt(0));
+		return 1;
+	}
+	return 0;
+}
+
 /** Initialize the Null type */
 void core_bool_init(Value th) {
 	vmlit(TypeBoolc) = pushType(th, vmlit(TypeType), 4);
@@ -27,6 +36,8 @@ void core_bool_init(Value th) {
 		vmlit(TypeBoolm) = pushMixin(th, vmlit(TypeType), aNull, 30);
 			pushSym(th, "*Bool");
 			popProperty(th, 1, "_name");
+			pushCMethod(th, bool_compare);
+			popProperty(th, 1, "<=>");
 		popProperty(th, 0, "_newtype");
 
 		pushCMethod(th, bool_new);
