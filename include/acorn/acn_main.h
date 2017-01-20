@@ -68,9 +68,12 @@ typedef struct CompInfo {
 
 	Value th;				//!< Current thread
 	LexInfo *lex;			//!< Lexer info for Acorn source being compiled
-	Value ast;				//!< Abstract Syntax Tree
 	BMethodInfo* method;	//!< Method whose byte-code is being built
 	Value prevcomp;			//!< Compiler for method that defined this method
+
+	Value ast;				//!< Abstract Syntax Tree
+	Value locvarseg;		//!< Local variable AST segment
+	Value clovarseg;		//!< Closure variable AST segment
 
 	// Generation context
 	Value thisop;			//!< Operator to use on every 'this' block stmt
@@ -143,6 +146,12 @@ void lexLog(LexInfo *lex, const char *msg);
 
 /** A temporary function for generating byte-code test programs */
 AVM_API Value genTestPgm(Value th, int pgm);
+
+/** Look for local variable. Returns idx if found, -1 otherwise. */
+int findLocalVar(CompInfo *comp, Value varnm);
+
+/** Look for closure variable. Returns idx if found, -1 otherwise. */
+int findClosureVar(CompInfo *comp, Value varnm);
 
 #ifdef __cplusplus
 } // end "C"

@@ -29,8 +29,6 @@ void newBMethod(Value th, Value *dest) {
 	meth->litsz = 0;
 	meth->nbrlits = 0;
 	meth->nbrexterns = 0;
-	meth->locals = NULL;
-	meth->localsz = 0;
 	meth->nbrlocals = 0;
 }
 
@@ -63,32 +61,6 @@ int genAddLit(CompInfo *comp, Value val) {
 	f->lits[f->nbrlits] = val;
 	mem_markChk(comp->th, comp, val);
 	return f->nbrlits++;
-}
-
-/* Look in reverse order for local variable, returning its register. Add if not found. */
-int genLocalVar(CompInfo *comp, Value varnm) {
-	BMethodInfo* f = comp->method;
-	assert(isSym(varnm));
-
-	// Look to see if local variable already defined
-	if (f->nbrlocals > 0) 
-		for (int reg = f->nbrlocals - 1; reg >= 0; reg--) {
-			if (f->locals[reg] == varnm)
-				return reg;
-		}
-
-	// Not defined: add it
-	mem_growvector(comp->th, f->locals, f->nbrlocals, f->localsz, Value, INT_MAX);
-	f->locals[f->nbrlocals] = varnm;
-	if (f->nbrlocals+1 > f->maxstacksize)
-		f->maxstacksize = f->nbrlocals + 1;
-	return f->nbrlocals++;
-}
-
-/* Add a parameter */
-void genAddParm(CompInfo *comp, Value varnm) {
-	methodNParms(comp->method)++;
-	genLocalVar(comp, varnm);
 }
 
 /* Indicate the method has a variable number of parameters */
@@ -278,36 +250,48 @@ void genAssign(CompInfo *comp, Value lval, Value rval) {
 	// Handle assignments that require we load rval (and other stuff) first
 	unsigned int rreg = comp->nextreg; // Save where we put rvals
 	if (vmlit(SymLocal) == lvalop) {
-		// Optimize load straight into register, if possible
-		// (But don't do it if we need a consistent register to find the value in)
-		Value rvalop = astGet(th, rval, 0);
-		int localreg = toAint(astGet(th, lval, 1));
-		if (isSym(rval)) {
-			if (vmlit(SymThis) == rval)
-				genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, comp->thisreg, 0));
-			else if (vmlit(SymSelf) == rval)
-				genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, 0, 0));
-			else if (vmlit(SymBaseurl) == rval)
-				genAddInstr(comp, BCINS_ABx(OpLoadLit, localreg, genAddLit(comp, comp->lex->url)));
-		} else {
-			if (vmlit(SymLit) == rvalop) {
-				Value litval = astGet(th, rval, 1);
-				if (litval==aNull)
-					genAddInstr(comp, BCINS_ABC(OpLoadPrim, localreg, 0, 0));
-				else if (litval==aFalse)
-					genAddInstr(comp, BCINS_ABC(OpLoadPrim, localreg, 1, 0));
-				else if (litval==aTrue)
-					genAddInstr(comp, BCINS_ABC(OpLoadPrim, localreg, 2, 0));
-				else
-					genAddInstr(comp, BCINS_ABx(OpLoadLit, localreg, genAddLit(comp, litval)));
-			} else if (vmlit(SymLocal) == rvalop) {
-				genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, toAint(astGet(th, rval, 1)), 0));
-			} else if (vmlit(SymGlobal) == rvalop) {
-				genAddInstr(comp, BCINS_ABx(OpGetGlobal, localreg, genAddLit(comp, astGet(th, rval, 1))));
+		Value symnm = astGet(th, lval, 1);
+		int localreg = findLocalVar(comp, symnm);
+		if (localreg != -1) {
+			// Optimize load straight into register, if possible
+			// (But don't do it if we need a consistent register to find the value in)
+			Value rvalop = astGet(th, rval, 0);
+			if (isSym(rval)) {
+				if (vmlit(SymThis) == rval)
+					genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, comp->thisreg, 0));
+				else if (vmlit(SymSelf) == rval)
+					genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, 0, 0));
+				else if (vmlit(SymBaseurl) == rval)
+					genAddInstr(comp, BCINS_ABx(OpLoadLit, localreg, genAddLit(comp, comp->lex->url)));
 			} else {
-				genExp(comp, rval);
-				genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, rreg, 0));
+				if (vmlit(SymLit) == rvalop) {
+					Value litval = astGet(th, rval, 1);
+					if (litval==aNull)
+						genAddInstr(comp, BCINS_ABC(OpLoadPrim, localreg, 0, 0));
+					else if (litval==aFalse)
+						genAddInstr(comp, BCINS_ABC(OpLoadPrim, localreg, 1, 0));
+					else if (litval==aTrue)
+						genAddInstr(comp, BCINS_ABC(OpLoadPrim, localreg, 2, 0));
+					else
+						genAddInstr(comp, BCINS_ABx(OpLoadLit, localreg, genAddLit(comp, litval)));
+				} else if (vmlit(SymLocal) == rvalop) {
+					Value symnm2 = astGet(th, rval, 1);
+					Aint localreg2;
+					if ((localreg2 = findLocalVar(comp, symnm2))!=-1)
+						genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, localreg2, 0));
+					else if ((localreg2 = findClosureVar(comp, symnm2))!=-1)
+						genAddInstr(comp, BCINS_ABC(OpGetClosure, localreg, localreg2, 0));
+				} else if (vmlit(SymGlobal) == rvalop) {
+					genAddInstr(comp, BCINS_ABx(OpGetGlobal, localreg, genAddLit(comp, astGet(th, rval, 1))));
+				} else {
+					genExp(comp, rval);
+					genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, rreg, 0));
+				}
 			}
+		}
+		else if ((localreg = findClosureVar(comp, symnm))!=-1) {
+			genExp(comp, rval);
+			genAddInstr(comp, BCINS_ABC(OpSetClosure, localreg, rreg, 0));
 		}
 	} else if (vmlit(SymGlobal) == lvalop) {
 		genExp(comp, rval);
@@ -360,7 +344,12 @@ void genExp(CompInfo *comp, Value astseg) {
 		} else if (vmlit(SymExt) == op) {
 			genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), toAint(astGet(th, astseg, 1))));
 		} else if (vmlit(SymLocal) == op) {
-			genAddInstr(comp, BCINS_ABC(OpLoadReg, genNextReg(comp), toAint(astGet(th, astseg,1)), 0));
+			Value symnm = astGet(th, astseg, 1);
+			Aint idx;
+			if ((idx = findLocalVar(comp, symnm))!=-1)
+				genAddInstr(comp, BCINS_ABC(OpLoadReg, genNextReg(comp), idx, 0));
+			else if ((idx = findClosureVar(comp, symnm))!=-1)
+				genAddInstr(comp, BCINS_ABC(OpGetClosure, genNextReg(comp), idx, 0));
 		} else if (vmlit(SymGlobal) == op) {
 			genAddInstr(comp, BCINS_ABx(OpGetGlobal, genNextReg(comp), genAddLit(comp, astGet(th, astseg, 1))));
 		} else if (vmlit(SymAssgn) == op) {
@@ -505,15 +494,18 @@ void genStmts(CompInfo *comp, Value astseg) {
 /* Generate a complete byte-code method by walking the 
  * Abstract Syntax Tree generated by the parser */
 void genBMethod(CompInfo *comp) {
+	// AST: ('method', localvars, closurevars, statements)
 	// Initialize generation state
 	comp->method->nbrexterns = comp->method->nbrlits;
 	comp->nextreg = comp->method->maxstacksize = comp->method->nbrlocals;
 	comp->thisreg = 0; // Starts with 'self'
 	comp->thisop = aNull;
+	comp->locvarseg = astGet(comp->th, comp->ast, 1);
+	comp->clovarseg = astGet(comp->th, comp->ast, 2);
 
-	// Root node is always 'method', its second node is always statements
+	// Generate: Initialize locals with null, statements, implicit return
 	genAddInstr(comp, BCINS_ABC(OpLoadNulls, comp->method->nbrlocals, 0, 0));
-	genStmts(comp, astGet(comp->th, comp->ast, 1));
+	genStmts(comp, astGet(comp->th, comp->ast, 3));
 	genAddInstr(comp, BCINS_ABC(OpReturn, comp->method->nbrlocals, 1, 0));
 }
 

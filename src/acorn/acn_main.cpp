@@ -58,13 +58,14 @@ Value genTestPgm(Value th, int pgm) {
 	CompInfo* comp = (CompInfo*) pushCompiler(th, src, aNull);
 	pushValue(th, comp->method);
 	Value self = pushSym(th, "self");
+	int selfidx = 0;
+	methodNParms(comp->method)=1;
 	switch (pgm) {
 
 	// Test the Load instructions
 	case 0: {
 		Value glosym = pushSym(th, "$g");
-		genAddParm(comp, self);
-		genAddInstr(comp, BCINS_ABC(OpLoadReg, 1, genLocalVar(comp, self), 0)); // load self into 1
+		genAddInstr(comp, BCINS_ABC(OpLoadReg, 1, selfidx, 0)); // load self into 1
 		genAddInstr(comp, BCINS_ABC(OpLoadPrim, 2, 2, 0)); // Load primitive true
 		genAddInstr(comp, BCINS_ABx(OpLoadLit, 3, genAddLit(comp, aFloat(3.14f))));  // Load literal
 		genAddInstr(comp, BCINS_ABx(OpSetGlobal, 3, genAddLit(comp, glosym)));
@@ -75,16 +76,14 @@ Value genTestPgm(Value th, int pgm) {
 
 	// Test variable parameters
 	case 1:
-		genAddParm(comp, self);
 		genVarParms(comp);
-		genAddInstr(comp, BCINS_ABC(OpLoadReg, 1, genLocalVar(comp, self), 0)); // load self into 1
+		genAddInstr(comp, BCINS_ABC(OpLoadReg, 1, selfidx, 0)); // load self into 1
 		genAddInstr(comp, BCINS_ABC(OpLoadVararg, 2, BCVARRET, 0)); // Load var args
 		genAddInstr(comp, BCINS_ABC(OpReturn, 1, BCVARRET, 0));
 		break;
 
 	// Test call and jump instructions with a fibonacci calculation
 	case 2:
-		genAddParm(comp, self);
 		genMaxStack(comp, 6);
 		genAddInstr(comp, BCINS_AJ(OpJTrue, 0, 2));
 		genAddInstr(comp, BCINS_ABx(OpLoadLit, 1, genAddLit(comp, anInt(5))));
@@ -109,10 +108,8 @@ Value genTestPgm(Value th, int pgm) {
 
 	// Test tailcall with a factorial method
 	case 3: {
-		Value a = pushSym(th, "a");
+		methodNParms(comp->method)=2;
 		Value fact = pushSym(th, "fact");
-		genAddParm(comp, self);
-		genAddParm(comp, a);
 		genMaxStack(comp, 6);
 		genAddInstr(comp, BCINS_AJ(OpJGt, 0, 1));
 		genAddInstr(comp, BCINS_ABC(OpReturn, 1, 1, 0));
@@ -129,15 +126,12 @@ Value genTestPgm(Value th, int pgm) {
 		genAddInstr(comp, BCINS_ABC(OpTailCall, 2, 2, BCVARRET));
 
 		tblSet(th, vmlit(TypeIntm), fact, comp->method);
-
-		popValue(th);
 		popValue(th);
 			} break;
 
 	// Test repetitive preps and calls, doing a build and for loop on a list, summing its integers
 	case 4: {
 		Value list = pushSym(th, "List");
-		genAddParm(comp, self);
 		genMaxStack(comp, 9);
 		genAddInstr(comp, BCINS_ABC(OpLoadStd, 3, 0, ss(SymNew)));
 		genAddInstr(comp, BCINS_ABx(OpGetGlobal, 4, genAddLit(comp, list)));
@@ -169,7 +163,6 @@ Value genTestPgm(Value th, int pgm) {
 		Value res = pushSym(th, "Resource");
 		Value load = pushSym(th, "Load");
 		Value testacn = pushString(th, vmlit(TypeTextm), "file://./test.acn");
-		genAddParm(comp, self);
 		genAddInstr(comp, BCINS_ABx(OpLoadLit, 3, genAddLit(comp, load)));
 		genAddInstr(comp, BCINS_ABx(OpLoadLit, 4, genAddLit(comp, vmlit(SymNew))));
 		genAddInstr(comp, BCINS_ABx(OpGetGlobal, 5, genAddLit(comp, res)));
@@ -243,7 +236,7 @@ int acn_linker(Value th) {
 
 	AuintIdx counter = 0;
 	Value *externp = meth->lits;
-	for (Aint i=0; i<meth->nbrexterns; i++) {
+	for (Auint i=0; i<meth->nbrexterns; i++) {
 		counter += resource_resolve(th, meth, externp);
 		externp++;
 	}

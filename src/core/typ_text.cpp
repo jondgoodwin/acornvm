@@ -72,10 +72,17 @@ int text_multiply(Value th) {
 
 /** Append to end of text string */
 int text_append(Value th) {
-	Value self = getLocal(th,0);
-	Value parm;
-	if (getTop(th)>1 && isStr(parm=getLocal(th,1))) {
-		strAppend(th, self, toStr(parm), str_size(parm));
+	if (getTop(th)>1) {
+		Value self = getLocal(th,0);
+		Value parm = getLocal(th,1);
+		if (!isStr(parm)) {
+			pushSym(th, "Text");
+			pushValue(th, parm);
+			getCall(th, 1, 1);
+			parm = getFromTop(th, 0);
+		}
+		if (isStr(parm))
+			strAppend(th, self, toStr(parm), str_size(parm));
 	}
 	setTop(th, 1);
 	return 1;

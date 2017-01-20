@@ -163,12 +163,10 @@ typedef struct BMethodInfo {
 	MemCommonInfoMeth;			//!< Common method header
 	Instruction *code;		//!< Array of bytecode instructions (size is nbr of instructions)
 	Value *lits;			//!< Array of literals used by this method
-	Value *locals;			//!< Array of local variables (& parms) used by method
 	AuintIdx avail;			//!< nbr of Instructions code is allocated for
 	AuintIdx litsz;			//!< Allocated size of literal list
 	AuintIdx nbrlits;		//!< Number of literals in lits
-	AuintIdx nbrexterns;		//!< Number of externals in lits
-	AuintIdx localsz;		//!< Allocated size of local list
+	AuintIdx nbrexterns;	//!< Number of externals in lits
 	AuintIdx nbrlocals;		//!< Number of local variables in locals
 	AuintIdx maxstacksize;	//!< Maximum size of stack needed to parms+locals
 } BMethodInfo;
@@ -179,9 +177,6 @@ typedef struct BMethodInfo {
 	{if (!isCMethod(m) && ((BMethodInfo*)m)->nbrlits>0) \
 		for (AuintIdx i=0; i<((BMethodInfo*)m)->nbrlits; i++) \
 			mem_markobj(th, ((BMethodInfo*)m)->lits[i]); \
-	if (!isCMethod(m) && ((BMethodInfo*)m)->nbrlocals>0) \
-		for (AuintIdx i=0; i<((BMethodInfo*)m)->nbrlocals; i++) \
-			mem_markobj(th, ((BMethodInfo*)m)->locals[i]); \
 	}
 
 /** Free all of an part's allocated memory */
@@ -191,7 +186,6 @@ typedef struct BMethodInfo {
 		BMethodInfo* bm = (BMethodInfo*)m; \
 		if (bm->code) mem_freearray(th, bm->code, bm->avail); \
 		if (bm->lits) mem_freearray(th, bm->lits, bm->litsz); \
-		if (bm->locals) mem_freearray(th, bm->locals, bm->localsz); \
 		mem_free(th, bm); \
 	}}
 

@@ -123,6 +123,40 @@ int genAddMethodLit(CompInfo *comp, Value val) {
 	return f->nbrlits++;
 }
 
+/* Look for local variable. Returns idx if found, -1 otherwise. */
+int findLocalVar(CompInfo *comp, Value varnm) {
+	assert(isSym(varnm));
+
+	// Look to see if variable already defined as local
+	int nbrlocals = arr_size(comp->locvarseg);
+	for (int idx = nbrlocals - 1; idx > 0; idx--) {
+		if (arrGet(comp->th, comp->locvarseg, idx) == varnm)
+			return idx-1;
+	}
+	return -1;
+}
+
+/* Look for closure variable. Returns idx if found, -1 otherwise. */
+int findClosureVar(CompInfo *comp, Value varnm) {
+	assert(isSym(varnm));
+
+	// Look to see if variable already defined as closure
+	int nbrlocals = arr_size(comp->clovarseg);
+	for (int idx = nbrlocals - 1; idx >= 0; idx--) {
+		if (arrGet(comp->th, comp->clovarseg, idx) == varnm)
+			return idx;
+	}
+	return -1;
+}
+
+/** If variable not declared already, declare it */
+void implicitLocal(CompInfo *comp, Value varnm) {
+	// If not declared by this method as local or closure ...
+	if (findLocalVar(comp, varnm)==-1 && findClosureVar(comp, varnm)==-1)
+		// Declare as closure var if found as local in outer method. Otherwise, declare as local
+		arrAdd(comp->th, comp->prevcomp!=aNull && findLocalVar((CompInfo*)comp->prevcomp, varnm)? comp->clovarseg: comp->locvarseg, varnm);
+}
+
 /** Parse an atomic value: literal, variable or pseudo-variable */
 void parseValue(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
@@ -142,7 +176,9 @@ void parseValue(CompInfo* comp, Value astseg) {
 		if (first=='$' || (first>='A' && first<='Z'))
 			astAddSeg2(th, astseg, vmlit(SymGlobal), comp->lex->token);
 		else {
-			astAddSeg2(th, astseg, vmlit(SymLocal), anInt(genLocalVar(comp, comp->lex->token)));
+			implicitLocal(comp, comp->lex->token); // declare local if not already declared
+			// We do not resolve to index until gen because of else clauses (declaration after use)
+			astAddSeg2(th, astseg, vmlit(SymLocal), comp->lex->token);
 		}
 		lexGetNextToken(comp->lex);
 	}
@@ -518,7 +554,20 @@ void parseBlock(CompInfo* comp, Value astseg) {
 void parseProgram(CompInfo* comp) {
 	Value th = comp->th;
 	astAddValue(th, comp->ast, vmlit(SymMethod));
-	genAddParm(comp, vmlit(SymSelf));
+
+	// local variable list - starts with pointer to outer method's local variable list
+	comp->locvarseg = astAddSeg(th, comp->ast, comp->prevcomp==aNull? aNull : ((CompInfo*)comp->prevcomp)->locvarseg, 16);
+
+	// closure variable list
+	comp->clovarseg = pushArray(th, aNull, 4);
+	arrAdd(th, comp->ast, comp->clovarseg);
+	popValue(th);
+
+	// Declare self as first implicit parameter
+	arrAdd(th, comp->locvarseg, vmlit(SymSelf));
+	methodNParms(comp->method)=1;
+
+	// process parameters as local variables
 	if (lexMatchNext(comp->lex, "[")) {
 		do {
 			if (comp->lex->toktype == Name_Token) {
@@ -526,7 +575,10 @@ void parseProgram(CompInfo* comp) {
 				if (first=='$' || (first>='A' && first<='Z'))
 					lexLog(comp->lex, "A global name may not be a method parameter");
 				else {
-					genAddParm(comp, comp->lex->token);
+					if (findLocalVar(comp, comp->lex->token)==-1) {
+						arrAdd(th, comp->locvarseg, comp->lex->token);
+						methodNParms(comp->method)++;
+					}
 				}
 				lexGetNextToken(comp->lex);
 			}
@@ -536,6 +588,8 @@ void parseProgram(CompInfo* comp) {
 	}
 	else
 		parseStmts(comp, comp->ast);
+
+	comp->method->nbrlocals = arr_size(comp->locvarseg)-1;
 }
 
 #ifdef __cplusplus

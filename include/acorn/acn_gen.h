@@ -44,10 +44,6 @@ void genPutInstr(CompInfo *comp, AuintIdx loc, Instruction i);
 void genAddInstr(CompInfo *comp, Instruction i);
 /** Add a literal and return its index */
 int genAddLit(CompInfo *comp, Value val);
-/** Look in reverse order for local variable, returning its register. Add if not found. */
-int genLocalVar(CompInfo *comp, Value varnm);
-/** Add a parameter */
-void genAddParm(CompInfo *comp, Value sym);
 /** Indicate the method has a variable number of parameters */
 void genVarParms(CompInfo *comp);
 /** Raise method's max stack size if register is above it */

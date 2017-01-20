@@ -28,7 +28,7 @@ int vm_log(Value th) {
 	if (getTop(th)>1 && isStr(getLocal(th,1))) {
 		const char *textp = toStr(getLocal(th,1));
 		Value serstr = pushStringl(th, aNull, NULL, 128);
-		int parmidx = 2;
+		Auint parmidx = 2;
 		while (*textp) {
 			const char *varp = strchr(textp, '%');
 			if (varp) {
