@@ -141,8 +141,8 @@ int findClosureVar(CompInfo *comp, Value varnm) {
 	assert(isSym(varnm));
 
 	// Look to see if variable already defined as closure
-	int nbrlocals = arr_size(comp->clovarseg);
-	for (int idx = nbrlocals - 1; idx >= 0; idx--) {
+	int nbrclosures = arr_size(comp->clovarseg);
+	for (int idx = nbrclosures - 1; idx >= 0; idx--) {
 		if (arrGet(comp->th, comp->clovarseg, idx) == varnm)
 			return idx;
 	}
@@ -154,7 +154,7 @@ void implicitLocal(CompInfo *comp, Value varnm) {
 	// If not declared by this method as local or closure ...
 	if (findLocalVar(comp, varnm)==-1 && findClosureVar(comp, varnm)==-1)
 		// Declare as closure var if found as local in outer method. Otherwise, declare as local
-		arrAdd(comp->th, comp->prevcomp!=aNull && findLocalVar((CompInfo*)comp->prevcomp, varnm)? comp->clovarseg: comp->locvarseg, varnm);
+		arrAdd(comp->th, comp->prevcomp!=aNull && findLocalVar((CompInfo*)comp->prevcomp, varnm)!=-1? comp->clovarseg : comp->locvarseg, varnm);
 }
 
 /** Parse an atomic value: literal, variable or pseudo-variable */
@@ -553,15 +553,18 @@ void parseBlock(CompInfo* comp, Value astseg) {
 /* Parse an Acorn program */
 void parseProgram(CompInfo* comp) {
 	Value th = comp->th;
-	astAddValue(th, comp->ast, vmlit(SymMethod));
+	Value methast = comp->ast;
+	astAddValue(th, methast, vmlit(SymMethod));
 
 	// local variable list - starts with pointer to outer method's local variable list
-	comp->locvarseg = astAddSeg(th, comp->ast, comp->prevcomp==aNull? aNull : ((CompInfo*)comp->prevcomp)->locvarseg, 16);
+	comp->locvarseg = astAddSeg(th, methast, comp->prevcomp==aNull? aNull : ((CompInfo*)comp->prevcomp)->locvarseg, 16);
 
 	// closure variable list
 	comp->clovarseg = pushArray(th, aNull, 4);
-	arrAdd(th, comp->ast, comp->clovarseg);
+	arrAdd(th, methast, comp->clovarseg);
 	popValue(th);
+
+	Value parminitast = astAddSeg(th, methast, vmlit(SymSemicolon), 4);
 
 	// Declare self as first implicit parameter
 	arrAdd(th, comp->locvarseg, vmlit(SymSelf));
@@ -571,23 +574,43 @@ void parseProgram(CompInfo* comp) {
 	if (lexMatchNext(comp->lex, "[")) {
 		do {
 			if (comp->lex->toktype == Name_Token) {
-				const char first = (toStr(comp->lex->token))[0];
+				Value symnm = comp->lex->token;
+				const char first = (toStr(symnm))[0];
 				if (first=='$' || (first>='A' && first<='Z'))
 					lexLog(comp->lex, "A global name may not be a method parameter");
 				else {
-					if (findLocalVar(comp, comp->lex->token)==-1) {
-						arrAdd(th, comp->locvarseg, comp->lex->token);
+					if (findLocalVar(comp, symnm)==-1) {
+						arrAdd(th, comp->locvarseg, symnm);
 						methodNParms(comp->method)++;
 					}
+					else
+						lexLog(comp->lex, "Duplicate method parameter name");
 				}
 				lexGetNextToken(comp->lex);
+
+				// Handle any specified parameter default value
+				if (lexMatchNext(comp->lex, "=")) {
+					// Produce this ast: parm||=default-expression
+					Value oreqseg = astAddSeg(th, parminitast, vmlit(SymOrAssgn), 3);
+					astAddSeg2(th, oreqseg, vmlit(SymLocal), symnm);
+					parseExp(comp, oreqseg);
+
+					/* // Produce this ast: parm=default-expression if parm==null
+					Value ifseg = astAddSeg(th, parminitast, vmlit(SymIf), 3);
+					Value condseg = astAddSeg(th, ifseg, vmlit(SymEquiv), 3);
+					astAddSeg2(th, condseg, vmlit(SymLocal), symnm);
+					astAddSeg2(th, condseg, vmlit(SymLit), aNull);
+					Value assgnseg = astAddSeg(th, ifseg, vmlit(SymAssgn), 3);
+					astAddSeg2(th, assgnseg, vmlit(SymLocal), symnm);
+					parseExp(comp, assgnseg);*/
+				}
 			}
 		} while (lexMatchNext(comp->lex, ","));
 		lexMatchNext(comp->lex, "]");
-		parseBlock(comp, comp->ast);
+		parseBlock(comp, methast);
 	}
 	else
-		parseStmts(comp, comp->ast);
+		parseStmts(comp, methast);
 
 	comp->method->nbrlocals = arr_size(comp->locvarseg)-1;
 }

@@ -159,6 +159,7 @@ extern "C" {
 		// AST symbols
 		SymMethod,	//!< 'method'
 		SymAssgn,	//!< '='
+		SymOrAssgn, //!< '||='
 		SymColon,	//!< ':'
 		SymThisBlock, //!< 'thisblock'
 		SymCallProp, //!< 'callprop'

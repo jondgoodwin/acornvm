@@ -242,6 +242,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	// AST symbols
 	{SymMethod, "method"},
 	{SymAssgn, "="},
+	{SymOrAssgn, "||="},
 	{SymColon, ":"},
 	{SymThisBlock, "thisblock"},
 	{SymCallProp, "callprop"},
