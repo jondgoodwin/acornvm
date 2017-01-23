@@ -326,6 +326,23 @@ bool hasNoBool(Value th, Value astseg) {
 	return true;
 }
 
+/** Return register number for expression (if it already is one), otherwise return -1 */
+int genExpReg(CompInfo *comp, Value astseg) {
+	Value th = comp->th;
+	if (isSym(astseg)) {
+		if (vmlit(SymThis) == astseg)
+			return comp->thisreg;
+		else if (vmlit(SymSelf) == astseg)
+			return 0;
+	} else {
+		Value op = astGet(th, astseg, 0);
+		if (vmlit(SymLocal) == op)
+			return findLocalVar(comp, astGet(th, astseg, 1));
+		else
+			return -1;
+	}
+}
+
 /** Generate the appropriate code for something that returns a value */
 void genExp(CompInfo *comp, Value astseg) {
 	Value th = comp->th;
@@ -368,7 +385,10 @@ void genExp(CompInfo *comp, Value astseg) {
 			int jumpip = BCNO_JMP;
 			genFwdJump(comp, OpJNNull, varreg, &jumpip);
 			Value valseg = astGet(th, astseg, 2);
-			if (isArr(valseg) && astGet(th, valseg, 0) == vmlit(SymLit))
+			int reg = genExpReg(comp, astseg);
+			if (reg>=0)
+				genAddInstr(comp, BCINS_ABC(OpLoadReg, varreg, reg, 0));
+			else if (isArr(valseg) && astGet(th, valseg, 0) == vmlit(SymLit))
 				genAddInstr(comp, BCINS_ABx(OpLoadLit, varreg, genAddLit(comp, astGet(th, valseg, 1))));
 			else {
 				unsigned int rreg = comp->nextreg; // Save where we put rvals
@@ -492,6 +512,16 @@ void genStmt(CompInfo *comp, Value aststmt) {
 		genFwdJump(comp, OpJump, 0, &comp->whileEndIp);
 	else if (op==vmlit(SymContinue) && comp->whileBegIp!=-1)
 		genAddInstr(comp, BCINS_AJ(OpJump, 0, comp->whileBegIp - comp->method->size-1));
+	else if (op==vmlit(SymReturn)) {
+		Value retexp = astGet(th, aststmt, 1);
+		int reg = genExpReg(comp, retexp);
+		if (reg>=0)
+			genAddInstr(comp, BCINS_ABC(OpReturn, reg, 1, 0));
+		else {
+			genExp(comp, retexp);
+			genAddInstr(comp, BCINS_ABC(OpReturn, comp->method->nbrlocals, 1, 0));
+		}
+	}
 	else genExp(comp, aststmt);
 
 	// Finish append/prepend
@@ -526,7 +556,9 @@ void genBMethod(CompInfo *comp) {
 	comp->clovarseg = astGet(comp->th, comp->ast, 2);
 
 	// Generate: Initialize locals with null, statements, implicit return
-	genAddInstr(comp, BCINS_ABC(OpLoadNulls, comp->method->nbrlocals, 0, 0));
+	int nbrnull = comp->method->nbrlocals - methodNParms(comp->method);
+	if (nbrnull>0)
+		genAddInstr(comp, BCINS_ABC(OpLoadNulls, methodNParms(comp->method), nbrnull, 0));
 	genStmts(comp, astGet(comp->th, comp->ast, 3));
 	genStmts(comp, astGet(comp->th, comp->ast, 4));
 	genAddInstr(comp, BCINS_ABC(OpReturn, comp->method->nbrlocals, 1, 0));

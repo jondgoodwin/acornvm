@@ -499,6 +499,7 @@ void parseStmts(CompInfo* comp, Value astseg) {
 	Value newseg;
 	while (comp->lex->toktype != Eof_Token && !lexMatch(comp->lex, "}")) {
 		Value stmt = comp->lex->token;
+		// 'if' block
 		if (lexMatchNext(comp->lex, "if")) {
 			newseg = astAddSeg(th, astseg, vmlit(SymIf), 3);
 			parseLogicExp(comp, newseg);
@@ -515,12 +516,16 @@ void parseStmts(CompInfo* comp, Value astseg) {
 				parseSemi(comp, astseg);
 			}
 		}
+
+		// 'while' block
 		else if (lexMatchNext(comp->lex, "while")) {
 			newseg = astAddSeg(th, astseg, vmlit(SymWhile), 3);
 			parseLogicExp(comp, newseg);
 			parseBlock(comp, newseg);
 			parseSemi(comp, astseg);
 		}
+
+		// 'break' or 'continue' statement
 		else if (lexMatchNext(comp->lex, "break") || lexMatchNext(comp->lex, "continue")) {
 			if (lexMatchNext(comp->lex, "if")) {
 				newseg = astAddSeg(th, astseg, vmlit(SymIf), 3); 
@@ -531,6 +536,15 @@ void parseStmts(CompInfo* comp, Value astseg) {
 			astAddSeg(th, newseg, stmt, 1);
 			parseSemi(comp, astseg);
 		}
+
+		// 'return' statement
+		else if (lexMatchNext(comp->lex, "return")) {
+			newseg = astAddSeg(th, astseg, vmlit(SymReturn), 2);
+			parseExp(comp, newseg);
+			parseSemi(comp, newseg);
+		}
+
+		// expression or 'this' block
 		else {
 			parseThisExp(comp, astseg);
 			parseSuffix(comp, astseg);

@@ -24,7 +24,10 @@ $test.Equal(job, 5, "while increments job 5 times")
 
 # Parameter default value
 parmdefault = [a=1]
-	x=a+1
 	a
 $test.Equal(parmdefault(), 1, "Parameter default failed")
 $test.Equal(parmdefault(3), 3, "Parameter default override failed")
+
+returning = []
+	return 1
+$test.Equal(returning(), 1, "Returning")
