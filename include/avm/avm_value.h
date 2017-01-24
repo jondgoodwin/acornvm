@@ -121,7 +121,7 @@ AVM_API Afloat toAfloat(Value v);
 #define isNull(v) (v==aNull)
 
 /** Is value false or null? */
-#define isFalse(v) (v<=aFalse)
+#define isFalse(v) (v==aFalse || v==aNull)
 
 /** Is value true or false? */
 #define isBool(v) (v>=aFalse)

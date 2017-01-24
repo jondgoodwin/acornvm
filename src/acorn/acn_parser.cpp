@@ -413,6 +413,8 @@ void parseSuffix(CompInfo* comp, Value astseg) {
 		// swap elements 1 and 2, so condition follows 'if'/'while'
 		arrSet(th, newseg, 3, astGet(th, newseg, 1));
 		arrDel(th, newseg, 1, 1);
+		// Wrap single statement in a block (so that fixing implicit returns works)
+		astInsSeg(th, newseg, vmlit(SymSemicolon), 2);
 	}
 }
 
@@ -540,7 +542,12 @@ void parseStmts(CompInfo* comp, Value astseg) {
 		// 'return' statement
 		else if (lexMatchNext(comp->lex, "return")) {
 			newseg = astAddSeg(th, astseg, vmlit(SymReturn), 2);
-			parseExp(comp, newseg);
+			if (comp->lex->token != vmlit(SymSemicolon) && comp->lex->token != vmlit(SymIf))
+				parseExp(comp, newseg);
+			else
+				astAddValue(th, newseg, aNull);
+			if (comp->lex->token == vmlit(SymIf))
+				parseSuffix(comp, astseg);
 			parseSemi(comp, newseg);
 		}
 
