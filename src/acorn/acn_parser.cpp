@@ -94,6 +94,7 @@ Value astInsSeg2(Value th, Value oldseg, Value astop, Value propval, AuintIdx si
 
 // Prototypes for functions used before they are defined
 void parseBlock(CompInfo* comp, Value astseg);
+void parseTernaryExp(CompInfo* comp, Value astseg);
 void parseExp(CompInfo* comp, Value astseg);
 
 /* Add a url literal and return its index */
@@ -246,10 +247,10 @@ void parseTerm(CompInfo* comp, Value astseg) {
 		// Process parameter list
 		if (lexMatchNext(comp->lex, "(")) {
 			astSetValue(th, propseg, 0, vmlit(SymCallProp)); // adjust because of parms
-			parseExp(comp, propseg);
+			parseTernaryExp(comp, propseg);
 
 			while (lexMatchNext(comp->lex, ","))
-				parseExp(comp, propseg);
+				parseTernaryExp(comp, propseg);
 			if (!lexMatchNext(comp->lex, ")"))
 				lexLog(comp->lex, "Expected ')' at end of parameter list.");
 		} else if (comp->lex->toktype == Lit_Token && (isStr(comp->lex->token) || isSym(comp->lex->token))) {
@@ -434,13 +435,25 @@ void parseTernaryExp(CompInfo* comp, Value astseg) {
 	}
 }
 
+/** Parse comma separated expressions */
+void parseCommaExp(CompInfo* comp, Value astseg) {
+	Value th = comp->th;
+	parseTernaryExp(comp, astseg);
+	if (comp->lex->token==vmlit(SymComma)) {
+		Value commaseg = astInsSeg(th, astseg, vmlit(SymComma), 4);
+		while (lexMatchNext(comp->lex, ",")) {
+			parseTernaryExp(comp, commaseg);
+		}
+	}
+}
+
 /** Parse an assignment or property setting expression */
 void parseAssgnExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
-	parseTernaryExp(comp, astseg);
+	parseCommaExp(comp, astseg);
 	if (lexMatchNext(comp->lex, "=")) {
 		astseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
-		parseTernaryExp(comp, astseg);
+		parseCommaExp(comp, astseg);
 	}
 	else if (lexMatchNext(comp->lex, ":")) {
 		// ('=', ('activeprop', 'this', property), value)
@@ -452,7 +465,7 @@ void parseAssgnExp(CompInfo* comp, Value astseg) {
 		// ('=', ('rawprop', 'this', property), value)
 		astseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
 		astInsSeg2(th, astseg, vmlit(SymRawProp), vmlit(SymThis), 3);
-		parseTernaryExp(comp, astseg);
+		parseCommaExp(comp, astseg);
 	}
 }
 
@@ -594,7 +607,11 @@ void parseProgram(CompInfo* comp) {
 	// process parameters as local variables
 	if (lexMatchNext(comp->lex, "[")) {
 		do {
-			if (comp->lex->toktype == Name_Token) {
+			if (lexMatchNext(comp->lex, "...")) {
+				methodFlags(comp->method) |= METHOD_FLG_VARPARM;
+				break;
+			}
+			else if (comp->lex->toktype == Name_Token) {
 				Value symnm = comp->lex->token;
 				const char first = (toStr(symnm))[0];
 				if (first=='$' || (first>='A' && first<='Z'))

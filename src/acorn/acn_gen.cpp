@@ -516,15 +516,27 @@ void genStmt(CompInfo *comp, Value aststmt) {
 		Value retexp = astGet(th, aststmt, 1);
 		if (retexp!=aNull) {
 			int reg = genExpReg(comp, retexp);
+			// Return from a local variable registers
 			if (reg>=0)
 				genAddInstr(comp, BCINS_ABC(OpReturn, reg, 1, 0));
+			// Return multiple calculated values
+			else if (astGet(th, retexp, 0)==vmlit(SymComma)) {
+				int nvals = arr_size(retexp)-1;
+				for (int i=1; i<=nvals; i++)
+					genExp(comp, astGet(th, retexp, i));
+				genAddInstr(comp, BCINS_ABC(OpReturn, svnextreg, nvals, 0));
+			}
+			// Do tail call if we are calling another method as the return value
+			else if (astGet(th, retexp, 0)==vmlit(SymCallProp))
+				genDoProp(comp, retexp, OpTailCall, aNull);
+			// Return single calculated value
 			else {
 				genExp(comp, retexp);
-				genAddInstr(comp, BCINS_ABC(OpReturn, comp->method->nbrlocals, 1, 0));
+				genAddInstr(comp, BCINS_ABC(OpReturn, svnextreg, 1, 0));
 			}
 		}
 		else
-			genAddInstr(comp, BCINS_ABC(OpReturn, 0, 0, 0));
+			genAddInstr(comp, BCINS_ABC(OpReturn, 0, 0, 0)); // return with no values
 	}
 	else genExp(comp, aststmt);
 
@@ -567,12 +579,12 @@ void genFixReturns(CompInfo *comp, Value aststmts) {
 	else if (lastop==vmlit(SymWhile) || lastop==vmlit(SymEach))
 		astAddSeg2(th, aststmts, vmlit(SymReturn), aNull);
 	// Implicit return for 'if'
-	else if (lastop==vmlit(SymIf)) {
+	else if (lastop==vmlit(SymIf) || lastop==vmlit(SymMatch)) {
 		// Recursively handle implicit return for each clause's statement block
-		Auint i;
-		for (i=2; i<arr_size(laststmt); i+=2)
+		Auint i = lastop==vmlit(SymMatch)? 3 : 2;
+		for (; i<arr_size(laststmt); i+=2)
 			genFixReturns(comp, astGet(th, laststmt, i));
-		// If 'if' has no 'else', add one that returns null
+		// If 'if' or 'match' has no 'else', add one that returns null
 		if (astGet(th, laststmt, i-1)!=vmlit(SymElse)) {
 			astAddValue(th, laststmt, vmlit(SymElse));
 			Value retseg = astAddSeg2(th, laststmt, vmlit(SymReturn), aNull);
@@ -601,9 +613,6 @@ void genBMethod(CompInfo *comp) {
 	genStmts(comp, astGet(comp->th, comp->ast, 3)); // Generate code for parameter defaults
 	Value aststmts = astGet(comp->th, comp->ast, 4);
 	genFixReturns(comp, aststmts); // Turn implicit returns into explicit returns
-	Value aststr = pushSerialized(comp->th, aststmts);
-	vmLog("Fixed AST is: %s", toStr(aststr));
-	popValue(comp->th);
 	genStmts(comp, aststmts); // Generate method's code block
 }
 

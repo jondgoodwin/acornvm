@@ -124,6 +124,7 @@ extern "C" {
 		SymLBrace,		//!< '{'
 		SymRBrace,		//!< '}'
 		SymSemicolon,	//!< ';'
+		SymComma,		//!< ','
 		SymQuestion,	//!< '?'
 		SymAt,			//!< '@'
 

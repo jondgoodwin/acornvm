@@ -201,7 +201,6 @@ enum MethodTypes {
 	MethodBad,	//!< Not a valid method (probably unknown method)
 	MethodBC,	//!< Byte-code method
 	MethodC,	//!< C-method
-	MethodRet	//!< Bad method - but we want to do a C-return for tailcall
 };
 
 /** Prepare call to method value on stack (with parms above it). 

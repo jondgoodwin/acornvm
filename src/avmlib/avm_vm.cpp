@@ -208,6 +208,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymLBrace, "{"},
 	{SymRBrace, "}"},
 	{SymSemicolon, ";"},
+	{SymComma, ","},
 	{SymQuestion, "?"},
 	{SymAt, "@"},
 

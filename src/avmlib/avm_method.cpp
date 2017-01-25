@@ -120,20 +120,22 @@ MethodTypes callPrep(Value th, Value *methodval, int nexpected, int flags) {
 	}
 }
 
-/** Prepare tailcall to method value on stack (with parms above it). 
- * Specify how many return values to expect to find on stack.
- * Returns 0 if bad method, 1 if bytecode, 2 if C-method
+/** A tailcall is effectively a call that does not increase the call stack size.
+ * It replaces the current call frame state with state for the called method.
+ * This function is only used at the end of a bytecode method and never from a C method.
+ * Specify address where method value is store and how many return values expected on stack.
+ * It returns an enum indicating what to do next: bad method, bytecode, C-method
  *
  * For c-methods, all parameters are passed, reserving 20 slots of stack space.
- * and then it is actually run
+ * and then it is actually run and the return values are managed.
  *
  * For byte code, parameters are massaged to ensure the expected number of
  * fixed parameters and establish a holding place for the variable parameters.
  */
 MethodTypes tailcallPrep(Value th, Value *methodval, int nexpected, int getset) {
 
-	// Return if we do not have a valid method to call
-	// Respond to call failure with a return of setval or nulls
+	// If we do not have a valid method to call, treat tailcall as just a return to caller,
+	// Return setval or nulls
 	if (!isMethod(*methodval) && !isClosure(*methodval)) {
 		// Copy the desired number of return values (nulls) where indicated
 		CallInfo *ci =th(th)->curmethod;
@@ -152,28 +154,24 @@ MethodTypes tailcallPrep(Value th, Value *methodval, int nexpected, int getset) 
 
 		// Return to 'c' method caller, if we were called from there
 		if (!isMethod(ci->method) || isCMethod(ci->method))
-			return MethodRet;
+			return MethodC;
 
 		// For bytecode, restore info from the previous call stack frame
 		if (want != BCVARRET) 
 			th(th)->stk_top = ci->end; // Restore top to end for known # of returns
-		return MethodBad;
+		return MethodBC;
 	}
 
-	// Re-initialize current CallInfo frame
+	// Alter current call frame to specify method we are calling and parms
 	CallInfo * ci = th(th)->curmethod;
+	// Capture method whose code we are running, extracting from closure if needed
+	ci->method = isEnc(*methodval, ArrEnc)? arrGet(th, *methodval, getset) : *methodval;
 	int nparms = th(th)->stk_top - methodval - 1;
-	memmove(ci->methodbase, methodval, (nparms+1)*sizeof(Value)); // Move down parms
+	memmove(ci->methodbase, methodval, (nparms+1)*sizeof(Value)); // Move new parms down over old ones
 	th(th)->stk_top = ci->methodbase + nparms + 1;
 	ci->nresults = nexpected;
 	ci->retTo = ci->methodbase;  // Address of method value, varargs and return values
 	ci->begin = ci->end = ci->methodbase + 1; // Parameter values are right after method value
-
-	// Capture the actual method whose code we are running
-	if (isEnc(*methodval, ArrEnc))
-		ci->method = arrGet(th, *methodval, getset); // extract from closure variables
-	else
-		ci->method = *methodval; // We already have the method
 
 	// C-method call - Does the whole thing: setup, call and stack clean up after return
 	if (isCMethod(ci->method)) {
@@ -183,7 +181,7 @@ MethodTypes tailcallPrep(Value th, Value *methodval, int nexpected, int getset) 
 		needMoreLocal(th, STACK_MINSIZE);
 		methodRunC(th); // and then run it
 
-		return MethodC; // C-method return
+		return isCMethod(th(th)->curmethod->method)? MethodC : MethodBC;
 	}
 
 	// Bytecode method call - Only does set-up, call done by caller
@@ -526,7 +524,7 @@ void methodRunBC(Value th) {
 			methCall(rega, bc_c(i), 1);
 			} break;
 
-		// OpGetCall: R(A .. A+C-1) := R(A+1).R(A)(R(A+1) .. A+B-1))
+		// OpTailCall: R(A .. A+C-1) := R(A+1).R(A)(R(A+1) .. A+B-1))
 		// if (B == 0xFF) then B = top. If (C == 0xFF), then top is set to last_result+1, 
 		// so next open instruction (CALL, RETURN, VAR) may use top.
 		case OpTailCall: {
@@ -538,9 +536,8 @@ void methodRunBC(Value th) {
 			// Prepare call frame and stack, then perform the call
 			*rega = getProperty(th, *(rega+1), *rega);
 			switch (tailcallPrep(th, rega, bc_c(i), 0)) {
-			case MethodRet:
+			case MethodC:
 				return; // Return to C caller on bad tailcall attempt
-			case MethodBad:
 			case MethodBC:
 				ci = th(th)->curmethod;
 				meth = (BMethodInfo*) (ci->method);

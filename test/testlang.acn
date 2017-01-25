@@ -28,7 +28,17 @@ parmdefault = [a=1]
 $test.Equal(parmdefault(), 1, "Parameter default failed")
 $test.Equal(parmdefault(3), 3, "Parameter default override failed")
 
-returning = [a]
+returning = [a, ...]
 	a if a
 $test.Equal(returning(1), 1, "Returning 1 failed")
 $test.Equal(returning(), null, "Returning no values failed")
+
+multret = [a]
+	a, a*2, a*3
+
+fact = [a]
+	1 if a<2
+	a*fact(a)
+
+splat = [a, ...]
+	a

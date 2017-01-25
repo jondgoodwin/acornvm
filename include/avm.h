@@ -2,7 +2,7 @@
  * @file
  *
  * This source file is part of avm - Acorn Virtual Machine.
- * Copyright (C) 2016  Jonathan Goodwin
+ * Copyright (C) 2017  Jonathan Goodwin
  *
  * This library is free software; you can redistribute it and/or
  * modify it under the terms of the GNU Lesser General Public
@@ -25,11 +25,11 @@
 #define AVM_VERSION_MAJOR	"0"		//!< Major version number
 #define AVM_VERSION_MINOR	"2"		//!< Minor version number
 #define AVM_VERSION_NUM		0		//!< Version number
-#define AVM_VERSION_RELEASE	"3"		//!< Version release
+#define AVM_VERSION_RELEASE	"4"		//!< Version release
 
 #define AVM_VERSION	"AcornVM " AVM_VERSION_MAJOR "." AVM_VERSION_MINOR		//!< Full version string
 #define AVM_RELEASE	AVM_VERSION "." AVM_VERSION_RELEASE		//!< Full version+release string
-#define AVM_COPYRIGHT	AVM_RELEASE "  Copyright (C) 2016 Jonathan Goodwin"		//!< Name + version + copyright string
+#define AVM_COPYRIGHT	AVM_RELEASE "  Copyright (C) 2017 Jonathan Goodwin"		//!< Name + version + copyright string
 
 #include "avm/avm_memory.h"
 #include "avm/avm_api.h"
