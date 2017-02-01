@@ -88,6 +88,14 @@ Value astInsSeg2(Value th, Value oldseg, Value astop, Value propval, AuintIdx si
 	return newseg;
 }
 
+/** Return true if ast segment can be assigned a value: variable or settable property/method */
+bool astIsLval(Value th, Value astseg) {
+	if (!isArr(astseg))
+		return false;
+	Value op = astGet(th, astseg, 0);
+	return op==vmlit(SymLocal) || op==vmlit(SymGlobal) || op==vmlit(SymActProp) || op==vmlit(SymRawProp) || op==vmlit(SymCallProp);
+}
+
 /* **********************
  * Parsing routines
  * **********************/
@@ -154,8 +162,9 @@ int findClosureVar(CompInfo *comp, Value varnm) {
 void implicitLocal(CompInfo *comp, Value varnm) {
 	// If not declared by this method as local or closure ...
 	if (findLocalVar(comp, varnm)==-1 && findClosureVar(comp, varnm)==-1)
-		// Declare as closure var if found as local in outer method. Otherwise, declare as local
-		arrAdd(comp->th, comp->prevcomp!=aNull && findLocalVar((CompInfo*)comp->prevcomp, varnm)!=-1? comp->clovarseg : comp->locvarseg, varnm);
+		// Declare as closure var if we are not forcing local and if found as local in outer method. Otherwise, declare as local
+		arrAdd(comp->th, !comp->forcelocal && comp->prevcomp!=aNull && findLocalVar((CompInfo*)comp->prevcomp, varnm)!=-1? 
+			comp->clovarseg : comp->locvarseg, varnm);
 }
 
 /** Parse an atomic value: literal, variable or pseudo-variable */
@@ -246,6 +255,8 @@ void parseTerm(CompInfo* comp, Value astseg) {
 		}
 		// Process parameter list
 		if (lexMatchNext(comp->lex, "(")) {
+			bool saveforcelocal = comp->forcelocal;
+			comp->forcelocal = false;
 			astSetValue(th, propseg, 0, vmlit(SymCallProp)); // adjust because of parms
 			parseTernaryExp(comp, propseg);
 
@@ -253,6 +264,7 @@ void parseTerm(CompInfo* comp, Value astseg) {
 				parseTernaryExp(comp, propseg);
 			if (!lexMatchNext(comp->lex, ")"))
 				lexLog(comp->lex, "Expected ')' at end of parameter list.");
+			comp->forcelocal = saveforcelocal;
 		} else if (comp->lex->toktype == Lit_Token && (isStr(comp->lex->token) || isSym(comp->lex->token))) {
 			astSetValue(th, propseg, 0, vmlit(SymCallProp)); // adjust because of parm
 			astAddSeg2(th, propseg, vmlit(SymLit), comp->lex->token);
@@ -450,22 +462,43 @@ void parseCommaExp(CompInfo* comp, Value astseg) {
 /** Parse an assignment or property setting expression */
 void parseAssgnExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
+
+	// Get lvals (could be rvals if no assignment operator is found)
+	// Presence of 'local' ensures unknown locals are declared as locals vs. closure vars
+	bool saveforcelocal = comp->forcelocal;
+	comp->forcelocal = lexMatchNext(comp->lex, "local");
 	parseCommaExp(comp, astseg);
+	comp->forcelocal = saveforcelocal;
+
+	// Process rvals depending on type of assignment
 	if (lexMatchNext(comp->lex, "=")) {
-		astseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
-		parseCommaExp(comp, astseg);
+		Value assgnseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
+		// Warn about unalterable literals or pseudo-variables to the left of "="
+		Value lvalseg = arrGet(th, assgnseg, 1);
+		if (!astIsLval(th, lvalseg))
+			lexLog(comp->lex, "Literals/pseudo-variables/expressions cannot be altered.");
+		else if (arrGet(th, lvalseg, 0) == vmlit(SymComma)) {
+			Value lval;
+			for (Auint i = 1; i<arr_size(lvalseg); i++) {
+				if (!astIsLval(th, lval = arrGet(th, lvalseg, i))) {
+					lexLog(comp->lex, "Literals/pseudo-variables/expressions cannot be altered.");
+					break;
+				}
+			}
+		}
+		parseAssgnExp(comp, assgnseg); // Get the values to the right
 	}
 	else if (lexMatchNext(comp->lex, ":")) {
 		// ('=', ('activeprop', 'this', property), value)
 		astseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
 		astInsSeg2(th, astseg, vmlit(SymActProp), vmlit(SymThis), 3);
-		parseTernaryExp(comp, astseg);
+		parseAssgnExp(comp, astseg);
 	}
 	else if (lexMatchNext(comp->lex, ":=")) {
 		// ('=', ('rawprop', 'this', property), value)
 		astseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
 		astInsSeg2(th, astseg, vmlit(SymRawProp), vmlit(SymThis), 3);
-		parseCommaExp(comp, astseg);
+		parseAssgnExp(comp, astseg);
 	}
 }
 

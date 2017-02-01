@@ -88,6 +88,24 @@ unsigned int genNextReg(CompInfo *comp) {
 	return comp->nextreg++;
 }
 
+/** Return register number for expression (if it already is one), otherwise return -1 */
+int genExpReg(CompInfo *comp, Value astseg) {
+	Value th = comp->th;
+	if (isSym(astseg)) {
+		if (vmlit(SymThis) == astseg)
+			return comp->thisreg;
+		else if (vmlit(SymSelf) == astseg)
+			return 0;
+	} else {
+		Value op = astGet(th, astseg, 0);
+		if (vmlit(SymLocal) == op)
+			return findLocalVar(comp, astGet(th, astseg, 1));
+		else
+			return -1;
+	}
+	return -1;
+}
+
 /** Get the destination where Jump is going */
 int genGetJump(CompInfo *comp, int ip) {
 	int offset = bc_j(comp->method->code[ip]);
@@ -162,14 +180,13 @@ void genJumpExp(CompInfo *comp, Value astseg, int *failjump, int *passjump, bool
 		genExp(comp, astGet(th, astseg, 1));
 		Value arg2 = astGet(th, astseg, 2);
 		if (astGet(th, arg2, 0)==vmlit(SymLit) && astGet(th, arg2, 1)==aNull) {
-			comp->nextreg = svnextreg;
 			genFwdJump(comp, revjump? OpJNNull : OpJNull, svnextreg, lastjump? failjump : passjump);
 		}
 		else {
 			genExp(comp, arg2);
-			comp->nextreg = svnextreg;
 			genFwdJump(comp, revjump? OpJDiff : OpJSame, svnextreg, lastjump? failjump : passjump);
 		}
+		comp->nextreg = svnextreg;
 		return;
 	}
 
@@ -179,8 +196,8 @@ void genJumpExp(CompInfo *comp, Value astseg, int *failjump, int *passjump, bool
 		genExp(comp, astGet(th, astseg, 2)); // '~=' uses right hand value for object call
 		genExp(comp, astGet(th, astseg, 1));
 		genAddInstr(comp, BCINS_ABC(OpGetCall, svnextreg, comp->nextreg - svnextreg-1, 1));
-		comp->nextreg = svnextreg;
 		genFwdJump(comp, revjump? OpJFalse : OpJTrue, svnextreg,  lastjump? failjump : passjump);
+		comp->nextreg = svnextreg;
 		return;
 	}
 
@@ -216,8 +233,8 @@ void genJumpExp(CompInfo *comp, Value astseg, int *failjump, int *passjump, bool
 	// (which includes explicit use of <==>)
 	else {
 		genExp(comp, astseg);
-		comp->nextreg = svnextreg;
 		genFwdJump(comp, revjump? OpJFalse : OpJTrue, svnextreg,  lastjump? failjump : passjump);
+		comp->nextreg = svnextreg;
 		return;
 	}
 
@@ -226,12 +243,25 @@ void genJumpExp(CompInfo *comp, Value astseg, int *failjump, int *passjump, bool
 	genExp(comp, astGet(th, astseg, 1));
 	genExp(comp, astGet(th, astseg, 2));
 	genAddInstr(comp, BCINS_ABC(OpGetCall, svnextreg, comp->nextreg - svnextreg-1, 1));
-	comp->nextreg = svnextreg;
 	genFwdJump(comp, jumpop, svnextreg,  lastjump? failjump : passjump);
+	comp->nextreg = svnextreg;
 }
 
-/** Generate code for some kind of property 'get' */
-void genDoProp(CompInfo *comp, Value astseg, char byteop, Value rval) {
+/** Return nonzero opcode if ast operator is a property/method call */
+char genIsProp(Value th, Value op, int setflag) {
+	if (vmlit(SymActProp) == op)
+		return setflag? OpSetActProp : OpGetActProp;
+	else if (vmlit(SymRawProp) == op)
+		return setflag? OpSetProp : OpGetProp;
+	else if (vmlit(SymCallProp) == op)
+		return setflag? OpSetCall : OpGetCall;
+	return 0;
+}
+
+/** Generate code for some kind of property/method call.
+    rval is aNull for 'get' mode and either a register integer or ast segment for 'set' mode. 
+	nexpected specifies how many return values expected from called method */
+void genDoProp(CompInfo *comp, Value astseg, char byteop, Value rval, int nexpected) {
 	Value th = comp->th;
 	unsigned int svreg = comp->nextreg; // Save
 
@@ -239,38 +269,101 @@ void genDoProp(CompInfo *comp, Value astseg, char byteop, Value rval) {
 
 	genExp(comp, astGet(th, astseg, 2)); // property
 	genExp(comp, astGet(th, astseg, 1)); // self
-	if (rval!=aNull)
-		genExp(comp, rval);	// For sets
+
+	// Handle value to be set (if provided) as first parameter
+	if (isInt(rval)) // already loaded into a register
+		genAddInstr(comp, BCINS_ABC(OpLoadReg, genNextReg(comp), toAint(rval), 0));
+	else if (rval!=aNull) {
+		AuintIdx rvalreg = comp->nextreg;
+		genExp(comp, rval); // Load into next available register
+		comp->nextreg = rvalreg+1;
+	}
 
 	// Load as many parameters as we have, then do property get
-	for (AuintIdx i = 3; i<getSize(astseg); i++)
+	for (AuintIdx i = 3; i<getSize(astseg); i++) {
+		AuintIdx rvalreg = comp->nextreg;
 		genExp(comp, astGet(th, astseg, i));
-	genAddInstr(comp, BCINS_ABC(byteop, svreg, comp->nextreg - svreg-1, 1));
+		comp->nextreg = rvalreg+1;
+	}
+	genAddInstr(comp, BCINS_ABC(byteop, svreg, comp->nextreg - svreg-1, nexpected));
 	comp->nextreg = svreg+1;
 }
 
 /** Generate code for an assignment */
 void genAssign(CompInfo *comp, Value lval, Value rval) {
 	Value th = comp->th;
+	Value lvalop = isArr(lval)? astGet(th, lval, 0) : aNull;
+
+	// Handle assignment to property or method
+	char opcode = genIsProp(th, lvalop, true);
+	if (opcode)
+		genDoProp(comp, lval, opcode, rval, 1);
+	else {
+		// Handle parallel, local, closure, global variable assignments where rval is loaded first
+		int nlvals = lvalop==vmlit(SymComma)? arr_size(lval)-1 : 1;
+		AuintIdx rvalreg;
+		if (isInt(rval))
+			rvalreg = toAint(rval); // It has already been loaded here
+		else {
+			// Load right-hand values
+			rvalreg = comp->nextreg; // Save where we put rvals
+			int opcode;
+			if (isArr(rval) && (opcode = genIsProp(th, astGet(th, rval, 0), false)))
+				// Be sure we capture desired number of return values from method call
+				genDoProp(comp, rval, opcode, aNull, nlvals);
+			else
+				genExp(comp, rval);
+		}
+		// Parallel assignment
+		if (vmlit(SymComma) == lvalop) {
+			int nrneed = nlvals - (comp->nextreg - rvalreg);
+			// Ensure we fill up right values with nulls to as high as left values
+			if (nrneed > 0) {
+				genAddInstr(comp, BCINS_ABC(OpLoadNulls, comp->nextreg, nrneed, 0));
+				comp->nextreg += nrneed;
+				// Keep track of high-water mark for later stack allocation purposes
+				if (comp->method->maxstacksize < comp->nextreg+nrneed)
+					comp->method->maxstacksize = comp->nextreg+nrneed;
+			}
+			// Assign each lval, one at a time, from corresponding loaded rval in a register
+			for (int i = 0; i<nlvals; i++) {
+				genAssign(comp, astGet(th, lval, i+1), anInt(rvalreg+i));
+			}
+		}
+		// Load into local or closure variable
+		else if (vmlit(SymLocal) == lvalop) {
+			Value symnm = astGet(th, lval, 1);
+			int localreg = findLocalVar(comp, symnm);
+			if (localreg != -1)
+				genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, rvalreg, 0));
+			else if ((localreg = findClosureVar(comp, symnm))!=-1)
+				genAddInstr(comp, BCINS_ABC(OpSetClosure, localreg, rvalreg, 0));
+		// Load into a global variable
+		} else if (vmlit(SymGlobal) == lvalop)
+			genAddInstr(comp, BCINS_ABx(OpSetGlobal, rvalreg, genAddLit(comp, astGet(th, lval, 1))));
+	}
+	// We do not consume values, so we don't restore comp->nextreg
+}
+
+/** Generate optimized code for assignment when it is just a statement and 
+    its right-hand values do not have to be put on stack */
+void genOptAssign(CompInfo *comp, Value lval, Value rval) {
+	Value th = comp->th;
 	Value lvalop = astGet(th, lval, 0);
 
 	// Handle assignments that require we load rval (and other stuff) first
-	unsigned int rreg = comp->nextreg; // Save where we put rvals
+	unsigned int fromreg = genExpReg(comp, rval);
 	if (vmlit(SymLocal) == lvalop) {
 		Value symnm = astGet(th, lval, 1);
 		int localreg = findLocalVar(comp, symnm);
 		if (localreg != -1) {
-			// Optimize load straight into register, if possible
-			// (But don't do it if we need a consistent register to find the value in)
-			Value rvalop = astGet(th, rval, 0);
-			if (isSym(rval)) {
-				if (vmlit(SymThis) == rval)
-					genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, comp->thisreg, 0));
-				else if (vmlit(SymSelf) == rval)
-					genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, 0, 0));
-				else if (vmlit(SymBaseurl) == rval)
-					genAddInstr(comp, BCINS_ABx(OpLoadLit, localreg, genAddLit(comp, comp->lex->url)));
-			} else {
+			// Optimize load straight into register, if possible (this, self, local var)
+			if (fromreg!=-1)
+				genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, fromreg, 0));
+			else if (vmlit(SymBaseurl) == rval)
+				genAddInstr(comp, BCINS_ABx(OpLoadLit, localreg, genAddLit(comp, comp->lex->url)));
+			else {
+				Value rvalop = astGet(th, rval, 0);
 				if (vmlit(SymLit) == rvalop) {
 					Value litval = astGet(th, rval, 1);
 					if (litval==aNull)
@@ -282,34 +375,32 @@ void genAssign(CompInfo *comp, Value lval, Value rval) {
 					else
 						genAddInstr(comp, BCINS_ABx(OpLoadLit, localreg, genAddLit(comp, litval)));
 				} else if (vmlit(SymLocal) == rvalop) {
-					Value symnm2 = astGet(th, rval, 1);
-					Aint localreg2;
-					if ((localreg2 = findLocalVar(comp, symnm2))!=-1)
-						genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, localreg2, 0));
-					else if ((localreg2 = findClosureVar(comp, symnm2))!=-1)
-						genAddInstr(comp, BCINS_ABC(OpGetClosure, localreg, localreg2, 0));
+					// We did local already - this must be a load from a closure variable
+					genAddInstr(comp, BCINS_ABC(OpGetClosure, localreg, findClosureVar(comp, astGet(th, rval, 1)), 0));
 				} else if (vmlit(SymGlobal) == rvalop) {
 					genAddInstr(comp, BCINS_ABx(OpGetGlobal, localreg, genAddLit(comp, astGet(th, rval, 1))));
 				} else {
+					fromreg = comp->nextreg; // Save where we put rvals
 					genExp(comp, rval);
-					genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, rreg, 0));
+					genAddInstr(comp, BCINS_ABC(OpLoadReg, localreg, fromreg, 0));
 				}
 			}
 		}
 		else if ((localreg = findClosureVar(comp, symnm))!=-1) {
+			fromreg = comp->nextreg; // Save where we put rvals
 			genExp(comp, rval);
-			genAddInstr(comp, BCINS_ABC(OpSetClosure, localreg, rreg, 0));
+			genAddInstr(comp, BCINS_ABC(OpSetClosure, localreg, fromreg, 0));
 		}
 	} else if (vmlit(SymGlobal) == lvalop) {
-		genExp(comp, rval);
-		genAddInstr(comp, BCINS_ABx(OpSetGlobal, rreg, genAddLit(comp, astGet(th, lval, 1))));
-	} else if (vmlit(SymActProp) == lvalop) {
-		genDoProp(comp, lval, OpSetActProp, rval);
-	} else if (vmlit(SymRawProp) == lvalop) {
-		genDoProp(comp, lval, OpSetProp, rval);
-	} else if (vmlit(SymCallProp) == lvalop) {
-		genDoProp(comp, lval, OpSetCall, rval);
-	}
+		if (fromreg != -1)
+			genAddInstr(comp, BCINS_ABx(OpSetGlobal, fromreg, genAddLit(comp, astGet(th, lval, 1))));
+		else {
+			fromreg = comp->nextreg; // Save where we put rvals
+			genExp(comp, rval);
+			genAddInstr(comp, BCINS_ABx(OpSetGlobal, fromreg, genAddLit(comp, astGet(th, lval, 1))));
+		}
+	} else 
+		genAssign(comp, lval, rval);
 }
 
 /** Return true if the expression makes no use of any logical or comparative operators */
@@ -326,24 +417,8 @@ bool hasNoBool(Value th, Value astseg) {
 	return true;
 }
 
-/** Return register number for expression (if it already is one), otherwise return -1 */
-int genExpReg(CompInfo *comp, Value astseg) {
-	Value th = comp->th;
-	if (isSym(astseg)) {
-		if (vmlit(SymThis) == astseg)
-			return comp->thisreg;
-		else if (vmlit(SymSelf) == astseg)
-			return 0;
-	} else {
-		Value op = astGet(th, astseg, 0);
-		if (vmlit(SymLocal) == op)
-			return findLocalVar(comp, astGet(th, astseg, 1));
-		else
-			return -1;
-	}
-}
-
-/** Generate the appropriate code for something that returns a value */
+/** Generate the appropriate code for something that places one or more values on the stack
+	beginning at comp->nextreg (which should be saved before calling this). The last value is at comp->nextreg-1 */
 void genExp(CompInfo *comp, Value astseg) {
 	Value th = comp->th;
 	if (isSym(astseg)) {
@@ -355,7 +430,14 @@ void genExp(CompInfo *comp, Value astseg) {
 			genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, comp->lex->url)));
 	} else {
 		Value op = astGet(th, astseg, 0);
-		if (vmlit(SymLit) == op) {
+		char opcode = genIsProp(th, op, false);
+		if (opcode) // Property or method use
+			genDoProp(comp, astseg, opcode, aNull, 1);
+		else if (vmlit(SymComma) == op) {
+			int nvals = arr_size(astseg)-1;
+			for (int i=1; i<=nvals; i++)
+				genExp(comp, astGet(th, astseg, i));
+		} else if (vmlit(SymLit) == op) {
 			Value litval = astGet(th, astseg, 1);
 			if (litval==aNull)
 				genAddInstr(comp, BCINS_ABC(OpLoadPrim, genNextReg(comp), 0, 0));
@@ -391,20 +473,17 @@ void genExp(CompInfo *comp, Value astseg) {
 			else if (isArr(valseg) && astGet(th, valseg, 0) == vmlit(SymLit))
 				genAddInstr(comp, BCINS_ABx(OpLoadLit, varreg, genAddLit(comp, astGet(th, valseg, 1))));
 			else {
-				unsigned int rreg = comp->nextreg; // Save where we put rvals
+				AuintIdx rreg = comp->nextreg; // Save where we put rvals
 				genExp(comp, valseg);
 				genAddInstr(comp, BCINS_ABC(OpLoadReg, varreg, rreg, 0));
 			}
 			genSetJumpList(comp, jumpip, comp->method->size);
-		} else if (vmlit(SymActProp) == op) {
-			genDoProp(comp, astseg, OpGetActProp, aNull);
-		} else if (vmlit(SymCallProp) == op) {
-			genDoProp(comp, astseg, OpGetCall, aNull);
 		} else if (vmlit(SymThisBlock) == op) {
 			unsigned int svthis = comp->thisreg;
 			Value svthisop = comp->thisop;
 			int thisreg = comp->nextreg;
 			genExp(comp, astGet(th, astseg, 1));
+			comp->nextreg = thisreg+1;
 			comp->thisreg = thisreg;
 			comp->thisop = astGet(th, astseg, 2);
 			genStmts(comp, astGet(th, astseg, 3));
@@ -450,6 +529,7 @@ void genExp(CompInfo *comp, Value astseg) {
 			genAddInstr(comp, BCINS_ABC(OpLoadPrim, nextreg, 1, 0));
 		}
 	}
+	return;
 }
 
 /** Generate all if/elif/else blocks */
@@ -496,7 +576,7 @@ void genWhile(CompInfo *comp, Value astseg) {
 /** Generate a statement */
 void genStmt(CompInfo *comp, Value aststmt) {
 	Value th = comp->th;
-	unsigned int svnextreg = comp->nextreg;
+	AuintIdx svnextreg = comp->nextreg;
 
 	// Do append/prepend of value generated by the statement, if 'this' block requested this
 	if (comp->thisop != aNull) {
@@ -514,31 +594,27 @@ void genStmt(CompInfo *comp, Value aststmt) {
 		genAddInstr(comp, BCINS_AJ(OpJump, 0, comp->whileBegIp - comp->method->size-1));
 	else if (op==vmlit(SymReturn)) {
 		Value retexp = astGet(th, aststmt, 1);
-		if (retexp!=aNull) {
+		if (retexp==aNull)
+			genAddInstr(comp, BCINS_ABC(OpReturn, 0, 0, 0)); // return with no values
+		else {
 			int reg = genExpReg(comp, retexp);
 			// Return from a local variable registers
 			if (reg>=0)
 				genAddInstr(comp, BCINS_ABC(OpReturn, reg, 1, 0));
-			// Return multiple calculated values
-			else if (astGet(th, retexp, 0)==vmlit(SymComma)) {
-				int nvals = arr_size(retexp)-1;
-				for (int i=1; i<=nvals; i++)
-					genExp(comp, astGet(th, retexp, i));
-				genAddInstr(comp, BCINS_ABC(OpReturn, svnextreg, nvals, 0));
-			}
 			// Do tail call if we are calling another method as the return value
 			else if (astGet(th, retexp, 0)==vmlit(SymCallProp))
-				genDoProp(comp, retexp, OpTailCall, aNull);
-			// Return single calculated value
+				genDoProp(comp, retexp, OpTailCall, aNull, 1);
+			// Return calculated values on stack
 			else {
 				genExp(comp, retexp);
-				genAddInstr(comp, BCINS_ABC(OpReturn, svnextreg, 1, 0));
+				genAddInstr(comp, BCINS_ABC(OpReturn, svnextreg, comp->nextreg - svnextreg, 0));
 			}
 		}
-		else
-			genAddInstr(comp, BCINS_ABC(OpReturn, 0, 0, 0)); // return with no values
 	}
-	else genExp(comp, aststmt);
+	else if (op==vmlit(SymAssgn)) 
+		genOptAssign(comp, astGet(th, aststmt,1), astGet(th, aststmt,2));
+	else 
+		genExp(comp, aststmt);
 
 	// Finish append/prepend
 	if (comp->thisop != aNull)

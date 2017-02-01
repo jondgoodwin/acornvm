@@ -44,6 +44,7 @@ Value newCompiler(Value th, Value *dest, Value src, Value url) {
 
 	comp->nextreg = 0;
 	comp->whileBegIp = -1;
+	comp->forcelocal = false;
 
 	return *dest;
 }

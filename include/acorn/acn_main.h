@@ -82,6 +82,8 @@ typedef struct CompInfo {
 	unsigned int thisreg;	//!< Register holding 'this' value
 	int whileBegIp;			//!< ip of current while block's first instruction
 	int whileEndIp;			//!< ip of first jump statement to end of current while block
+
+	bool forcelocal;			//!< true if undeclared local must be local
 } CompInfo;
 
 /** Mark values for garbage collection 

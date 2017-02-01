@@ -36,9 +36,17 @@ $test.Equal(returning(), null, "Returning no values failed")
 multret = [a]
 	a, a*2, a*3
 
-fact = [a]
-	1 if a<2
-	a*fact(a)
-
 splat = [a, ...]
 	a
+# warnings - these are not allowed
+1 = 1
+self, this = 0,1
+
+a,b = 1,2
+a,b = b,a
+$test.True(a===2 and b===1, "Swap values failed")
+
+fact = [n, fn, total=1]
+	return total if n<2
+	fn(n-1, fn, n*total)
+$test.Equal(fact(10, fact), 3628800, "Bad recursive factorial method with tail call")
