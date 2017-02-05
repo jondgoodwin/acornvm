@@ -330,7 +330,7 @@ void testCapi(void) {
 	popProperty(th, mixinidx, "--");
 	pushCMethod(th, newmixin);
 	popProperty(th, mixinidx, "New");
-	addMixin(th, pushProperty(th, mixinidx-1, "_newtype"), mixin);
+	addMixin(th, pushProperty(th, mixinidx-1, "traits"), mixin);
 	popValue(th);
 	popValue(th);
 	popValue(th);

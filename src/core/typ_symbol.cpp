@@ -67,7 +67,7 @@ void core_symbol_init(Value th) {
 			popProperty(th, 1, "<=>");
 			pushCMethod(th, symbol_text);
 			popProperty(th, 1, "Text");
-		popProperty(th, 0, "_newtype");
+		popProperty(th, 0, "traits");
 		pushCMethod(th, symbol_new);
 		popProperty(th, 0, "New");
 	popGloVar(th, "Symbol");

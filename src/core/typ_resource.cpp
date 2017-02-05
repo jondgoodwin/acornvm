@@ -640,7 +640,7 @@ void core_resource_init(Value th) {
 			popProperty(th, 1, "fragment");
 			pushCMethod(th, resource_inst_url);
 			popProperty(th, 1, "url");
-		popProperty(th, 0, "_newtype");
+		popProperty(th, 0, "traits");
 		pushCMethod(th, resource_new);
 		popProperty(th, 0, "New");
 		pushTbl(th, vmlit(TypeIndexm), 16);

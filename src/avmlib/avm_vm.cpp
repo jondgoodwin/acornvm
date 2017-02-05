@@ -211,6 +211,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymComma, ","},
 	{SymQuestion, "?"},
 	{SymAt, "@"},
+	{SymSplat, "..."},
 
 	// Compiler symbols that are also methods
 	{SymAppend, "<<"},
@@ -233,6 +234,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymLoad, "Load"},
 	{SymGet, "Get"},
 	{SymParas, "()"},
+	{SymBrackets, "[]"},
 	{SymNeg, "-@"},
 	{SymValue, "value"},
 	{SymNext, "next"},

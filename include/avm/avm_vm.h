@@ -127,6 +127,7 @@ extern "C" {
 		SymComma,		//!< ','
 		SymQuestion,	//!< '?'
 		SymAt,			//!< '@'
+		SymSplat,		//!< '...'
 
 		// Compiler symbols that are also methods
 		SymAppend,	//!< '<<'
@@ -150,6 +151,7 @@ extern "C" {
 		SymLoad,	//!< 'Load'
 		SymGet,		//!< 'Get'
 		SymParas,	//!< '()'
+		SymBrackets, //!< '[]'
 		SymNeg,		//!< '-@'
 		SymValue,	//!< 'value'
 		SymNext,	//!< 'next'

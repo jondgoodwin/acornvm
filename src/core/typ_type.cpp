@@ -33,7 +33,7 @@ void core_type_init(Value th) {
 		pushCMethod(th, type_new);
 		popProperty(th, 0, "New");
 		pushCMethod(th, type_get);
-		popProperty(th, 0, "()");
+		popProperty(th, 0, "[]");
 	popGloVar(th, "Type");
 	return;
 }

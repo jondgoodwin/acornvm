@@ -204,6 +204,10 @@ void parseValue(CompInfo* comp, Value astseg) {
 	else if (lexMatchNext(comp->lex, "self")) {
 		astAddValue(th, astseg, vmlit(SymSelf));
 	}
+	// '...' splat
+	else if (lexMatchNext(comp->lex, "...")) {
+		astAddValue(th, astseg, vmlit(SymSplat));
+	}
 	// parenthetically-enclosed expression
 	else if (lexMatchNext(comp->lex, "(")) {
 		parseExp(comp, astseg);
@@ -233,15 +237,20 @@ void parseTerm(CompInfo* comp, Value astseg) {
 	else
 		parseValue(comp, astseg);
 	// Handle suffix chains
-	while (newflag || lexMatch(comp->lex, ".") || lexMatch(comp->lex, "(")) {
+	while (newflag || lexMatch(comp->lex, ".") || lexMatch(comp->lex, "(") || lexMatch(comp->lex, "[")) {
 		Value propseg = astInsSeg(th, astseg, vmlit(SymActProp), 4); // may adjust later
 		// Determine the property
 		if (newflag) {
 			astAddSeg2(th, propseg, vmlit(SymLit), vmlit(SymNew));
 			newflag = false; // only works once
 		}
-		else if (lexMatch(comp->lex, "("))
-			astAddSeg2(th, propseg, vmlit(SymLit), vmlit(SymParas));
+		else if (lexMatch(comp->lex, "(")) {
+			// For pure method call, adjust to be: self.method
+			arrSet(th, propseg, 2, arrGet(th, propseg, 1));
+			arrSet(th, propseg, 1, vmlit(SymSelf));
+		}
+		else if (lexMatch(comp->lex, "["))
+			astAddSeg2(th, propseg, vmlit(SymLit), vmlit(SymBrackets));
 		else { // '.'
 			lexGetNextToken(comp->lex); // scan past '.'
 			if (comp->lex->toktype == Name_Token || comp->lex->toktype == Lit_Token) {
@@ -253,8 +262,9 @@ void parseTerm(CompInfo* comp, Value astseg) {
 				lexLog(comp->lex, "Expected property expression after '.'");
 			}
 		}
-		// Process parameter list
-		if (lexMatchNext(comp->lex, "(")) {
+		// Process parameter or index list
+		bool parenflag;
+		if ((parenflag = lexMatchNext(comp->lex, "(")) || lexMatchNext(comp->lex, "[")) {
 			bool saveforcelocal = comp->forcelocal;
 			comp->forcelocal = false;
 			astSetValue(th, propseg, 0, vmlit(SymCallProp)); // adjust because of parms
@@ -262,10 +272,12 @@ void parseTerm(CompInfo* comp, Value astseg) {
 
 			while (lexMatchNext(comp->lex, ","))
 				parseTernaryExp(comp, propseg);
-			if (!lexMatchNext(comp->lex, ")"))
-				lexLog(comp->lex, "Expected ')' at end of parameter list.");
+			if (!lexMatchNext(comp->lex, parenflag? ")" : "]"))
+				lexLog(comp->lex, "Expected ')' or ']' at end of parameter list.");
 			comp->forcelocal = saveforcelocal;
-		} else if (comp->lex->toktype == Lit_Token && (isStr(comp->lex->token) || isSym(comp->lex->token))) {
+		}
+		// If symbol without a no parameter list, treat it as a property call
+		else if (comp->lex->toktype == Lit_Token && (isStr(comp->lex->token) || isSym(comp->lex->token))) {
 			astSetValue(th, propseg, 0, vmlit(SymCallProp)); // adjust because of parm
 			astAddSeg2(th, propseg, vmlit(SymLit), comp->lex->token);
 			lexGetNextToken(comp->lex);

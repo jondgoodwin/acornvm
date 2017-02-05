@@ -83,7 +83,7 @@ void core_range_init(Value th) {
 			pushCMethod(th, range_step_set);
 			pushClosure(th, 2);
 			popProperty(th, 1, "step");
-		popProperty(th, 0, "_newtype");
+		popProperty(th, 0, "traits");
 
 		pushCMethod(th, range_new);
 		popProperty(th, 0, "New");

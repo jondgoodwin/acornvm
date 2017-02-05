@@ -337,7 +337,7 @@ void core_int_init(Value th) {
 			pushCMethod(th, int_rand);
 			popProperty(th, 1, "Random");
 
-		popProperty(th, 0, "_newtype");
+		popProperty(th, 0, "traits");
 
 		pushCMethod(th, int_biggest);
 		popProperty(th, 0, "biggest");

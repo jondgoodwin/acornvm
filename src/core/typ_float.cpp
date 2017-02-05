@@ -336,7 +336,7 @@ void core_float_init(Value th) {
 
 			pushCMethod(th, float_text);
 			popProperty(th, 1, "Text");
-		popProperty(th, 0, "_newtype");
+		popProperty(th, 0, "traits");
 
 		pushCMethod(th, float_new);
 		popProperty(th, 0, "New");

@@ -28,16 +28,6 @@ parmdefault = [a=1]
 $test.Equal(parmdefault(), 1, "Parameter default failed")
 $test.Equal(parmdefault(3), 3, "Parameter default override failed")
 
-returning = [a, ...]
-	a if a
-$test.Equal(returning(1), 1, "Returning 1 failed")
-$test.Equal(returning(), null, "Returning no values failed")
-
-multret = [a]
-	a, a*2, a*3
-
-splat = [a, ...]
-	a
 # warnings - these are not allowed
 1 = 1
 self, this = 0,1
@@ -46,7 +36,44 @@ a,b = 1,2
 a,b = b,a
 $test.True(a===2 and b===1, "Swap values failed")
 
-fact = [n, fn, total=1]
-	return total if n<2
-	fn(n-1, fn, n*total)
-$test.Equal(fact(10, fact), 3628800, "Bad recursive factorial method with tail call")
+Integer.traits
+	Factorial: [total=1]
+		return total if self<2
+		(self-1).Factorial(self*total)
+$test.Equal(10 .Factorial, 3628800, "Failed recursive factorial method with tail call")
+
+returning = [a]
+	a if a # implicit return calculated for 'else'
+$test.Equal(returning(1), 1, "Returning 1 failed")
+$test.Equal(returning(), null, "Returning no values failed")
+
+# test splat, parallel assignment, muliple returns
+splat = [a, ...]
+	passon = [...]
+		...
+	if a===3
+		a, ..., ...
+	elif a==='mult'
+		local c,d = ...
+		c*d
+	elif a==='multby2'
+		local b,c,d = 2,...
+		b*c*d
+	elif a==='2few'
+		local b,c,d = ...
+		c,d = 4 if not c
+		b,c,d
+	elif a==='passon'
+		a,b = passon(5,8)
+		a*b
+	else
+		passon('a', ...)
+v1,v2,v3,v4 = splat(3,6,2)
+$test.True(v1===3 and v2===6 and v3===6 and v4===2, "parallel assignment for multiple return values failed")
+$test.True(splat('mult', 3, 4)===12, "parallel assignment with splat failed")
+$test.True(splat('multby2', 3, 4)===24, "parallel assignment with end-splat failed")
+v1,v2,v3 = splat('2few',1)
+$test.True(v1===1 and v2===4 and v3===null, "Too few values failed")
+$test.True(splat('passon')===40, "parallel assignment from a method failed")
+v1,v2 = splat('else', 'b', 'c')
+$test.True(v1==='a' and v2==='b', "Pass on and return multiple values failed")

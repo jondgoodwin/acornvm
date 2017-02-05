@@ -20,7 +20,6 @@ void testCore(void);
 
 void testAll(void) {
 	testCapi();
-	testGen();
 	testType();
 	testLang();
 	testCore();

@@ -14,7 +14,6 @@
     <ClCompile Include="testavm.cpp" />
     <ClCompile Include="testcapi.cpp" />
     <ClCompile Include="testcore.cpp" />
-    <ClCompile Include="testgen.cpp" />
     <ClCompile Include="testtype.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

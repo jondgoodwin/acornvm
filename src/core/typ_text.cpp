@@ -373,14 +373,14 @@ void core_text_init(Value th) {
 			pushCMethod(th, text_get);
 			pushCMethod(th, text_set);
 			pushClosure(th, 2);
-			popProperty(th, 1, "()");
+			popProperty(th, 1, "[]");
 			pushCMethod(th, text_remove);
 			popProperty(th, 1, "Remove");
 			pushCMethod(th, text_insert);
 			popProperty(th, 1, "Insert");
 			pushCMethod(th, text_set);
 			popProperty(th, 1, "Replace");
-		popProperty(th, 0, "_newtype");
+		popProperty(th, 0, "traits");
 		pushCMethod(th, text_new);
 		popProperty(th, 0, "New");
 	popGloVar(th, "Text");

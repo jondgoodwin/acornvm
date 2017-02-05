@@ -38,7 +38,7 @@ void core_bool_init(Value th) {
 			popProperty(th, 1, "_name");
 			pushCMethod(th, bool_compare);
 			popProperty(th, 1, "<=>");
-		popProperty(th, 0, "_newtype");
+		popProperty(th, 0, "traits");
 
 		pushCMethod(th, bool_new);
 		popProperty(th, 0, "New");

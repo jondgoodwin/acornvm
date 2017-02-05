@@ -280,12 +280,21 @@ void genDoProp(CompInfo *comp, Value astseg, char byteop, Value rval, int nexpec
 	}
 
 	// Load as many parameters as we have, then do property get
+	bool varparms = false;
 	for (AuintIdx i = 3; i<getSize(astseg); i++) {
 		AuintIdx rvalreg = comp->nextreg;
-		genExp(comp, astGet(th, astseg, i));
-		comp->nextreg = rvalreg+1;
+		Value parm = astGet(th, astseg, i);
+		if (parm == vmlit(SymSplat)) {
+			genAddInstr(comp, BCINS_ABC(OpLoadVararg, rvalreg, 0xFF, 0));
+			varparms = true;
+			break;
+		}
+		else {
+			genExp(comp, parm);
+			comp->nextreg = rvalreg+1;
+		}
 	}
-	genAddInstr(comp, BCINS_ABC(byteop, svreg, comp->nextreg - svreg-1, nexpected));
+	genAddInstr(comp, BCINS_ABC(byteop, svreg, varparms? 0xFF : comp->nextreg - svreg-1, nexpected));
 	comp->nextreg = svreg+1;
 }
 
@@ -301,22 +310,43 @@ void genAssign(CompInfo *comp, Value lval, Value rval) {
 	else {
 		// Handle parallel, local, closure, global variable assignments where rval is loaded first
 		int nlvals = lvalop==vmlit(SymComma)? arr_size(lval)-1 : 1;
+		bool varrvals = false;
 		AuintIdx rvalreg;
 		if (isInt(rval))
-			rvalreg = toAint(rval); // It has already been loaded here
+			rvalreg = toAint(rval); // rval is already in a register, so use that reg
 		else {
-			// Load right-hand values
+			// Special handling for right-hand values for parallel assignment
 			rvalreg = comp->nextreg; // Save where we put rvals
 			int opcode;
-			if (isArr(rval) && (opcode = genIsProp(th, astGet(th, rval, 0), false)))
-				// Be sure we capture desired number of return values from method call
+			// For method call, specify expected number of return values
+			if (isArr(rval) && (opcode = genIsProp(th, astGet(th, rval, 0), false))) {
 				genDoProp(comp, rval, opcode, aNull, nlvals);
+				varrvals = true;
+			}
+			// For solo splat, load needed number from parameter varargs
+			else if (rval == vmlit(SymSplat)) {
+				genAddInstr(comp, BCINS_ABC(OpLoadVararg, genNextReg(comp), nlvals, 0));
+				varrvals = true;
+			}
+			// For comma-separated rvals, special handling in case ... splat appears (at end)
+			else if (nlvals>1 && isArr(rval) && arrGet(th, rval, 0)==vmlit(SymComma)) {
+				int nvals = arr_size(rval)-1;
+				for (int i=1; i<=nvals; i++) {
+					Value rvali = astGet(th, rval, i);
+					if (i==nvals && i<=nlvals && rvali==vmlit(SymSplat)) {
+						genAddInstr(comp, BCINS_ABC(OpLoadVararg, genNextReg(comp), nlvals-i+1, 0));
+						varrvals = true;
+					}
+					else
+						genExp(comp, rvali);
+				}
+			}
 			else
 				genExp(comp, rval);
 		}
-		// Parallel assignment
+		// Handle parallel assignment for lvals
 		if (vmlit(SymComma) == lvalop) {
-			int nrneed = nlvals - (comp->nextreg - rvalreg);
+			int nrneed = varrvals? 0 : nlvals - (comp->nextreg - rvalreg);
 			// Ensure we fill up right values with nulls to as high as left values
 			if (nrneed > 0) {
 				genAddInstr(comp, BCINS_ABC(OpLoadNulls, comp->nextreg, nrneed, 0));
@@ -428,6 +458,8 @@ void genExp(CompInfo *comp, Value astseg) {
 			genAddInstr(comp, BCINS_ABC(OpLoadReg, genNextReg(comp), 0, 0));
 		else if (vmlit(SymBaseurl) == astseg)
 			genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, comp->lex->url)));
+		else if (vmlit(SymSplat) == astseg)
+			genAddInstr(comp, BCINS_ABC(OpLoadVararg, genNextReg(comp), 1, 0)); // By default, only get one value
 	} else {
 		Value op = astGet(th, astseg, 0);
 		char opcode = genIsProp(th, op, false);
@@ -602,8 +634,28 @@ void genStmt(CompInfo *comp, Value aststmt) {
 			if (reg>=0)
 				genAddInstr(comp, BCINS_ABC(OpReturn, reg, 1, 0));
 			// Do tail call if we are calling another method as the return value
-			else if (astGet(th, retexp, 0)==vmlit(SymCallProp))
+			else if (isArr(retexp) && astGet(th, retexp, 0)==vmlit(SymCallProp))
 				genDoProp(comp, retexp, OpTailCall, aNull, 1);
+			// For solo splat, load parameter varargs and return them
+			else if (retexp == vmlit(SymSplat)) {
+				genAddInstr(comp, BCINS_ABC(OpLoadVararg, svnextreg, 0xFF, 0));
+				genAddInstr(comp, BCINS_ABC(OpReturn, svnextreg, 0xFF, 0));
+			}
+			// For comma-separated rvals, special handling in case ... splat appears (at end)
+			else if (isArr(retexp) && arrGet(th, retexp, 0)==vmlit(SymComma)) {
+				int nvals = arr_size(retexp)-1;
+				bool varrvals = false;
+				for (int i=1; i<=nvals; i++) {
+					Value rvali = astGet(th, retexp, i);
+					if (i==nvals && rvali==vmlit(SymSplat)) {
+						genAddInstr(comp, BCINS_ABC(OpLoadVararg, genNextReg(comp), 0xFF, 0));
+						varrvals = true;
+					}
+					else
+						genExp(comp, rvali);
+				}
+				genAddInstr(comp, BCINS_ABC(OpReturn, svnextreg, varrvals? 0xFF : comp->nextreg - svnextreg, 0));
+			}
 			// Return calculated values on stack
 			else {
 				genExp(comp, retexp);
@@ -645,7 +697,7 @@ void genFixReturns(CompInfo *comp, Value aststmts) {
 	Value th = comp->th;
 	assert(astGet(th, aststmts, 0)==vmlit(SymSemicolon));
 	Value laststmt = astGet(th, aststmts, arr_size(aststmts)-1);
-	Value lastop = astGet(th, laststmt, 0);
+	Value lastop = isArr(laststmt)? astGet(th, laststmt, 0) : laststmt;
 	// Implicit return for 'this' block is to return 'this' at end of block
 	if (lastop==vmlit(SymThisBlock)) {
 		Value thisstmts = astGet(th, laststmt, 3);
@@ -661,7 +713,7 @@ void genFixReturns(CompInfo *comp, Value aststmts) {
 		for (; i<arr_size(laststmt); i+=2)
 			genFixReturns(comp, astGet(th, laststmt, i));
 		// If 'if' or 'match' has no 'else', add one that returns null
-		if (astGet(th, laststmt, i-1)!=vmlit(SymElse)) {
+		if (astGet(th, laststmt, i-3)!=vmlit(SymElse)) {
 			astAddValue(th, laststmt, vmlit(SymElse));
 			Value retseg = astAddSeg2(th, laststmt, vmlit(SymReturn), aNull);
 		}

@@ -132,7 +132,7 @@ MethodTypes callPrep(Value th, Value *methodval, int nexpected, int flags) {
  * For byte code, parameters are massaged to ensure the expected number of
  * fixed parameters and establish a holding place for the variable parameters.
  */
-MethodTypes tailcallPrep(Value th, Value *methodval, int nexpected, int getset) {
+MethodTypes tailcallPrep(Value th, Value *methodval, int getset) {
 
 	// If we do not have a valid method to call, treat tailcall as just a return to caller,
 	// Return setval or nulls
@@ -169,9 +169,9 @@ MethodTypes tailcallPrep(Value th, Value *methodval, int nexpected, int getset) 
 	int nparms = th(th)->stk_top - methodval - 1;
 	memmove(ci->methodbase, methodval, (nparms+1)*sizeof(Value)); // Move new parms down over old ones
 	th(th)->stk_top = ci->methodbase + nparms + 1;
-	ci->nresults = nexpected;
 	ci->retTo = ci->methodbase;  // Address of method value, varargs and return values
 	ci->begin = ci->end = ci->methodbase + 1; // Parameter values are right after method value
+	// Do not alter ci->nresults, as it is still correct for method we will return to
 
 	// C-method call - Does the whole thing: setup, call and stack clean up after return
 	if (isCMethod(ci->method)) {
@@ -336,12 +336,14 @@ void methodRunBC(Value th) {
 
 		// OpGetClosure: R(A) := Closure(D)
 		case OpGetClosure:
-			*rega = arrGet(th, ci->methodbase, bc_bx(i));
+			if (isArr(ci->methodbase))
+				*rega = arrGet(th, ci->methodbase, bc_bx(i));
 			break;
 
 		// OpSetClosure: Closure(D) := R(A)
 		case OpSetClosure:
-			arrSet(th, ci->methodbase, bc_bx(i), *rega);
+			if (isArr(ci->methodbase))
+				arrSet(th, ci->methodbase, bc_bx(i), *rega);
 			break;
 
 		// OpJump: ip += sBx
@@ -485,11 +487,13 @@ void methodRunBC(Value th) {
 		// so next open instruction (CALL, RETURN, VAR) may use top.
 		case OpGetCall: {
 			// Get property value. If executable, we can do call
-			*rega = getProperty(th, *(rega+1), *rega); // Find executable
 			if (!isCallable(*rega)) {
-				// If not callable, set up an indexed get/set
-				*(rega+1) = *rega;
-				*rega = getProperty(th, *(rega+1), vmlit(SymParas));
+				*rega = getProperty(th, *(rega+1), *rega); // Find executable
+				if (!isCallable(*rega)) {
+					// If not callable, set up an indexed get/set
+					*(rega+1) = *rega;
+					*rega = getProperty(th, *(rega+1), vmlit(SymParas));
+				}
 			}
 
 			// Reset frame top for fixed parms (var already has it adjusted)
@@ -506,13 +510,15 @@ void methodRunBC(Value th) {
 		// so next open instruction (CALL, RETURN, VAR) may use top.
 		case OpSetCall: {
 			// Get property value. If executable, we can do call
-			Value propcall = getProperty(th, *(rega+1), *rega); // Find executable
-			if (isCallable(propcall)) 
-				*rega = propcall;
-			else {
-				// If not callable, do an indexed get/set
-				*(rega+1) = *rega;
-				*rega = getProperty(th, *(rega+1), vmlit(SymParas));
+			if (!isCallable(*rega)) {
+				Value propcall = getProperty(th, *(rega+1), *rega); // Find executable
+				if (isCallable(propcall)) 
+					*rega = propcall;
+				else {
+					// If not callable, do an indexed get/set
+					*(rega+1) = *rega;
+					*rega = getProperty(th, *(rega+1), vmlit(SymParas));
+				}
 			}
 
 			// Reset frame top for fixed parms (var already has it adjusted)
@@ -525,8 +531,7 @@ void methodRunBC(Value th) {
 			} break;
 
 		// OpTailCall: R(A .. A+C-1) := R(A+1).R(A)(R(A+1) .. A+B-1))
-		// if (B == 0xFF) then B = top. If (C == 0xFF), then top is set to last_result+1, 
-		// so next open instruction (CALL, RETURN, VAR) may use top.
+		// if (B == 0xFF) then B = top. C was set by who called us.
 		case OpTailCall: {
 			int b = bc_b(i); // nbr of parms
 			// Reset frame top for fixed parms (var already has it adjusted)
@@ -534,8 +539,9 @@ void methodRunBC(Value th) {
 				th(th)->stk_top = rega+b+1;
 
 			// Prepare call frame and stack, then perform the call
-			*rega = getProperty(th, *(rega+1), *rega);
-			switch (tailcallPrep(th, rega, bc_c(i), 0)) {
+			if (!isCallable(*rega))
+				*rega = getProperty(th, *(rega+1), *rega);
+			switch (tailcallPrep(th, rega, 0)) {
 			case MethodC:
 				return; // Return to C caller on bad tailcall attempt
 			case MethodBC:

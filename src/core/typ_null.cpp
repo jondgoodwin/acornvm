@@ -38,7 +38,7 @@ void core_null_init(Value th) {
 			popProperty(th, 1, "_name");
 			pushCMethod(th, null_compare);
 			popProperty(th, 1, "<=>");
-		popProperty(th, 0, "_newtype");
+		popProperty(th, 0, "traits");
 
 		pushCMethod(th, null_new);
 		popProperty(th, 0, "New");

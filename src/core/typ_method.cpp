@@ -44,14 +44,14 @@ void core_method_init(Value th) {
 			pushSym(th, "*Method");
 			popProperty(th, 1, "_name");
 			pushCMethod(th, method_get);
-			popProperty(th, 1, "()");
+			popProperty(th, 1, "[]");
 			pushCMethod(th, acn_linker);
 			popProperty(th, 1, "Link");
 			pushCMethod(th, method_arity);
 			popProperty(th, 1, "arity");
 			pushCMethod(th, method_varargs);
 			popProperty(th, 1, "varargs?");
-		popProperty(th, 0, "_newtype");
+		popProperty(th, 0, "traits");
 		pushCMethod(th, acn_newmethod);
 		popProperty(th, 0, "New");
 	popGloVar(th, "Method");

@@ -327,7 +327,7 @@ void core_list_init(Value th) {
 			pushCMethod(th, list_get);
 			pushCMethod(th, list_set);
 			pushClosure(th, 2);
-			popProperty(th, 1, "()");
+			popProperty(th, 1, "[]");
 			pushCMethod(th, list_remove);
 			popProperty(th, 1, "Remove");
 			pushCMethod(th, list_removeValue);
@@ -364,7 +364,7 @@ void core_list_init(Value th) {
 			popProperty(th, 1, "Reverse");
 			pushCMethod(th, list_sort);
 			popProperty(th, 1, "Sort");
-		popProperty(th, 0, "_newtype");
+		popProperty(th, 0, "traits");
 		pushCMethod(th, list_new);
 		popProperty(th, 0, "New");
 	popGloVar(th, "List");
