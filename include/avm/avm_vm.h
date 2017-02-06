@@ -137,7 +137,7 @@ extern "C" {
 		SymDiv,		//!< '/'
 		SymRocket,	//!< '<=>'
 		SymEquiv,	//!< '==='
-		SymMatchOp,	//!< '~='
+		SymMatchOp,	//!< '=~'
 		SymLt,		//!< '<'
 		SymLe,		//!< '<='
 		SymGt,		//!< '>'
@@ -172,6 +172,7 @@ extern "C" {
 		SymLocal,	//!< 'local'
 		SymLit,		//!< 'lit'
 		SymExt,		//!< 'ext'
+		SymRange,	//!< 'Range'
 		SymResource, //!< 'Resource'
 
 		// Core type type

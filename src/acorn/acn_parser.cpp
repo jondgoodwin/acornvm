@@ -371,22 +371,41 @@ void parseAddSubExp(CompInfo* comp, Value astseg) {
 	}
 }
 
+/** Parse the range .. constructor operator */
+void parseRangeExp(CompInfo* comp, Value astseg) {
+	Value th = comp->th;
+	parseAddSubExp(comp, astseg);
+	if (lexMatchNext(comp->lex, "..")) {
+		// ('CallProp', 'Range', 'New', from, to, step)
+		Value newseg = astInsSeg(th, astseg, vmlit(SymCallProp), 4);
+		Value from = pushValue(th, arrGet(th, newseg, 1));
+		arrDel(th, newseg, 1, 1);
+		astAddSeg2(th, newseg, vmlit(SymGlobal), vmlit(SymRange));
+		astAddSeg2(th, newseg, vmlit(SymLit), vmlit(SymNew));
+		astAddValue(th, newseg, from);
+		popValue(th);
+		parseAddSubExp(comp, newseg);
+		if (lexMatchNext(comp->lex, ".."))
+			parseAddSubExp(comp, newseg);
+	}
+}
+
 /** Parse the comparison operators */
 void parseCompExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
-	parseAddSubExp(comp, astseg);
+	parseRangeExp(comp, astseg);
 	Value op = comp->lex->token;
 	if (lexMatchNext(comp->lex, "<=>")) {
 		Value newseg = astInsSeg(th, astseg, vmlit(SymCallProp), 4);
 		astAddSeg2(th, newseg, vmlit(SymLit), op);
-		parseAddSubExp(comp, newseg);
+		parseRangeExp(comp, newseg);
 	}
-	else if (lexMatchNext(comp->lex, "===") || lexMatchNext(comp->lex, "~=")
+	else if (lexMatchNext(comp->lex, "===") || lexMatchNext(comp->lex, "=~")
 		|| lexMatchNext(comp->lex, "==") || lexMatchNext(comp->lex, "!=")
 		|| lexMatchNext(comp->lex, "<=") || lexMatchNext(comp->lex, ">=")
 		|| lexMatchNext(comp->lex, "<") || lexMatchNext(comp->lex, ">")) {
 		Value newseg = astInsSeg(th, astseg, op, 3);
-		parseAddSubExp(comp, newseg);
+		parseRangeExp(comp, newseg);
 	}
 }
 

@@ -69,11 +69,20 @@ splat = [a, ...]
 	else
 		passon('a', ...)
 v1,v2,v3,v4 = splat(3,6,2)
-$test.True(v1===3 and v2===6 and v3===6 and v4===2, "parallel assignment for multiple return values failed")
-$test.True(splat('mult', 3, 4)===12, "parallel assignment with splat failed")
-$test.True(splat('multby2', 3, 4)===24, "parallel assignment with end-splat failed")
+$test.True(v1===3 and v2===6 and v3===6 and v4===2, "parallel assignment for multiple return values")
+$test.True(splat('mult', 3, 4)===12, "parallel assignment with splat")
+$test.True(splat('multby2', 3, 4)===24, "parallel assignment with end-splat")
 v1,v2,v3 = splat('2few',1)
-$test.True(v1===1 and v2===4 and v3===null, "Too few values failed")
-$test.True(splat('passon')===40, "parallel assignment from a method failed")
+$test.True(v1===1 and v2===4 and v3===null, "Too few values")
+$test.True(splat('passon')===40, "parallel assignment from a method")
 v1,v2 = splat('else', 'b', 'c')
-$test.True(v1==='a' and v2==='b', "Pass on and return multiple values failed")
+$test.True(v1==='a' and v2==='b', "Pass on and return multiple values")
+
+# Range test
+$test.True(4 =~ 0 .. 6, "Range match")
+
+clo = (0 .. 3).Each
+while true
+	a,b = clo()
+	break if not a
+	Vm.Print(b.Text)

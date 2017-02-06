@@ -221,7 +221,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymDiv, "/"},
 	{SymRocket, "<=>"},
 	{SymEquiv, "==="},
-	{SymMatchOp, "~="},
+	{SymMatchOp, "=~"},
 	{SymLt, "<"},
 	{SymLe, "<="},
 	{SymGt, ">"},
@@ -254,6 +254,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymGlobal, "global"},
 	{SymLit, "lit"},
 	{SymExt, "ext"},
+	{SymRange, "Range"},
 	{SymResource, "Resource"},
 
 	// End of literal table

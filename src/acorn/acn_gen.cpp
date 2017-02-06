@@ -190,10 +190,10 @@ void genJumpExp(CompInfo *comp, Value astseg, int *failjump, int *passjump, bool
 		return;
 	}
 
-	// '~=' pattern match
+	// '=~' pattern match
 	else if (condop == vmlit(SymMatchOp)) {
 		genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, vmlit(SymMatchOp))));
-		genExp(comp, astGet(th, astseg, 2)); // '~=' uses right hand value for object call
+		genExp(comp, astGet(th, astseg, 2)); // '=~' uses right hand value for object call
 		genExp(comp, astGet(th, astseg, 1));
 		genAddInstr(comp, BCINS_ABC(OpGetCall, svnextreg, comp->nextreg - svnextreg-1, 1));
 		genFwdJump(comp, revjump? OpJFalse : OpJTrue, svnextreg,  lastjump? failjump : passjump);

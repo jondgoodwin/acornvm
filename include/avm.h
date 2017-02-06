@@ -25,7 +25,7 @@
 #define AVM_VERSION_MAJOR	"0"		//!< Major version number
 #define AVM_VERSION_MINOR	"2"		//!< Minor version number
 #define AVM_VERSION_NUM		0		//!< Version number
-#define AVM_VERSION_RELEASE	"4"		//!< Version release
+#define AVM_VERSION_RELEASE	"5"		//!< Version release
 
 #define AVM_VERSION	"AcornVM " AVM_VERSION_MAJOR "." AVM_VERSION_MINOR		//!< Full version string
 #define AVM_RELEASE	AVM_VERSION "." AVM_VERSION_RELEASE		//!< Full version+release string
