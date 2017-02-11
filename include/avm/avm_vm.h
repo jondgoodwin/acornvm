@@ -154,7 +154,7 @@ extern "C" {
 		SymBrackets, //!< '[]'
 		SymNeg,		//!< '-@'
 		SymValue,	//!< 'value'
-		SymNext,	//!< 'next'
+		SymEachMeth, //!< 'Each'
 
 		SymFinalizer, //!< '_finalizer' method for CData
 		SymName,	//!< '_type' symbol

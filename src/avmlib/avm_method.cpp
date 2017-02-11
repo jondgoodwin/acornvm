@@ -49,7 +49,7 @@ MethodTypes callPrep(Value th, Value *methodval, int nexpected, int flags) {
 	if (!isCallable(*methodval)) {
 		// Copy the desired number of return values (nulls) where indicated
 		CallInfo *ci =th(th)->curmethod;
-		Value* to = ci->retTo + (flags&2);
+		Value* to = ci->retTo + (flags>>1);
 		AintIdx want = ci->nresults; // how many caller wants
 		if (flags==1) {
 			*to++ = *(methodval+2); // For set call, return set value by default
@@ -63,7 +63,7 @@ MethodTypes callPrep(Value th, Value *methodval, int nexpected, int flags) {
 	// Start and initialize a new CallInfo block
 	CallInfo * ci = th(th)->curmethod = th(th)->curmethod->next ? th(th)->curmethod->next : thrGrowCI(th);
 	ci->nresults = nexpected;
-	ci->retTo = ci->methodbase = methodval + (flags&2);  // Address of method value, varargs and return values
+	ci->retTo = (ci->methodbase = methodval) + (flags>>1);  // Address of method value, varargs and return values
 	ci->begin = ci->end = methodval + 1; // Parameter values are right after method value
 
 	// Capture the actual method whose code we are running
@@ -429,18 +429,32 @@ void methodRunBC(Value th) {
 			*rega = vmStdSym(th, bc_c(i));
 			break;
 
-		// OpForPrep: R(A+1) := R(B); R(A) = R(A+1).StdMeth(C); R(A+2):=null
-		case OpForPrep:
-			*(rega+1) = *(stkbeg + bc_b(i));
-			*rega = getProperty(th, *(rega+1), vmStdSym(th, bc_c(i)));
-			*(rega+2) = aNull;
+		// OpEachPrep: R(A) := R(B).Each
+		case OpEachPrep:
+			*rega = *(stkbeg + bc_b(i));
+			if (!isCallable(*rega)) {
+				*(rega+1) = *rega;
+				*rega = getProperty(th, *rega, vmlit(SymEachMeth));
+				th(th)->stk_top = rega+2;
+				methCall(rega, 1, 0);
+			}
+			//	*rega = getProperty(th, *rega, vmlit(SymEachMeth));
 			break;
 
-		// OpRptPrep: R(A+1) := R(B); R(A) = R(A+1).StdMeth(C)
-		case OpRptPrep:
-			*(rega+1) = *(stkbeg + bc_b(i));
-			*rega = getProperty(th, *(rega+1), vmStdSym(th, bc_c(i)));
-			break;
+		// OpEachSplat: R(A+1) := R(A)/null, R(A+2) := ...[R(A)], R(A):=R(A)+1
+		case OpEachSplat: {
+			AuintIdx nbrvar = stkbeg - ci->methodbase - methodNParms(meth) - 1;
+			AuintIdx j = toAint(*rega);
+			if (j<nbrvar) {
+				*(rega+1) = *rega;
+				*(rega+2) = *(stkbeg+j-nbrvar);
+				*rega = anInt(j+1);
+			}
+			else {
+				*(rega+1) = aNull;
+				*(rega+2) = aNull;
+			}
+			} break;
 
 		// OpGetProp: R(A) := R(A).*R(A+1)
 		// Get property value
@@ -479,6 +493,25 @@ void methodRunBC(Value th) {
 				if (isType(*(rega+1)))
 					tblSet(th, *(rega+1), *rega, *(rega+2));
 				*rega = *(rega+2);
+			}
+			} break;
+
+		// OpEachCall: R(A .. A+C-1) := R(A+1).R(A)(R(A+1) .. A+B-1))
+		// if (B == 0xFF) then B = top. If (C == 0xFF), then top is set to last_result+1, 
+		// so next open instruction (CALL, RETURN, VAR) may use top.
+		case OpEachCall: {
+			// Get property value. If executable, we can do call
+			if (isCallable(*rega)) {
+				// Reset frame top for fixed parms (var already has it adjusted)
+				int b = bc_b(i); // nbr of parms
+				if (b != BCVARRET) 
+					th(th)->stk_top = rega+b+1;
+
+				// Prepare call frame and stack, then perform the call
+				methCall(rega, bc_c(i), 2);
+			}
+			else {
+				*(rega+1) = aNull;
 			}
 			} break;
 
@@ -551,19 +584,6 @@ void methodRunBC(Value th) {
 				stkbeg = ci->begin;
 			} }
 			break;
-
-		// OpRptCall: R(A+2 .. A+C+1) := R(A)(R(A+1) .. A+B-1))
-		// if (B == 0xFF) then B = top. If (C == 0xFF), then top is set to last_result+1, 
-		// so next open instruction (CALL, RETURN, VAR) may use top.
-		case OpRptCall: {
-			int b = bc_b(i); // nbr of parms
-			// Reset frame top for fixed parms (var already has it adjusted)
-			if (b != BCVARRET) 
-				th(th)->stk_top = rega+b+1;
-
-			// Prepare call frame and stack, then perform the call
-			methCall(rega, bc_c(i), 2);
-			} break;
 
 		// OpReturn: retTo(0 .. wanted) := R(A .. A+B-1); Return
 	    //	if (B == 0xFF), it uses Top-1 (resets Top) rather than A+B-1 (Top=End)
@@ -737,8 +757,9 @@ void methSerialize(Value th, Value str, int indent, Value method) {
 		case OpJGtN: methALSerialize(th, str, "JGtN ", i, anInt(ip+bc_j(i)+1)); break;
 		case OpJGeN: methALSerialize(th, str, "JGeN ", i, anInt(ip+bc_j(i)+1)); break;
 		case OpLoadStd: methABSSerialize(th, str, "LoadStd ", i, vmStdSym(th, bc_c(i))); break;
-		case OpForPrep: methABSSerialize(th, str, "ForPrep ", i, vmStdSym(th, bc_c(i))); break;
-		case OpRptPrep: methABSSerialize(th, str, "RptPrep ", i, vmStdSym(th, bc_c(i))); break;
+		case OpEachPrep: methABCSerialize(th, str, "EachPrep ", i); break;
+		case OpEachSplat: methABCSerialize(th, str, "EachSplat ", i); break;
+		case OpEachCall: methABCSerialize(th, str, "EachCall ", i); break;
 		case OpGetProp: methABCSerialize(th, str, "GetProp ", i); break;
 		case OpSetProp: methABCSerialize(th, str, "SetProp ", i); break;
 		case OpGetActProp:  methABCSerialize(th, str, "GetActProp ", i); break;
@@ -746,7 +767,6 @@ void methSerialize(Value th, Value str, int indent, Value method) {
 		case OpGetCall:  methABCSerialize(th, str, "GetCall ", i); break;
 		case OpSetCall:  methABCSerialize(th, str, "SetCall ", i); break;
 		case OpTailCall:  methABCSerialize(th, str, "TailCall ", i); break;
-		case OpRptCall:  methABCSerialize(th, str, "RptCall ", i); break;
 		case OpReturn: methABCSerialize(th, str, "Return ", i); break;
 		default: strAppend(th, str, "Unknown Opcode", 14);
 		}

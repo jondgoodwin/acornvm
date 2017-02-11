@@ -237,7 +237,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymBrackets, "[]"},
 	{SymNeg, "-@"},
 	{SymValue, "value"},
-	{SymNext, "next"},
+	{SymEachMeth, "Each"},
 
 	{SymFinalizer, "_finalizer"},
 	{SymName, "_name"},
@@ -292,7 +292,6 @@ const int stdTblMap[] = {
 	SymDiv,		// '/'
 	SymNeg,		// '-@'
 
-	SymNext,	// 'next'
 	-1
 };
 

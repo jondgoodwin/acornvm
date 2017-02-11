@@ -15,12 +15,15 @@ extern "C" {
 
 /** Create a new List. Parameters fill the List */
 int list_new(Value th) {
-	if (getTop(th)==2 && isInt(getLocal(th, 1))) {
-		pushArray(th, vmlit(TypeListm), toAint(getLocal(th, 1)));
+	Value traits = pushProperty(th, 0, "traits"); popValue(th);
+	if (getTop(th)==1)
+		pushArray(th, traits, 4);
+	else if (getTop(th)==2 && isInt(getLocal(th, 1))) {
+		pushArray(th, traits, toAint(getLocal(th, 1)));
 	}
 	else {
 		int arrsz = getTop(th)-1;
-		Value arr = pushArray(th, vmlit(TypeListm), arrsz);
+		Value arr = pushArray(th, traits, arrsz);
 		int idx = 0;
 		while (arrsz--) {
 			arrSet(th, arr, idx, getLocal(th, idx+1));
@@ -227,16 +230,6 @@ int list_forcesize(Value th) {
 	return 0;
 }
 
-/** Get next item from a List */
-int list_next(Value th) {
-	Value arr = getLocal(th,0);
-	AintIdx sz = arr_size(arr);
-	AintIdx pos = (getLocal(th,1)==aNull)? 0 : toAint(getLocal(th,1));
-	pushValue(th, pos>=sz? aNull : arrGet(th, arr, pos));
-	setLocal(th, 1, pos>=sz? aNull : anInt((Aint)pos+1));
-	return 2;
-}
-
 /* Reverse the order of elements */
 int list_reverse(Value th) {
 	Value arr = getLocal(th, 0);
@@ -314,6 +307,30 @@ int list_sort(Value th) {
 	return 1;
 }
 
+/** Closure iterator that retrieves List's next value */
+int list_each_get(Value th) {
+	Value self    = pushCloVar(th, 2); popValue(th);
+	AuintIdx current = toAint(pushCloVar(th, 3)); popValue(th);
+	if (current>=arr_size(self))
+		return 0;
+	pushValue(th, anInt(current + 1));
+	popCloVar(th, 3);
+	pushValue(th, anInt(current));
+	pushValue(th, arrGet(th, self, current));
+	return 2;
+}
+
+/** Return a get/set closure that iterates over the list */
+int list_each(Value th) {
+	Value self = pushLocal(th, 0);
+	pushCMethod(th, list_each_get);
+	pushValue(th, aNull);
+	pushValue(th, self);
+	pushValue(th, anInt(0));
+	pushClosure(th, 4);
+	return 1;
+}
+
 /** Initialize the List type */
 void core_list_init(Value th) {
 	vmlit(TypeListc) = pushType(th, vmlit(TypeType), 4);
@@ -356,14 +373,14 @@ void core_list_init(Value th) {
 			popProperty(th, 1, "Pop");
 			pushCMethod(th, list_shift);
 			popProperty(th, 1, "Shift");
-			pushCMethod(th, list_next);
-			popProperty(th, 1, "next");
 			pushCMethod(th, list_randomize);
 			popProperty(th, 1, "Randomize");
 			pushCMethod(th, list_reverse);
 			popProperty(th, 1, "Reverse");
 			pushCMethod(th, list_sort);
 			popProperty(th, 1, "Sort");
+			pushCMethod(th, list_each);
+			popProperty(th, 1, "Each");
 		popProperty(th, 0, "traits");
 		pushCMethod(th, list_new);
 		popProperty(th, 0, "New");

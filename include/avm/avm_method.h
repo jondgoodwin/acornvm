@@ -153,9 +153,9 @@ enum ByteCodeOps {
 	OpSetCall,
 	OpReturn,
 	OpTailCall,
-	OpForPrep,
-	OpRptPrep,
-	OpRptCall
+	OpEachPrep,
+	OpEachSplat,
+	OpEachCall,
 };
 
 /** Information about a bytecode method */

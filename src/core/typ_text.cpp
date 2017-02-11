@@ -342,6 +342,35 @@ int text_insert(Value th) {
 	return 1;
 }
 
+/** Closure iterator that retrieves Text's next character as new string */
+int text_each_get(Value th) {
+	Value self    = pushCloVar(th, 2); popValue(th);
+	AuintIdx curpos = toAint(pushCloVar(th, 3)); popValue(th);
+	AuintIdx charidx = toAint(pushCloVar(th, 4)); popValue(th);
+	if (curpos>=str_size(self))
+		return 0;
+	const char *textp = toStr(self)+curpos;
+	pushValue(th, anInt(curpos + utf8_charsize(textp)));
+	popCloVar(th, 3);
+	pushValue(th, anInt(charidx + 1));
+	popCloVar(th, 4);
+	pushValue(th, anInt(charidx));
+	pushStringl(th, vmlit(TypeTextm), textp, utf8_charsize(textp));
+	return 2;
+}
+
+/** Return a get/set closure that iterates over the Text value */
+int text_each(Value th) {
+	Value self = pushLocal(th, 0);
+	pushCMethod(th, text_each_get);
+	pushValue(th, aNull);
+	pushValue(th, self);
+	pushValue(th, anInt(0));
+	pushValue(th, anInt(0));
+	pushClosure(th, 5);
+	return 1;
+}
+
 /** Initialize the Text type */
 void core_text_init(Value th) {
 	vmlit(TypeTextc) = pushType(th, vmlit(TypeType), 4);
@@ -380,6 +409,8 @@ void core_text_init(Value th) {
 			popProperty(th, 1, "Insert");
 			pushCMethod(th, text_set);
 			popProperty(th, 1, "Replace");
+			pushCMethod(th, text_each);
+			popProperty(th, 1, "Each");
 		popProperty(th, 0, "traits");
 		pushCMethod(th, text_new);
 		popProperty(th, 0, "New");

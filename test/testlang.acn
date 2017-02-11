@@ -66,6 +66,10 @@ splat = [a, ...]
 	elif a==='passon'
 		a,b = passon(5,8)
 		a*b
+	elif a==='tolist'
+		+List
+			each n in ...
+				this << n
 	else
 		passon('a', ...)
 v1,v2,v3,v4 = splat(3,6,2)
@@ -77,12 +81,42 @@ $test.True(v1===1 and v2===4 and v3===null, "Too few values")
 $test.True(splat('passon')===40, "parallel assignment from a method")
 v1,v2 = splat('else', 'b', 'c')
 $test.True(v1==='a' and v2==='b', "Pass on and return multiple values")
+$test.Equal(splat('tolist','a')[0], 'a', "splat to list")
+$test.Equal(splat('tolist',0,1,2).size, 3, "splat to list size")
+cnt = 0
+each b in splat('tolist',0,1,2)
+	$test.Equal(cnt, b, "Each for splat and list")
+	cnt = cnt + 1
 
 # Range test
 $test.True(4 =~ 0 .. 6, "Range match")
 
-clo = (0 .. 3).Each
-while true
-	a,b = clo()
-	break if not a
-	Vm.Print(b.Text)
+cnt = 0
+each a:b in 0 .. 3
+	$test.True(cnt===b, "Each on a range")
+	cnt = cnt + 1
+
+splatter = [...]
+	local cnt = 0
+	each r in ...
+		$test.True(cnt === r, "Each on splat")
+		cnt = cnt + 1
+splatter(0,1,2,3,4)
+
+cnt = 0
+each b in +List(0,1,2)
+	$test.True(cnt===b, "Each on a list")
+	cnt=cnt+1
+
+cnt = 0
+each b in "Ὅμηρος"
+	continue if false
+	break if false
+	$test.Equal(b, "Ὅμηρος"[cnt], "Each on a Text")
+	cnt=cnt+1
+	
+index = +Index
+index['a'] = 'a'
+index['b'] = 'b'
+each key:b in index
+	$test.Equal(key, b, "Each on an Index")

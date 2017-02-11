@@ -136,12 +136,18 @@ int genAddMethodLit(CompInfo *comp, Value val) {
 int findLocalVar(CompInfo *comp, Value varnm) {
 	assert(isSym(varnm));
 
-	// Look to see if variable already defined as local
-	int nbrlocals = arr_size(comp->locvarseg);
-	for (int idx = nbrlocals - 1; idx > 0; idx--) {
-		if (arrGet(comp->th, comp->locvarseg, idx) == varnm)
-			return idx-1;
-	}
+	Value th = comp->th;
+	Value locvars = comp->locvarseg;
+	do {
+		// Look to see if variable already defined as local
+		// Ignore first two values (link pointer and base index number)
+		int nbrlocals = arr_size(locvars);
+		for (int idx = nbrlocals - 1; idx > 1; idx--) {
+			if (arrGet(th, locvars, idx) == varnm)
+				return idx-2+toAint(arrGet(th, locvars, 1)); // relative to base index
+		}
+		locvars = arrGet(th, locvars, 0); // link to prior local variables
+	} while (locvars!=aNull);
 	return -1;
 }
 
@@ -598,9 +604,45 @@ void parseStmts(CompInfo* comp, Value astseg) {
 
 		// 'while' block
 		else if (lexMatchNext(comp->lex, "while")) {
-			newseg = astAddSeg(th, astseg, vmlit(SymWhile), 3);
+			newseg = astAddSeg(th, astseg, vmlit(SymWhile), 4);
+			astAddValue(th, newseg, aNull);
 			parseLogicExp(comp, newseg);
 			parseBlock(comp, newseg);
+			parseSemi(comp, astseg);
+		}
+
+		// 'each' block
+		else if (lexMatchNext(comp->lex, "each")) {
+			// Parse return variables and "in"
+			Value blkvars = pushArray(th, vmlit(TypeListm), 8);
+			arrSet(th, blkvars, 0, comp->locvarseg);
+			AuintIdx i=2;
+			do {
+				if (comp->lex->toktype==Name_Token || comp->lex->toktype==Lit_Token) {
+					arrSet(th, blkvars, i++, comp->lex->token);
+					lexGetNextToken(comp->lex);
+				}
+				else
+					lexLog(comp->lex, "Expected variable name");
+				// Assign null variable for "key", if none specified using ':'
+				if (i==3 && !lexMatch(comp->lex, ":")) {
+					arrSet(th, blkvars, i++, arrGet(th, blkvars, 2));
+					arrSet(th, blkvars, 2, aNull);
+				}
+			} while (lexMatchNext(comp->lex, ",") || lexMatchNext(comp->lex, ":"));
+			if (!lexMatchNext(comp->lex, "in"))
+				lexLog(comp->lex, "Expected 'in'");
+
+			// Build 'each' newseg ('each', localvars, iterator, nretvals, block);
+			newseg = astAddSeg(th, astseg, vmlit(SymEach), 5);
+			astAddValue(th, newseg, blkvars);
+			Value svlocalvars = comp->locvarseg;
+			comp->locvarseg = blkvars;
+			parseLogicExp(comp, newseg);
+			astAddValue(th, newseg, anInt(i-2)); // number of return values
+			parseBlock(comp, newseg);
+			comp->locvarseg = svlocalvars;
+			popValue(th); // blkvars
 			parseSemi(comp, astseg);
 		}
 
@@ -655,7 +697,8 @@ void parseProgram(CompInfo* comp) {
 	astAddValue(th, methast, vmlit(SymMethod));
 
 	// local variable list - starts with pointer to outer method's local variable list
-	comp->locvarseg = astAddSeg(th, methast, comp->prevcomp==aNull? aNull : ((CompInfo*)comp->prevcomp)->locvarseg, 16);
+	comp->locvarseg = astAddSeg(th, methast, aNull, 16);
+	astAddValue(th, comp->locvarseg, anInt(1));
 
 	// closure variable list
 	comp->clovarseg = pushArray(th, aNull, 4);
@@ -663,10 +706,6 @@ void parseProgram(CompInfo* comp) {
 	popValue(th);
 
 	Value parminitast = astAddSeg(th, methast, vmlit(SymSemicolon), 4);
-
-	// Declare self as first implicit parameter
-	arrAdd(th, comp->locvarseg, vmlit(SymSelf));
-	methodNParms(comp->method)=1;
 
 	// process parameters as local variables
 	if (lexMatchNext(comp->lex, "[")) {
@@ -721,5 +760,3 @@ void parseProgram(CompInfo* comp) {
 } // extern "C"
 } // namespace avm
 #endif
-
-

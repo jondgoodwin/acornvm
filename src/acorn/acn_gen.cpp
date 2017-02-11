@@ -19,7 +19,7 @@ void newBMethod(Value th, Value *dest) {
 	*dest = (Value) meth;
 
 	methodFlags(meth) = 0;
-	methodNParms(meth) = 0;
+	methodNParms(meth) = 1; // 'self'
 
 	meth->code = NULL;
 	meth->maxstacksize = 20;
@@ -66,6 +66,22 @@ int genAddLit(CompInfo *comp, Value val) {
 /* Indicate the method has a variable number of parameters */
 void genVarParms(CompInfo *comp) {
 	methodFlags(comp->method) = METHOD_FLG_VARPARM;
+}
+
+/** Allocate block's local variables */
+Value genLocalVars(CompInfo *comp, Value blockvarseg) {
+	Value th = comp->th;
+	Value svLocalVars = comp->locvarseg;
+	if (blockvarseg!=aNull) {
+		comp->locvarseg = blockvarseg;
+		arrSet(th, comp->locvarseg, 1, anInt(comp->nextreg));
+		int nbrvars = arr_size(comp->locvarseg)-2;
+		genAddInstr(comp, BCINS_ABC(OpLoadNulls, comp->nextreg, nbrvars, 0));
+		comp->nextreg += nbrvars;
+		if (comp->method->maxstacksize < comp->nextreg+nbrvars)
+			comp->method->maxstacksize = comp->nextreg+nbrvars;
+	}
+	return svLocalVars;
 }
 
 /* Raise method's max stack size if register is above it */
@@ -593,16 +609,70 @@ void genIf(CompInfo *comp, Value astseg) {
 /** Generate while block */
 void genWhile(CompInfo *comp, Value astseg) {
 	Value th = comp->th;
+	unsigned int savereg = comp->nextreg;
+
+	// Allocate block's local variables
+	Value svLocalVars = genLocalVars(comp, astGet(th, astseg, 1));
+
+	// Perform conditional expression and jump
 	int svJumpBegIp = comp->whileBegIp;
 	int svJumpEndIp = comp->whileEndIp;
 	comp->whileBegIp = comp->method->size;
 	comp->whileEndIp = BCNO_JMP;
-	genJumpExp(comp, astGet(th, astseg, 1), &comp->whileEndIp, NULL, false, true);
-	genStmts(comp, astGet(th, astseg, 2)); // Generate block
+	genJumpExp(comp, astGet(th, astseg, 2), &comp->whileEndIp, NULL, false, true);
+
+	// Generate block and jump to beginning. Fix conditional jump to after 'while' block
+	genStmts(comp, astGet(th, astseg, 3)); // Generate block
 	genAddInstr(comp, BCINS_AJ(OpJump, 0, comp->whileBegIp - comp->method->size-1));
-	genSetJumpList(comp, comp->whileEndIp, comp->method->size); // Fix jumps to end of 'while' block
+	genSetJumpList(comp, comp->whileEndIp, comp->method->size); // Fix jump to end of 'while' block
+
+	// Restore block's saved values
+	comp->nextreg = savereg;
 	comp->whileBegIp = svJumpBegIp;
 	comp->whileEndIp = svJumpEndIp;
+	comp->locvarseg = svLocalVars;
+}
+
+/** Generate while or each block */
+void genEach(CompInfo *comp, Value astseg) {
+	Value th = comp->th;
+	unsigned int savereg = comp->nextreg;
+
+	// Prepare iterator for 'each' block outside of main loop (loaded in savereg)
+	bool splatflag = astGet(th, astseg, 2) == vmlit(SymSplat);
+	if (splatflag)
+		genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, anInt(0))));
+	else {
+		int fromreg = genExpReg(comp, astGet(th, astseg, 2));
+		if (fromreg==-1) {
+			genExp(comp, astGet(th, astseg, 2));
+			genAddInstr(comp, BCINS_ABC(OpEachPrep, savereg, savereg, 0));
+		}
+		else
+			genAddInstr(comp, BCINS_ABC(OpEachPrep, genNextReg(comp), fromreg, 0));
+	}
+
+	// Allocate block's local variables
+	Value svLocalVars = genLocalVars(comp, astGet(th, astseg, 1));
+
+	// Perform conditional expression and jump
+	int svJumpBegIp = comp->whileBegIp;
+	int svJumpEndIp = comp->whileEndIp;
+	comp->whileBegIp = comp->method->size;
+	comp->whileEndIp = BCNO_JMP;
+	genAddInstr(comp, BCINS_ABC(splatflag? OpEachSplat : OpEachCall, savereg, 0, toAint(astGet(th, astseg,3))));
+	genFwdJump(comp, OpJFalse, savereg+1, &comp->whileEndIp);
+
+	// Generate block and jump to beginning. Fix conditional jump to after 'while' block
+	genStmts(comp, astGet(th, astseg, 4)); // Generate block
+	genAddInstr(comp, BCINS_AJ(OpJump, 0, comp->whileBegIp - comp->method->size-1));
+	genSetJumpList(comp, comp->whileEndIp, comp->method->size); // Fix jump to end of 'while' block
+
+	// Restore block's saved values
+	comp->nextreg = savereg;
+	comp->whileBegIp = svJumpBegIp;
+	comp->whileEndIp = svJumpEndIp;
+	comp->locvarseg = svLocalVars;
 }
 
 /** Generate a statement */
@@ -620,6 +690,7 @@ void genStmt(CompInfo *comp, Value aststmt) {
 	Value op = isArr(aststmt)? astGet(th, aststmt, 0) : aststmt;
 	if (op==vmlit(SymIf)) genIf(comp, aststmt); 
 	else if (op==vmlit(SymWhile)) genWhile(comp, aststmt);
+	else if (op==vmlit(SymEach)) genEach(comp, aststmt);
 	else if (op==vmlit(SymBreak) && comp->whileBegIp!=-1)
 		genFwdJump(comp, OpJump, 0, &comp->whileEndIp);
 	else if (op==vmlit(SymContinue) && comp->whileBegIp!=-1)
@@ -732,6 +803,7 @@ void genBMethod(CompInfo *comp) {
 	comp->thisreg = 0; // Starts with 'self'
 	comp->thisop = aNull;
 	comp->locvarseg = astGet(comp->th, comp->ast, 1);
+	arrSet(comp->th, comp->locvarseg, 1, anInt(1));
 	comp->clovarseg = astGet(comp->th, comp->ast, 2);
 
 	// Generate the method's code based on AST
