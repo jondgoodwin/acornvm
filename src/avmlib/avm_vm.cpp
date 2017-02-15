@@ -327,6 +327,7 @@ void core_index_init(Value th);
 void core_type_init(Value th);
 
 void core_vm_init(Value th);
+void core_all_init(Value th);
 
 void core_resource_init(Value th);
 void core_method_init(Value th);
@@ -350,6 +351,7 @@ void core_init(Value th) {
 	core_index_init(th);
 
 	core_vm_init(th);
+	core_all_init(th);
 
 	// Load resource before the types it uses
 	core_resource_init(th);

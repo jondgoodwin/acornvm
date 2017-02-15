@@ -45,6 +45,7 @@
     <ClCompile Include="src\avmlib\avm_thread.cpp" />
     <ClCompile Include="src\avmlib\avm_value.cpp" />
     <ClCompile Include="src\avmlib\avm_vm.cpp" />
+    <ClCompile Include="src\core\typ_all.cpp" />
     <ClCompile Include="src\core\typ_bool.cpp" />
     <ClCompile Include="src\core\typ_file.cpp" />
     <ClCompile Include="src\core\typ_float.cpp" />

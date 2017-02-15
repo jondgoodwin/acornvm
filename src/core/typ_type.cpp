@@ -21,7 +21,15 @@ int type_new(Value th) {
 
 /** Lookup a value from type's named property */
 int type_get(Value th) {
-	pushValue(th, getTop(th)>=2? getProperty(th, getLocal(th,0), getLocal(th,1)) : aNull);
+	pushValue(th, getTop(th)>=2? tblGet(th, getLocal(th,0), getLocal(th,1)) : aNull);
+	return 1;
+}
+
+/** Change a value for type's named property */
+int type_set(Value th) {
+	if (getTop(th)>=3)
+		tblSet(th, getLocal(th,0), getLocal(th,2), getLocal(th,1));
+	setTop(th, 1);
 	return 1;
 }
 
@@ -33,6 +41,8 @@ void core_type_init(Value th) {
 		pushCMethod(th, type_new);
 		popProperty(th, 0, "New");
 		pushCMethod(th, type_get);
+		pushCMethod(th, type_set);
+		pushClosure(th, 2);
 		popProperty(th, 0, "[]");
 	popGloVar(th, "Type");
 	return;

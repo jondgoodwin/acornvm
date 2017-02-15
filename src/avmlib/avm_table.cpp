@@ -376,7 +376,7 @@ int isType(Value val) {
 
 /* Return 1 if the value is a Type table, otherwise 0 */
 int isPrototype(Value val) {
-	return isEnc(val, TblEnc) && tbl_info(val)->flags1 & (TypeTbl | ProtoType);
+	return isEnc(val, TblEnc) && ((tbl_info(val)->flags1 & (TypeTbl | ProtoType))==(TypeTbl|ProtoType));
 }
 
 /* Return 1 if table has an entry at key, 0 if not */

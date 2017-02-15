@@ -75,3 +75,7 @@ $test.Equal(homer, "Ὅμη", "resizing Ὅμηρος to 3 characters != Ὅμη
 $test.Equal(+Text("Ὅμηρος").Remove(2, -3), "Ὅμς", "Transform Ὅμηρος into Homer")
 $test.Equal(+Text("Ὅμηρος").Replace("Homer", 0, 3), "Homerος", "Transform Ὅμηρος into Homerος")
 $test.Equal(+Text("Abf").Insert(2, "cde"), "Abcdef", "+Text(\"Abf\").Insert(2, \"cde\") != \"Abcdef\"")
+
+# Any
+$test.Equal(0 .type, Integer.traits, ".type")
+$test.Equal(0 .type, Integer.property('traits'), ".property")
