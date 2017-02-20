@@ -25,8 +25,8 @@ $test.Equal(job, 5, "while increments job 5 times")
 # Parameter default value
 parmdefault = [a=1]
 	a
-$test.Equal(parmdefault(), 1, "Parameter default failed")
-$test.Equal(parmdefault(3), 3, "Parameter default override failed")
+$test.Equal(parmdefault(), 1, "Parameter default")
+$test.Equal(parmdefault(3), 3, "Parameter default override")
 
 # warnings - these are not allowed
 1 = 1
@@ -40,12 +40,12 @@ Integer.traits
 	Factorial: [total=1]
 		return total if self<2
 		(self-1).Factorial(self*total)
-$test.Equal(10 .Factorial, 3628800, "Failed recursive factorial method with tail call")
+$test.Equal(10 .Factorial, 3628800, "Recursive factorial method with tail call")
 
 returning = [a]
 	a if a # implicit return calculated for 'else'
-$test.Equal(returning(1), 1, "Returning 1 failed")
-$test.Equal(returning(), null, "Returning no values failed")
+$test.Equal(returning(1), 1, "Returning 1")
+$test.Equal(returning(), null, "Returning no values")
 
 # test splat, parallel assignment, muliple returns
 splat = [a, ...]
@@ -120,3 +120,17 @@ index['a'] = 'a'
 index['b'] = 'b'
 each key:b in index
 	$test.Equal(key, b, "Each on an Index")
+
+# dot operators
+type = +Type
+	meth: []
+		3
+	.:meth = m = [] {4}
+$test.True(type.meth==4, ".: override")
+type
+	meth::: m = [] {5}
+$test.True(type.meth==5, "::: override")
+$test.True(m===type::meth, ":: indexing into type")
+$test.True(m===type::'meth', ":: indexing sym into type")
+m = 'meth'
+$test.True(5===type.(m), "calculated property")

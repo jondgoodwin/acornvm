@@ -88,6 +88,22 @@ Value astInsSeg2(Value th, Value oldseg, Value astop, Value propval, AuintIdx si
 	return newseg;
 }
 
+/** Create a new untethered, sized AST segment that has astop as first element */
+Value astPushNew(Value th, Value astop, AuintIdx size) {
+	Value newseg = pushArray(th, aNull, size);
+	arrAdd(th, newseg, astop);
+	return newseg;
+}
+
+/** Attach newseg into last slot of oldseg, whose old value is appended to newseg */
+void astPopNew(Value th, Value oldseg, Value newseg) {
+	AuintIdx oldpos = arr_size(oldseg)-1;
+	Value saveval = arrGet(th, oldseg, oldpos);
+	arrSet(th, oldseg, oldpos, newseg);
+	arrAdd(th, newseg, saveval);
+	popValue(th);
+}
+
 /** Return true if ast segment can be assigned a value: variable or settable property/method */
 bool astIsLval(Value th, Value astseg) {
 	if (!isArr(astseg))
@@ -234,59 +250,97 @@ void parseValue(CompInfo* comp, Value astseg) {
 	return;
 }
 
+/** Add a list of parameters to a AST propseg */
+void parseParams(CompInfo* comp, Value propseg, const char *closeparen) {
+	bool saveforcelocal = comp->forcelocal;
+	comp->forcelocal = false;
+
+	parseTernaryExp(comp, propseg);
+	while (lexMatchNext(comp->lex, ","))
+		parseTernaryExp(comp, propseg);
+
+	if (!lexMatchNext(comp->lex, closeparen))
+		lexLog(comp->lex, "Expected ')' or ']' at end of parameter/index list.");
+
+	comp->forcelocal = saveforcelocal;
+}
+
+/** Determine if token is '.' '.:' or '::' */
+#define isdots(token) ((token)==vmlit(SymDot) || (token)==vmlit(SymColons) || (token)==vmlit(SymDotColon))
+
 /** Parse a compound term, handling new and suffixes */
 void parseTerm(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
+	// Capture whether term began with a "+" prefix
 	bool newflag = lexMatchNext(comp->lex, "+");
-	if (lexMatch(comp->lex, "."))
+	// Obtain base value (dots as prefix implies 'this' as base value)
+	if (!newflag && isdots(comp->lex->token))
 		astAddValue(th, astseg, vmlit(SymThis));
 	else
 		parseValue(comp, astseg);
 	// Handle suffix chains
-	while (newflag || lexMatch(comp->lex, ".") || lexMatch(comp->lex, "(") || lexMatch(comp->lex, "[")) {
-		Value propseg = astInsSeg(th, astseg, vmlit(SymActProp), 4); // may adjust later
-		// Determine the property
+	while (newflag || isdots(comp->lex->token) || lexMatch(comp->lex, "(") || lexMatch(comp->lex, "[")) {
+		bool getparms = true;
+		Value propseg = astInsSeg(th, astseg, vmlit(SymActProp), 4); // may adjust op later
+		// Treat '+' as calling .New
 		if (newflag) {
 			astAddSeg2(th, propseg, vmlit(SymLit), vmlit(SymNew));
 			newflag = false; // only works once
 		}
+		// For pure method call, adjust to be: self.method
 		else if (lexMatch(comp->lex, "(")) {
-			// For pure method call, adjust to be: self.method
 			arrSet(th, propseg, 2, arrGet(th, propseg, 1));
 			arrSet(th, propseg, 1, vmlit(SymSelf));
 		}
-		else if (lexMatch(comp->lex, "["))
+		// For indexing, adjust to: base.'[]'
+		else if (lexMatchNext(comp->lex, "[")) {
+			astSetValue(th, propseg, 0, vmlit(SymCallProp)); // adjust because of parms
 			astAddSeg2(th, propseg, vmlit(SymLit), vmlit(SymBrackets));
-		else { // '.'
-			lexGetNextToken(comp->lex); // scan past '.'
+			parseParams(comp, propseg, "]");
+			getparms = false;
+		}
+		// Handle '.', '.:', and '::'
+		else {
+			if (comp->lex->token == vmlit(SymDotColon)) {
+				astSetValue(th, propseg, 0, vmlit(SymRawProp));
+				getparms = false;
+			}
+			else if (comp->lex->token == vmlit(SymColons)) {
+				astSetValue(th, propseg, 0, vmlit(SymCallProp));
+				astAddSeg2(th, propseg, vmlit(SymLit), vmlit(SymBrackets));
+				getparms = false;
+			}
+			lexGetNextToken(comp->lex); // scan past dot(s) operator
+
+			// Retrieve the property specified after the dot(s) operator
 			if (comp->lex->toktype == Name_Token || comp->lex->toktype == Lit_Token) {
 				astAddSeg2(th, propseg, vmlit(SymLit), comp->lex->token);
 				lexGetNextToken(comp->lex);
 			}
+			// Calculated property symbol/method value
+			else if (lexMatchNext(comp->lex, "(")) {
+				parseExp(comp, propseg);
+				if (!lexMatchNext(comp->lex, ")"))
+					lexLog(comp->lex, "Expected ')' at end of property expression.");
+			}
 			else {
 				astAddSeg2(th, propseg, vmlit(SymLit), aNull);
-				lexLog(comp->lex, "Expected property expression after '.'");
+				lexLog(comp->lex, "Expected property expression after '.', '.:', or '::'");
 			}
 		}
-		// Process parameter or index list
-		bool parenflag;
-		if ((parenflag = lexMatchNext(comp->lex, "(")) || lexMatchNext(comp->lex, "[")) {
-			bool saveforcelocal = comp->forcelocal;
-			comp->forcelocal = false;
-			astSetValue(th, propseg, 0, vmlit(SymCallProp)); // adjust because of parms
-			parseTernaryExp(comp, propseg);
 
-			while (lexMatchNext(comp->lex, ","))
-				parseTernaryExp(comp, propseg);
-			if (!lexMatchNext(comp->lex, parenflag? ")" : "]"))
-				lexLog(comp->lex, "Expected ')' or ']' at end of parameter list.");
-			comp->forcelocal = saveforcelocal;
-		}
-		// If symbol without a no parameter list, treat it as a property call
-		else if (comp->lex->toktype == Lit_Token && (isStr(comp->lex->token) || isSym(comp->lex->token))) {
-			astSetValue(th, propseg, 0, vmlit(SymCallProp)); // adjust because of parm
-			astAddSeg2(th, propseg, vmlit(SymLit), comp->lex->token);
-			lexGetNextToken(comp->lex);
+		// Process parameter list, if appropriate for this term suffix
+		if (getparms) {
+			if (lexMatchNext(comp->lex, "(")) {
+				astSetValue(th, propseg, 0, vmlit(SymCallProp)); // adjust because of parms
+				parseParams(comp, propseg, ")");
+			}
+			// Treat Text or Symbol literal as a single parameter to pass
+			else if (comp->lex->toktype == Lit_Token && (isStr(comp->lex->token) || isSym(comp->lex->token))) {
+				astSetValue(th, propseg, 0, vmlit(SymCallProp)); // adjust because of parm
+				astAddSeg2(th, propseg, vmlit(SymLit), comp->lex->token);
+				lexGetNextToken(comp->lex);
+			}
 		}
 	}
 }
@@ -499,11 +553,13 @@ void parseCommaExp(CompInfo* comp, Value astseg) {
 /** Parse an assignment or property setting expression */
 void parseAssgnExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
+	bool isTripleColon;
 
 	// Get lvals (could be rvals if no assignment operator is found)
 	// Presence of 'local' ensures unknown locals are declared as locals vs. closure vars
 	bool saveforcelocal = comp->forcelocal;
 	comp->forcelocal = lexMatchNext(comp->lex, "local");
+	bool inparens = lexMatch(comp->lex, "(");
 	parseCommaExp(comp, astseg);
 	comp->forcelocal = saveforcelocal;
 
@@ -525,17 +581,22 @@ void parseAssgnExp(CompInfo* comp, Value astseg) {
 		}
 		parseAssgnExp(comp, assgnseg); // Get the values to the right
 	}
-	else if (lexMatchNext(comp->lex, ":")) {
-		// ('=', ('activeprop', 'this', property), value)
-		astseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
-		astInsSeg2(th, astseg, vmlit(SymActProp), vmlit(SymThis), 3);
-		parseAssgnExp(comp, astseg);
-	}
-	else if (lexMatchNext(comp->lex, ":=")) {
-		// ('=', ('rawprop', 'this', property), value)
-		astseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
-		astInsSeg2(th, astseg, vmlit(SymRawProp), vmlit(SymThis), 3);
-		parseAssgnExp(comp, astseg);
+	else if ((isTripleColon = lexMatchNext(comp->lex, ":::")) || lexMatchNext(comp->lex, ":")) {
+		// Turn variable name before ':' into a literal
+		if (!inparens) {
+			Value lval = arrGet(th, astseg, arr_size(astseg)-1);
+			Value op = isArr(lval)? arrGet(th, lval, 0) : aNull;
+			if (op==vmlit(SymLocal) || op==vmlit(SymGlobal))
+				arrSet(th, lval, 0, vmlit(SymLit));
+		}
+		// ('=', ('activeprop'/'callprop', 'this', ('[]',) property), value)
+		Value assgnseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
+		Value indexseg = astPushNew(th, vmlit(isTripleColon? SymCallProp : SymActProp), 4);
+		astAddValue(th, indexseg, vmlit(SymThis));
+		if (isTripleColon)
+			astAddSeg2(th, indexseg, vmlit(SymLit), vmlit(SymBrackets));
+		astPopNew(th, assgnseg, indexseg);
+		parseAssgnExp(comp, assgnseg);
 	}
 }
 
@@ -618,7 +679,7 @@ void parseStmts(CompInfo* comp, Value astseg) {
 			arrSet(th, blkvars, 0, comp->locvarseg);
 			AuintIdx i=2;
 			do {
-				if (comp->lex->toktype==Name_Token || comp->lex->toktype==Lit_Token) {
+				if (comp->lex->toktype==Name_Token) {
 					arrSet(th, blkvars, i++, comp->lex->token);
 					lexGetNextToken(comp->lex);
 				}

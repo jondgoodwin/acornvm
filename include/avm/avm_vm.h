@@ -128,6 +128,9 @@ extern "C" {
 		SymQuestion,	//!< '?'
 		SymAt,			//!< '@'
 		SymSplat,		//!< '...'
+		SymDot,			//!< '.'
+		SymColons,		//!< '::'
+		SymDotColon,	//!< '.:'
 
 		// Compiler symbols that are also methods
 		SymAppend,	//!< '<<'
