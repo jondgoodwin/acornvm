@@ -1,9 +1,10 @@
 # Acorn language tests
-a=+List
-	this << 3
 
-a=3 if !a
+# warnings - these are not allowed
+1 = 1
+self, this = 0,1
 
+# Conditional expressions
 $test.True(true, "true is True")
 $test.Equal(null || 'x', 'x', "(null or 'x')==='x'")
 $test.Equal(null and 'x', null, "(null and 'x')===null")
@@ -17,6 +18,12 @@ if !true
 if !(2<3 && 1<2 || 0<1 && 0<4)
 	$test.True(false, "!(2<3 && 1<2 || 0<1 && 0<4)")
 
+# if / clause
+local a = null
+a=3 if not a
+$test.True(a===3, "if suffix")
+
+# while
 job = 0
 while job<5
 	job = job + 1
@@ -28,10 +35,7 @@ parmdefault = [a=1]
 $test.Equal(parmdefault(), 1, "Parameter default")
 $test.Equal(parmdefault(3), 3, "Parameter default override")
 
-# warnings - these are not allowed
-1 = 1
-self, this = 0,1
-
+# Parallel assignment
 a,b = 1,2
 a,b = b,a
 $test.True(a===2 and b===1, "Swap values failed")
@@ -134,3 +138,14 @@ $test.True(m===type::meth, ":: indexing into type")
 $test.True(m===type::'meth', ":: indexing sym into type")
 m = 'meth'
 $test.True(5===type.(m), "calculated property")
+
+# this blocks
+a=+List
+	<< 3
+$test.True(a[0]===3, "this block with <<")
+a using '<<'
+	4,5
+$test.True(a.size===3 and a[2]===5, "this block using <<")
+a using [x] {<< x*x;}
+	2;3
+$test.True(a.size===5 and a[4]===9, "this block using method")

@@ -456,6 +456,13 @@ void methodRunBC(Value th) {
 			}
 			} break;
 
+		// OpGetMeth: R(A) := R(A).*R(A+1)
+		// Get property's method value (unless property is an executable method)
+		case OpGetMeth:
+			if (!isCallable(*rega))
+				*rega = getProperty(th, *(rega+1), *rega); // Find executable
+			break;
+
 		// OpGetProp: R(A) := R(A).*R(A+1)
 		// Get property value
 		case OpGetProp:
@@ -525,7 +532,7 @@ void methodRunBC(Value th) {
 				if (!isCallable(*rega)) {
 					// If not callable, set up an indexed get/set
 					*(rega+1) = *rega;
-					*rega = getProperty(th, *(rega+1), vmlit(SymParas));
+					*rega = getProperty(th, *(rega+1), vmlit(SymBrackets));
 				}
 			}
 
@@ -550,7 +557,7 @@ void methodRunBC(Value th) {
 				else {
 					// If not callable, do an indexed get/set
 					*(rega+1) = *rega;
-					*rega = getProperty(th, *(rega+1), vmlit(SymParas));
+					*rega = getProperty(th, *(rega+1), vmlit(SymBrackets));
 				}
 			}
 
@@ -760,6 +767,7 @@ void methSerialize(Value th, Value str, int indent, Value method) {
 		case OpEachPrep: methABCSerialize(th, str, "EachPrep ", i); break;
 		case OpEachSplat: methABCSerialize(th, str, "EachSplat ", i); break;
 		case OpEachCall: methABCSerialize(th, str, "EachCall ", i); break;
+		case OpGetMeth: methABCSerialize(th, str, "GetMeth ", i); break;
 		case OpGetProp: methABCSerialize(th, str, "GetProp ", i); break;
 		case OpSetProp: methABCSerialize(th, str, "SetProp ", i); break;
 		case OpGetActProp:  methABCSerialize(th, str, "GetActProp ", i); break;

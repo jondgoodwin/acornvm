@@ -201,6 +201,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymSelf, "self"},
 	{SymThis, "this"},
 	{SymTo, "to"},
+	{SymUsing, "using"},
 	{SymWait, "wait"},
 	{SymWhile, "while"},
 	{SymWorker, "worker"},
@@ -218,6 +219,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 
 	// Compiler symbols that are also methods
 	{SymAppend, "<<"},
+	{SymPrepend, ">>"},
 	{SymPlus, "+"},
 	{SymMinus, "-"},
 	{SymMult, "*"},

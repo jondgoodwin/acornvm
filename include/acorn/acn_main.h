@@ -76,10 +76,9 @@ typedef struct CompInfo {
 	Value clovarseg;		//!< Closure variable AST segment
 
 	// Generation context
-	Value thisop;			//!< Operator to use on every 'this' block stmt
-
 	unsigned int nextreg;	//!< Next register available for use
 	unsigned int thisreg;	//!< Register holding 'this' value
+	unsigned int thisopreg;	//!< Register for method to use on every 'this' block stmt
 	int whileBegIp;			//!< ip of current while block's first instruction
 	int whileEndIp;			//!< ip of first jump statement to end of current while block
 

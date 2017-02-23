@@ -116,6 +116,7 @@ extern "C" {
 		SymSelf,		//!< 'self'
 		SymThis,		//!< 'this'
 		SymTo,			//!< 'to'
+		SymUsing,		//!< 'using'
 		SymVar,			//!< 'var'
 		SymWait,		//!< 'wait'
 		SymWhile,		//!< 'while'
@@ -134,6 +135,7 @@ extern "C" {
 
 		// Compiler symbols that are also methods
 		SymAppend,	//!< '<<'
+		SymPrepend, //!< '>>'
 		SymPlus,	//!< '+'
 		SymMinus,	//!< '-'
 		SymMult,	//!< '*'

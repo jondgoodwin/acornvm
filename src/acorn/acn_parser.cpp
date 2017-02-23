@@ -118,7 +118,7 @@ bool astIsLval(Value th, Value astseg) {
 
 // Prototypes for functions used before they are defined
 void parseBlock(CompInfo* comp, Value astseg);
-void parseTernaryExp(CompInfo* comp, Value astseg);
+void parseAppendExp(CompInfo* comp, Value astseg);
 void parseExp(CompInfo* comp, Value astseg);
 
 /* Add a url literal and return its index */
@@ -255,9 +255,9 @@ void parseParams(CompInfo* comp, Value propseg, const char *closeparen) {
 	bool saveforcelocal = comp->forcelocal;
 	comp->forcelocal = false;
 
-	parseTernaryExp(comp, propseg);
+	parseAppendExp(comp, propseg);
 	while (lexMatchNext(comp->lex, ","))
-		parseTernaryExp(comp, propseg);
+		parseAppendExp(comp, propseg);
 
 	if (!lexMatchNext(comp->lex, closeparen))
 		lexLog(comp->lex, "Expected ')' or ']' at end of parameter/index list.");
@@ -507,21 +507,6 @@ void parseLogicExp(CompInfo* comp, Value astseg) {
 	}
 }
 
-/** Parse 'if', 'while' or 'each' suffix */
-void parseSuffix(CompInfo* comp, Value astseg) {
-	Value th = comp->th;
-	Value token = comp->lex->token;
-	if (lexMatchNext(comp->lex, "if") || lexMatchNext(comp->lex, "while")) {
-		Value newseg = astInsSeg(th, astseg, token, 4);
-		parseLogicExp(comp, newseg);
-		// swap elements 1 and 2, so condition follows 'if'/'while'
-		arrSet(th, newseg, 3, astGet(th, newseg, 1));
-		arrDel(th, newseg, 1, 1);
-		// Wrap single statement in a block (so that fixing implicit returns works)
-		astInsSeg(th, newseg, vmlit(SymSemicolon), 2);
-	}
-}
-
 /** Parse '?' 'else' ternary operator */
 void parseTernaryExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
@@ -538,14 +523,30 @@ void parseTernaryExp(CompInfo* comp, Value astseg) {
 	}
 }
 
+/** Parse append and prepend operators */
+void parseAppendExp(CompInfo* comp, Value astseg) {
+	Value th = comp->th;
+	if (comp->lex->toktype==Res_Token && (comp->lex->token == vmlit(SymAppend) || comp->lex->token == vmlit(SymPrepend)))
+		astAddValue(th, astseg, vmlit(SymThis));
+	else
+		parseTernaryExp(comp, astseg);
+	Value op;
+	while (comp->lex->toktype==Res_Token && ((op=comp->lex->token)==vmlit(SymAppend) || op==vmlit(SymPrepend))) {
+		lexGetNextToken(comp->lex);
+		Value newseg = astInsSeg(th, astseg, vmlit(SymCallProp), 4);
+		astAddSeg2(th, newseg, vmlit(SymLit), op);
+		parseTernaryExp(comp, newseg);
+	}
+}
+
 /** Parse comma separated expressions */
 void parseCommaExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
-	parseTernaryExp(comp, astseg);
+	parseAppendExp(comp, astseg);
 	if (comp->lex->token==vmlit(SymComma)) {
 		Value commaseg = astInsSeg(th, astseg, vmlit(SymComma), 4);
 		while (lexMatchNext(comp->lex, ",")) {
-			parseTernaryExp(comp, commaseg);
+			parseAppendExp(comp, commaseg);
 		}
 	}
 }
@@ -568,9 +569,7 @@ void parseAssgnExp(CompInfo* comp, Value astseg) {
 		Value assgnseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
 		// Warn about unalterable literals or pseudo-variables to the left of "="
 		Value lvalseg = arrGet(th, assgnseg, 1);
-		if (!astIsLval(th, lvalseg))
-			lexLog(comp->lex, "Literals/pseudo-variables/expressions cannot be altered.");
-		else if (arrGet(th, lvalseg, 0) == vmlit(SymComma)) {
+		if (arrGet(th, lvalseg, 0) == vmlit(SymComma)) {
 			Value lval;
 			for (Auint i = 1; i<arr_size(lvalseg); i++) {
 				if (!astIsLval(th, lval = arrGet(th, lvalseg, i))) {
@@ -578,6 +577,9 @@ void parseAssgnExp(CompInfo* comp, Value astseg) {
 					break;
 				}
 			}
+		}
+		else if (!astIsLval(th, lvalseg)) {
+			lexLog(comp->lex, "Literals/pseudo-variables/expressions cannot be altered.");
 		}
 		parseAssgnExp(comp, assgnseg); // Get the values to the right
 	}
@@ -600,31 +602,25 @@ void parseAssgnExp(CompInfo* comp, Value astseg) {
 	}
 }
 
+/** Parse an expression */
+void parseExp(CompInfo* comp, Value astseg) {
+	parseAssgnExp(comp, astseg);
+}
+
 /** Parse a 'this' expression/block or append/prepend operator */
 void parseThisExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
 	parseAssgnExp(comp, astseg);
-	Value op;
-	bool opflag = (op=comp->lex->token) 
-		&& (lexMatchNext(comp->lex, "<<") || lexMatchNext(comp->lex, ">>"));
-	if (lexMatch(comp->lex, "{")) {
+	if (lexMatchNext(comp->lex, "using")) {
 		Value newseg = astInsSeg(th, astseg, vmlit(SymThisBlock), 3);
-		astAddValue(th, newseg, opflag? op : aNull);
+		parseAssgnExp(comp, newseg);
 		parseBlock(comp, newseg);
 	}
-	else if (opflag) {
-		do {
-			Value newseg = astInsSeg(th, astseg, vmlit(SymCallProp), 4);
-			astAddSeg2(th, newseg, vmlit(SymLit), op);
-			parseAssgnExp(comp, newseg);
-		} while ((op=comp->lex->token) 
-		&& (lexMatchNext(comp->lex, "<<") || lexMatchNext(comp->lex, ">>")));
+	else if (lexMatch(comp->lex, "{")) {
+		Value newseg = astInsSeg(th, astseg, vmlit(SymThisBlock), 3);
+		astAddValue(th, newseg, aNull);
+		parseBlock(comp, newseg);
 	}
-}
-
-/** Parse an expression */
-void parseExp(CompInfo* comp, Value astseg) {
-	parseThisExp(comp, astseg);
 }
 
 void parseSemi(CompInfo* comp, Value astseg) {
@@ -636,6 +632,22 @@ void parseSemi(CompInfo* comp, Value astseg) {
 			else
 				lexGetNextToken(comp->lex);
 	}
+}
+
+/** Parse 'if', 'while' or 'each' statement clauses */
+void parseClause(CompInfo* comp, Value astseg) {
+	Value th = comp->th;
+	Value token = comp->lex->token;
+	if (lexMatchNext(comp->lex, "if") || lexMatchNext(comp->lex, "while")) {
+		Value newseg = astInsSeg(th, astseg, token, 4);
+		parseLogicExp(comp, newseg);
+		// swap elements 1 and 2, so condition follows 'if'/'while'
+		arrSet(th, newseg, 3, astGet(th, newseg, 1));
+		arrDel(th, newseg, 1, 1);
+		// Wrap single statement in a block (so that fixing implicit returns works)
+		astInsSeg(th, newseg, vmlit(SymSemicolon), 2);
+	}
+	parseSemi(comp, astseg);
 }
 
 /** Parse a sequence of statements, each ending with ';' */
@@ -709,14 +721,8 @@ void parseStmts(CompInfo* comp, Value astseg) {
 
 		// 'break' or 'continue' statement
 		else if (lexMatchNext(comp->lex, "break") || lexMatchNext(comp->lex, "continue")) {
-			if (lexMatchNext(comp->lex, "if")) {
-				newseg = astAddSeg(th, astseg, vmlit(SymIf), 3); 
-				parseLogicExp(comp, newseg);
-			}
-			else
-				newseg = astseg;
-			astAddSeg(th, newseg, stmt, 1);
-			parseSemi(comp, astseg);
+			astAddSeg(th, astseg, stmt, 1);
+			parseClause(comp, astseg);
 		}
 
 		// 'return' statement
@@ -726,16 +732,14 @@ void parseStmts(CompInfo* comp, Value astseg) {
 				parseExp(comp, newseg);
 			else
 				astAddValue(th, newseg, aNull);
-			if (comp->lex->token == vmlit(SymIf))
-				parseSuffix(comp, astseg);
-			parseSemi(comp, newseg);
+			parseClause(comp, astseg);
 		}
 
 		// expression or 'this' block
 		else {
-			parseThisExp(comp, astseg);
-			parseSuffix(comp, astseg);
-			parseSemi(comp, astseg);
+			if (stmt != vmlit(SymSemicolon))
+				parseThisExp(comp, astseg);
+			parseClause(comp, astseg);
 		}
 	}
 	return;

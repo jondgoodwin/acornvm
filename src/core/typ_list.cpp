@@ -234,13 +234,15 @@ int list_forcesize(Value th) {
 int list_reverse(Value th) {
 	Value arr = getLocal(th, 0);
 	AuintIdx size = arr_size(arr);
-	AuintIdx limit = (size-1)>>1;
-	for (AuintIdx i = size-1; i > limit; i--) {
-		AuintIdx j = size-i-1;
-		pushValue(th, arrGet(th, arr, i));
-		arrSet(th, arr, i, arrGet(th, arr, j));
-		arrSet(th, arr, j, getFromTop(th, 0));
-		popValue(th);
+	if (size>0) {
+		AuintIdx limit = (size-1)>>1;
+		for (AuintIdx i = size-1; i > limit; i--) {
+			AuintIdx j = size-i-1;
+			pushValue(th, arrGet(th, arr, i));
+			arrSet(th, arr, i, arrGet(th, arr, j));
+			arrSet(th, arr, j, getFromTop(th, 0));
+			popValue(th);
+		}
 	}
 	setTop(th,1);
 	return 1;
@@ -251,12 +253,14 @@ unsigned int int_boundrand(Value th, unsigned int bound);
 int list_randomize(Value th) {
 	Value arr = getLocal(th, 0);
 	AuintIdx size = arr_size(arr);
-	for (AuintIdx i = size-1; i >= 1; i--) {
-		AuintIdx j = int_boundrand(th, i);
-		pushValue(th, arrGet(th, arr, i));
-		arrSet(th, arr, i, arrGet(th, arr, j));
-		arrSet(th, arr, j, getFromTop(th, 0));
-		popValue(th);
+	if (size>0) {
+		for (AuintIdx i = size-1; i >= 1; i--) {
+			AuintIdx j = int_boundrand(th, i);
+			pushValue(th, arrGet(th, arr, i));
+			arrSet(th, arr, i, arrGet(th, arr, j));
+			arrSet(th, arr, j, getFromTop(th, 0));
+			popValue(th);
+		}
 	}
 	return 0;
 }

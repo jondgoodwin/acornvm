@@ -145,6 +145,7 @@ enum ByteCodeOps {
 	OpJSame,
 	OpJDiff,
 	OpLoadStd,
+	OpGetMeth,
 	OpGetProp,
 	OpSetProp,
 	OpGetActProp,

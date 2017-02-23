@@ -1,12 +1,4 @@
-﻿arr = +List <<
-	4;3;2;1;'t';3;-1;0
-arr.Randomize
-#$test.Serialize(arr)
-arr.Sort
-arr.Reverse
-#$test.Serialize(arr)
-
-# Integer arithmetic tests
+﻿# Integer arithmetic tests
 $test.Equal(-(-1), 1, "-(-1) == 1")
 $test.Equal((-1).Abs, 1, "(-1).Abs == 1")
 $test.Equal(--1, 1, "--1 == 1")
@@ -55,6 +47,15 @@ $test.Equal(list.size, 4, "list is incorrectly sized")
 list.RemoveValue(3)
 $test.Equal(list.size, 2, "RemoveValue did not remove two 3's")
 list.RemoveValue(3)
+
+arr = +List using '<<'
+	4;3;2;1;'t';3;-1;0
+arr.Randomize
+#$test.Serialize(arr)
+arr.Sort
+arr.Reverse
+#$test.Serialize(arr)
+$test.Equal(arr.size, 8, "builder")
 
 # Text
 $test.Equal("abc", "abc", "'abc' not equal to 'abc'")
