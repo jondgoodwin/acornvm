@@ -301,11 +301,11 @@ void parseTerm(CompInfo* comp, Value astseg) {
 		}
 		// Handle '.', '.:', and '::'
 		else {
-			if (comp->lex->token == vmlit(SymDotColon)) {
+			if (lexMatch(comp->lex, ".:")) {
 				astSetValue(th, propseg, 0, vmlit(SymRawProp));
 				getparms = false;
 			}
-			else if (comp->lex->token == vmlit(SymColons)) {
+			else if (lexMatch(comp->lex, "::")) {
 				astSetValue(th, propseg, 0, vmlit(SymCallProp));
 				astAddSeg2(th, propseg, vmlit(SymLit), vmlit(SymBrackets));
 				getparms = false;
@@ -526,13 +526,14 @@ void parseTernaryExp(CompInfo* comp, Value astseg) {
 /** Parse append and prepend operators */
 void parseAppendExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
-	if (comp->lex->toktype==Res_Token && (comp->lex->token == vmlit(SymAppend) || comp->lex->token == vmlit(SymPrepend)))
+	// If prefix, assume 'this'. Otherwise get left hand value
+	if (lexMatch(comp->lex, "<<") || lexMatch(comp->lex, ">>"))
 		astAddValue(th, astseg, vmlit(SymThis));
 	else
 		parseTernaryExp(comp, astseg);
+
 	Value op;
-	while (comp->lex->toktype==Res_Token && ((op=comp->lex->token)==vmlit(SymAppend) || op==vmlit(SymPrepend))) {
-		lexGetNextToken(comp->lex);
+	while ((op=comp->lex->token) && lexMatchNext(comp->lex, "<<") || lexMatchNext(comp->lex, ">>")) {
 		Value newseg = astInsSeg(th, astseg, vmlit(SymCallProp), 4);
 		astAddSeg2(th, newseg, vmlit(SymLit), op);
 		parseTernaryExp(comp, newseg);
@@ -543,7 +544,7 @@ void parseAppendExp(CompInfo* comp, Value astseg) {
 void parseCommaExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
 	parseAppendExp(comp, astseg);
-	if (comp->lex->token==vmlit(SymComma)) {
+	if (lexMatch(comp->lex, ",")) {
 		Value commaseg = astInsSeg(th, astseg, vmlit(SymComma), 4);
 		while (lexMatchNext(comp->lex, ",")) {
 			parseAppendExp(comp, commaseg);
@@ -726,10 +727,11 @@ void parseStmts(CompInfo* comp, Value astseg) {
 		}
 
 		// 'return' statement
-		else if (lexMatchNext(comp->lex, "return")) {
-			newseg = astAddSeg(th, astseg, vmlit(SymReturn), 2);
-			if (comp->lex->token != vmlit(SymSemicolon) && comp->lex->token != vmlit(SymIf))
-				parseExp(comp, newseg);
+		else if (lexMatchNext(comp->lex, "return") || lexMatchNext(comp->lex, "yield")) {
+			newseg = astAddSeg(th, astseg, stmt, 2);
+			if (!lexMatch(comp->lex, ";") && !lexMatch(comp->lex, "if")
+				&& !lexMatch(comp->lex, "each") && !lexMatch(comp->lex, "while"))
+				parseThisExp(comp, newseg);
 			else
 				astAddValue(th, newseg, aNull);
 			parseClause(comp, astseg);
@@ -800,15 +802,6 @@ void parseProgram(CompInfo* comp) {
 					Value oreqseg = astAddSeg(th, parminitast, vmlit(SymOrAssgn), 3);
 					astAddSeg2(th, oreqseg, vmlit(SymLocal), symnm);
 					parseExp(comp, oreqseg);
-
-					/* // Produce this ast: parm=default-expression if parm==null
-					Value ifseg = astAddSeg(th, parminitast, vmlit(SymIf), 3);
-					Value condseg = astAddSeg(th, ifseg, vmlit(SymEquiv), 3);
-					astAddSeg2(th, condseg, vmlit(SymLocal), symnm);
-					astAddSeg2(th, condseg, vmlit(SymLit), aNull);
-					Value assgnseg = astAddSeg(th, ifseg, vmlit(SymAssgn), 3);
-					astAddSeg2(th, assgnseg, vmlit(SymLocal), symnm);
-					parseExp(comp, assgnseg);*/
 				}
 			}
 		} while (lexMatchNext(comp->lex, ","));

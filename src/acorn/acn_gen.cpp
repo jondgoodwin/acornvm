@@ -545,6 +545,14 @@ void genExp(CompInfo *comp, Value astseg) {
 			if (thisop != aNull)
 				genAddInstr(comp, BCINS_ABC(OpGetMeth, comp->thisopreg, 0, 0));
 			genStmts(comp, astGet(th, astseg, 3));
+			// Value of a this block is 'this'. Needed for returns or this blocks within this blocks.
+			if (thisop != aNull) {
+				// Move 'this' down, so its value is in the right place
+				genAddInstr(comp, BCINS_ABC(OpLoadReg, comp->thisopreg, comp->thisreg, 0));
+				comp->nextreg = comp->thisreg;
+			}
+			else
+				comp->nextreg = comp->thisreg+1;
 			comp->thisopreg = svthisopreg;
 			comp->thisreg = svthis;
 		} else if (vmlit(SymQuestion) == op) { // Ternary
@@ -782,13 +790,9 @@ void genFixReturns(CompInfo *comp, Value aststmts) {
 	assert(astGet(th, aststmts, 0)==vmlit(SymSemicolon));
 	Value laststmt = astGet(th, aststmts, arr_size(aststmts)-1);
 	Value lastop = isArr(laststmt)? astGet(th, laststmt, 0) : laststmt;
-	// Implicit return for 'this' block is to return 'this' at end of block
-	if (lastop==vmlit(SymThisBlock)) {
-		Value thisstmts = astGet(th, laststmt, 3);
-		astAddSeg2(th, thisstmts, vmlit(SymReturn), vmlit(SymThis));
-	}
 	// Implicit return for loops is to return 'null' afterwards
-	else if (lastop==vmlit(SymWhile) || lastop==vmlit(SymEach))
+	if (lastop==vmlit(SymWhile) || lastop==vmlit(SymEach) || lastop==vmlit(SymDo) 
+			|| lastop==vmlit(SymYield) || lastop==vmlit(SymBreak) || lastop==vmlit(SymContinue))
 		astAddSeg2(th, aststmts, vmlit(SymReturn), aNull);
 	// Implicit return for 'if'
 	else if (lastop==vmlit(SymIf) || lastop==vmlit(SymMatch)) {
@@ -802,7 +806,8 @@ void genFixReturns(CompInfo *comp, Value aststmts) {
 			Value retseg = astAddSeg2(th, laststmt, vmlit(SymReturn), aNull);
 		}
 	}
-	else
+	// Replace non-return expression statement with 'return' in front
+	else if (lastop!=vmlit(SymReturn))
 		astInsSeg(th, aststmts, vmlit(SymReturn), 2);
 }
 
