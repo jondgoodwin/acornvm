@@ -566,7 +566,7 @@ void parseAssgnExp(CompInfo* comp, Value astseg) {
 	comp->forcelocal = saveforcelocal;
 
 	// Process rvals depending on type of assignment
-	if (lexMatchNext(comp->lex, "=")) {
+	if (lexMatch(comp->lex, "=")) {
 		Value assgnseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
 		// Warn about unalterable literals or pseudo-variables to the left of "="
 		Value lvalseg = arrGet(th, assgnseg, 1);
@@ -582,6 +582,7 @@ void parseAssgnExp(CompInfo* comp, Value astseg) {
 		else if (!astIsLval(th, lvalseg)) {
 			lexLog(comp->lex, "Literals/pseudo-variables/expressions cannot be altered.");
 		}
+		lexGetNextToken(comp->lex); // Go past assignment operator
 		parseAssgnExp(comp, assgnseg); // Get the values to the right
 	}
 	else if ((isTripleColon = lexMatchNext(comp->lex, ":::")) || lexMatchNext(comp->lex, ":")) {
@@ -624,8 +625,10 @@ void parseThisExp(CompInfo* comp, Value astseg) {
 	}
 }
 
+/** Expect ';' at this point. Error if not found, then scan to find it. */
 void parseSemi(CompInfo* comp, Value astseg) {
-	if (!lexMatchNext(comp->lex, ";")&&comp->lex->toktype!=Eof_Token) {
+	// Allow right curly brace and end-of-file to stand in for a semi-colon
+	if (!lexMatchNext(comp->lex, ";")&&!lexMatch(comp->lex, "}")&&comp->lex->toktype!=Eof_Token) {
 		lexLog(comp->lex, "Unexpected token in statement. Ignoring all until block or ';'.");
 		while (comp->lex->toktype != Eof_Token && !lexMatch(comp->lex, "}") && !lexMatchNext(comp->lex, ";"))
 			if (lexMatch(comp->lex, "{"))

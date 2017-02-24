@@ -51,6 +51,7 @@ Value newLex(Value th, Value *dest, Value src, Value url) {
 	lex->newline = false;
 	lex->newprogram = true;
 	lex->insertSemi = false;
+	lex->undentcont = false;
 	lex->optype = 0;
 	return (Value) lex;
 }
@@ -171,8 +172,15 @@ bool lexScanWhite(LexInfo *lex) {
 
 			// Handle continuation.
 			if (lex_thischar(lex)=='\\') {
-				lex->newline = false;
-				lex->newindent = lex->curindent; // ignore indentation for a continuation
+				// Undenting requires we spawn some semi-colons and right braces
+				if (lex->newindent < lex->curindent)
+					lex->undentcont = true;
+				else {
+					lex->newline = false;
+					// Pretend indent did not change for extra-indented continuation
+					if (lex->newindent > lex->curindent)
+						lex->newindent = lex->curindent;
+				}
 				lex_skipchar(lex);
 			}
 			break;
@@ -245,7 +253,10 @@ bool lexScanWhite(LexInfo *lex) {
 		lex->toktype=Res_Token;
 		lex->token=vmlit(SymRBrace);
 		lex->curindent--;
-		lex->insertSemi = true;	// Always insert semi-colon after implied closing brace
+		if (lex->undentcont && lex->newindent==lex->curindent)
+			lex->undentcont = false; // Continued line at right indent now. No semi-colon.
+		else
+			lex->insertSemi = true;	// Insert semi-colon after implied closing brace
 		return true;
 	}
 

@@ -49,6 +49,7 @@ typedef struct LexInfo {
 	bool newline;		//!< True if we just started a new non-continued line
 	bool newprogram;	//!< True if we have not yet processed any token
 	bool insertSemi;	//!< True if we need to insert ';' as next token
+	bool undentcont;	//!< True if we are processing undenting on a line continuation
 } LexInfo;
 
 /** Mark values for garbage collection 
