@@ -555,7 +555,7 @@ void parseCommaExp(CompInfo* comp, Value astseg) {
 /** Parse an assignment or property setting expression */
 void parseAssgnExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
-	bool isTripleColon;
+	bool isColonEq;
 
 	// Get lvals (could be rvals if no assignment operator is found)
 	// Presence of 'local' ensures unknown locals are declared as locals vs. closure vars
@@ -585,7 +585,7 @@ void parseAssgnExp(CompInfo* comp, Value astseg) {
 		lexGetNextToken(comp->lex); // Go past assignment operator
 		parseAssgnExp(comp, assgnseg); // Get the values to the right
 	}
-	else if ((isTripleColon = lexMatchNext(comp->lex, ":::")) || lexMatchNext(comp->lex, ":")) {
+	else if ((isColonEq = lexMatchNext(comp->lex, ":=")) || lexMatchNext(comp->lex, ":")) {
 		// Turn variable name before ':' into a literal
 		if (!inparens) {
 			Value lval = arrGet(th, astseg, arr_size(astseg)-1);
@@ -595,9 +595,9 @@ void parseAssgnExp(CompInfo* comp, Value astseg) {
 		}
 		// ('=', ('activeprop'/'callprop', 'this', ('[]',) property), value)
 		Value assgnseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
-		Value indexseg = astPushNew(th, vmlit(isTripleColon? SymCallProp : SymActProp), 4);
+		Value indexseg = astPushNew(th, vmlit(isColonEq? SymCallProp : SymActProp), 4);
 		astAddValue(th, indexseg, vmlit(SymThis));
-		if (isTripleColon)
+		if (isColonEq)
 			astAddSeg2(th, indexseg, vmlit(SymLit), vmlit(SymBrackets));
 		astPopNew(th, assgnseg, indexseg);
 		parseAssgnExp(comp, assgnseg);
@@ -638,18 +638,62 @@ void parseSemi(CompInfo* comp, Value astseg) {
 	}
 }
 
+/** Parse the each clause: vars and iterator */
+void parseEachClause(CompInfo *comp, Value newseg) {
+	Value th = comp->th;
+
+	// Set up block variable list
+	Value blkvars = pushArray(th, vmlit(TypeListm), 8);
+	arrSet(th, blkvars, 0, comp->locvarseg);
+	comp->locvarseg = blkvars;
+	astAddValue(th, newseg, blkvars);
+	popValue(th); // blkvars
+
+	// Parse list of 'each' variables (into new variable block)
+	AuintIdx bvarsz=2;
+	do {
+		if (comp->lex->toktype==Name_Token) {
+			arrSet(th, blkvars, bvarsz++, comp->lex->token);
+			lexGetNextToken(comp->lex);
+		}
+		else
+			lexLog(comp->lex, "Expected variable name");
+		// Assign null variable for "key", if none specified using ':'
+		if (bvarsz==3 && !lexMatch(comp->lex, ":")) {
+			arrSet(th, blkvars, bvarsz++, arrGet(th, blkvars, 2));
+			arrSet(th, blkvars, 2, aNull);
+		}
+	} while (lexMatchNext(comp->lex, ",") || lexMatchNext(comp->lex, ":"));
+	astAddValue(th, newseg, anInt(bvarsz-2)); // expected number of 'each' values
+
+	// 'in' clause
+	if (!lexMatchNext(comp->lex, "in"))
+		lexLog(comp->lex, "Expected 'in'");
+	parseLogicExp(comp, newseg);
+}
+
 /** Parse 'if', 'while' or 'each' statement clauses */
 void parseClause(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
-	Value token = comp->lex->token;
-	if (lexMatchNext(comp->lex, "if") || lexMatchNext(comp->lex, "while")) {
-		Value newseg = astInsSeg(th, astseg, token, 4);
-		parseLogicExp(comp, newseg);
-		// swap elements 1 and 2, so condition follows 'if'/'while'
-		arrSet(th, newseg, 3, astGet(th, newseg, 1));
-		arrDel(th, newseg, 1, 1);
-		// Wrap single statement in a block (so that fixing implicit returns works)
-		astInsSeg(th, newseg, vmlit(SymSemicolon), 2);
+	// Handle multiple clauses so they execute in reverse order
+	while (lexMatch(comp->lex, "if") || lexMatch(comp->lex, "while") || lexMatch(comp->lex, "each")) {
+		Value ctltype = comp->lex->token;
+		if (lexMatchNext(comp->lex, "if") || lexMatchNext(comp->lex, "while")) {
+			// Wrap 'if' single statement in a block (so that fixing implicit returns works)
+			if (ctltype==vmlit(SymIf))
+				astInsSeg(th, astseg, vmlit(SymSemicolon), 2);
+			Value ctlseg = astPushNew(th, ctltype, 4);
+			// astAddValue(th, ctlseg, aNull);
+			parseLogicExp(comp, ctlseg);
+			astPopNew(th, astseg, ctlseg); // swap in place of block
+		}
+		else if (lexMatchNext(comp->lex, "each")) {
+			Value svlocalvars = comp->locvarseg;
+			Value ctlseg = astPushNew(th, ctltype, 4);
+			parseEachClause(comp, ctlseg); // var and 'in' iterator
+			astPopNew(th, astseg, ctlseg); // swap in place of block
+			comp->locvarseg = svlocalvars;
+		}
 	}
 	parseSemi(comp, astseg);
 }
@@ -690,36 +734,12 @@ void parseStmts(CompInfo* comp, Value astseg) {
 
 		// 'each' block
 		else if (lexMatchNext(comp->lex, "each")) {
-			// Parse return variables and "in"
-			Value blkvars = pushArray(th, vmlit(TypeListm), 8);
-			arrSet(th, blkvars, 0, comp->locvarseg);
-			AuintIdx i=2;
-			do {
-				if (comp->lex->toktype==Name_Token) {
-					arrSet(th, blkvars, i++, comp->lex->token);
-					lexGetNextToken(comp->lex);
-				}
-				else
-					lexLog(comp->lex, "Expected variable name");
-				// Assign null variable for "key", if none specified using ':'
-				if (i==3 && !lexMatch(comp->lex, ":")) {
-					arrSet(th, blkvars, i++, arrGet(th, blkvars, 2));
-					arrSet(th, blkvars, 2, aNull);
-				}
-			} while (lexMatchNext(comp->lex, ",") || lexMatchNext(comp->lex, ":"));
-			if (!lexMatchNext(comp->lex, "in"))
-				lexLog(comp->lex, "Expected 'in'");
-
-			// Build 'each' newseg ('each', localvars, iterator, nretvals, block);
+			// Build 'each' newseg ('each', localvars, nretvals, iterator, block);
 			newseg = astAddSeg(th, astseg, vmlit(SymEach), 5);
-			astAddValue(th, newseg, blkvars);
 			Value svlocalvars = comp->locvarseg;
-			comp->locvarseg = blkvars;
-			parseLogicExp(comp, newseg);
-			astAddValue(th, newseg, anInt(i-2)); // number of return values
+			parseEachClause(comp, newseg); // var and 'in' iterator
 			parseBlock(comp, newseg);
 			comp->locvarseg = svlocalvars;
-			popValue(th); // blkvars
 			parseSemi(comp, astseg);
 		}
 

@@ -131,7 +131,7 @@ int list_remove(Value th) {
 
 /** Remove the specified value from list, wherever found */
 int list_removeValue(Value th) {
-	if (getTop(th)<2 || !isInt(getLocal(th, 1)))
+	if (getTop(th)<2)
 		return 0;
 	// Scan list from end to start, looking for value
 	Value arr = getLocal(th, 0);
@@ -144,6 +144,24 @@ int list_removeValue(Value th) {
 	}
 	setTop(th, 1);
 	return 1;
+}
+
+/** Find the specified value in list */
+int list_find(Value th) {
+	if (getTop(th)<2)
+		return 0;
+	// Scan list from start to end, looking for value
+	Value arr = getLocal(th, 0);
+	Value val = getLocal(th, 1);
+	AintIdx size = arr_size(arr);
+	for (AintIdx i=0; i<size; i++) {
+		// Return index for value if found
+		if (arrGet(th, arr, i)==val) {
+			pushValue(th, anInt(i));
+			return 1;
+		}
+	}
+	return 0;
 }
 
 /** Create and return new list containing a shallow copy of the elements from original list.
@@ -353,6 +371,8 @@ void core_list_init(Value th) {
 			popProperty(th, 1, "Remove");
 			pushCMethod(th, list_removeValue);
 			popProperty(th, 1, "RemoveValue");
+			pushCMethod(th, list_find);
+			popProperty(th, 1, "Find");
 			pushCMethod(th, list_clone);
 			popProperty(th, 1, "Clone");
 			pushCMethod(th, list_sub);

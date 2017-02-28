@@ -657,13 +657,13 @@ void genEach(CompInfo *comp, Value astseg) {
 	unsigned int savereg = comp->nextreg;
 
 	// Prepare iterator for 'each' block outside of main loop (loaded in savereg)
-	bool splatflag = astGet(th, astseg, 2) == vmlit(SymSplat);
-	if (splatflag)
+	Value iter = astGet(th, astseg, 3);
+	if (iter == vmlit(SymSplat))
 		genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, anInt(0))));
 	else {
-		int fromreg = genExpReg(comp, astGet(th, astseg, 2));
+		int fromreg = genExpReg(comp, iter);
 		if (fromreg==-1) {
-			genExp(comp, astGet(th, astseg, 2));
+			genExp(comp, iter);
 			genAddInstr(comp, BCINS_ABC(OpEachPrep, savereg, savereg, 0));
 		}
 		else
@@ -678,7 +678,7 @@ void genEach(CompInfo *comp, Value astseg) {
 	int svJumpEndIp = comp->whileEndIp;
 	comp->whileBegIp = comp->method->size;
 	comp->whileEndIp = BCNO_JMP;
-	genAddInstr(comp, BCINS_ABC(splatflag? OpEachSplat : OpEachCall, savereg, 0, toAint(astGet(th, astseg,3))));
+	genAddInstr(comp, BCINS_ABC(iter == vmlit(SymSplat)? OpEachSplat : OpEachCall, savereg, 0, toAint(astGet(th, astseg,2))));
 	genFwdJump(comp, OpJFalse, savereg+1, &comp->whileEndIp);
 
 	// Generate block and jump to beginning. Fix conditional jump to after 'while' block

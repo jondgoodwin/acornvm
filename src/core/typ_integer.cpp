@@ -200,6 +200,12 @@ int int_char(Value th) {
 	return 1;
 }
 
+/* Convert an integer to a Float */
+int int_float(Value th) {
+	pushValue(th, aFloat((Afloat)toAint(getLocal(th, 0))));
+	return 1;
+}
+
 /* Convert an integer to a Text string */
 int int_text(Value th) {
 	char string[15];
@@ -331,6 +337,8 @@ void core_int_init(Value th) {
 
 			pushCMethod(th, int_char);
 			popProperty(th, 1, "Char");
+			pushCMethod(th, int_float);
+			popProperty(th, 1, "Float");
 			pushCMethod(th, int_text);
 			popProperty(th, 1, "Text");
 

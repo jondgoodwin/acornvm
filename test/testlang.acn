@@ -132,8 +132,8 @@ type = +Type
 	.:meth = m = [] {4}
 $test.True(type.meth==4, ".: override")
 type
-	meth::: m = [] {5}
-$test.True(type.meth==5, "::: override")
+	meth:= m = [] {5}
+$test.True(type.meth==5, ":= override")
 $test.True(m===type::meth, ":: indexing into type")
 $test.True(m===type::'meth', ":: indexing sym into type")
 m = 'meth'
@@ -149,3 +149,22 @@ $test.True(a.size===3 and a[2]===5, "this block using <<")
 a using [x] {<< x*x;}
 	2;3
 $test.True(a.size===5 and a[4]===9, "this block using method")
+
+Vm.Print(n.Text) if n%2===0 each n in 1 .. 6
+
+Integer.traits
+	Sqrt: []
+		self.Float.Sqrt.Integer
+	Primes: []
+		mults = +List
+		+List
+			each i in 2 .. self
+				if not mults.Find(i)
+					<< i
+					mults<<j each j in 2*i..self..i if i<=self.Sqrt
+
+Vm using 'Print'
+	"\nPrimes: "
+	each n in (100).Primes
+		n.Text;" "
+	"\n"

@@ -253,6 +253,12 @@ int float_rand(Value th) {
 	return 1;
 }
 
+/* Convert an integer to a Float */
+int float_integer(Value th) {
+	pushValue(th, anInt((Aint)toAfloat(getLocal(th, 0))));
+	return 1;
+}
+
 /* Convert to a Text string */
 int float_text(Value th) {
 	char fstr[30];
@@ -334,6 +340,8 @@ void core_float_init(Value th) {
 			pushCMethod(th, float_floor);
 			popProperty(th, 1, "Floor");
 
+			pushCMethod(th, float_integer);
+			popProperty(th, 1, "Integer");
 			pushCMethod(th, float_text);
 			popProperty(th, 1, "Text");
 		popProperty(th, 0, "traits");
