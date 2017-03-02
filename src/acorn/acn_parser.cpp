@@ -148,6 +148,16 @@ int genAddMethodLit(CompInfo *comp, Value val) {
 	return f->nbrlits++;
 }
 
+/* Look for variable in locvars: return index if found, otherwise -1 */
+int findBlockVar(Value th, Value locvars, Value varnm) {
+	int nbrlocals = arr_size(locvars);
+	for (int idx = nbrlocals - 1; idx > 1; idx--) {
+		if (arrGet(th, locvars, idx) == varnm)
+			return idx-2+toAint(arrGet(th, locvars, 1)); // relative to base index
+	}
+	return -1;
+}
+
 /* Look for local variable. Returns idx if found, -1 otherwise. */
 int findLocalVar(CompInfo *comp, Value varnm) {
 	assert(isSym(varnm));
@@ -181,11 +191,16 @@ int findClosureVar(CompInfo *comp, Value varnm) {
 }
 
 /** If variable not declared already, declare it */
-void implicitLocal(CompInfo *comp, Value varnm) {
-	// If not declared by this method as local or closure ...
-	if (findLocalVar(comp, varnm)==-1 && findClosureVar(comp, varnm)==-1)
+void declareLocal(CompInfo *comp, Value varnm) {
+	// If explicit 'local' declaration, declare if not found in block list
+	if (comp->forcelocal) {
+		if (findBlockVar(comp->th, comp->locvarseg, varnm))
+			arrAdd(comp->th, comp->locvarseg, varnm);
+	}
+	// If implicit variable, declare as local or closure, if not found in this or any outer block
+	else if (findLocalVar(comp, varnm)==-1 && findClosureVar(comp, varnm)==-1)
 		// Declare as closure var if we are not forcing local and if found as local in outer method. Otherwise, declare as local
-		arrAdd(comp->th, !comp->forcelocal && comp->prevcomp!=aNull && findLocalVar((CompInfo*)comp->prevcomp, varnm)!=-1? 
+		arrAdd(comp->th, comp->prevcomp!=aNull && findLocalVar((CompInfo*)comp->prevcomp, varnm)!=-1? 
 			comp->clovarseg : comp->locvarseg, varnm);
 }
 
@@ -208,7 +223,7 @@ void parseValue(CompInfo* comp, Value astseg) {
 		if (first=='$' || (first>='A' && first<='Z'))
 			astAddSeg2(th, astseg, vmlit(SymGlobal), comp->lex->token);
 		else {
-			implicitLocal(comp, comp->lex->token); // declare local if not already declared
+			declareLocal(comp, comp->lex->token); // declare local if not already declared
 			// We do not resolve to index until gen because of else clauses (declaration after use)
 			astAddSeg2(th, astseg, vmlit(SymLocal), comp->lex->token);
 		}
@@ -609,20 +624,37 @@ void parseExp(CompInfo* comp, Value astseg) {
 	parseAssgnExp(comp, astseg);
 }
 
-/** Parse a 'this' expression/block or append/prepend operator */
+/** Set up block variable list and add it to astseg */
+Value parseNewBlockVars(CompInfo *comp, Value astseg) {
+	Value th = comp->th;
+	// Set up block variable list
+	Value blkvars = pushArray(th, vmlit(TypeListm), 8);
+	arrSet(th, blkvars, 0, comp->locvarseg);
+	arrSet(th, blkvars, 1, anInt(0));
+	comp->locvarseg = blkvars;
+	astAddValue(th, astseg, blkvars);
+	popValue(th); // blkvars
+	return blkvars;
+}
+
+/** Parse an expression statement / 'this' block */
 void parseThisExp(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
+	Value svlocalvars = comp->locvarseg;
 	parseAssgnExp(comp, astseg);
 	if (lexMatchNext(comp->lex, "using")) {
-		Value newseg = astInsSeg(th, astseg, vmlit(SymThisBlock), 3);
+		Value newseg = astInsSeg(th, astseg, vmlit(SymThisBlock), 5);
+		parseNewBlockVars(comp, newseg);
 		parseAssgnExp(comp, newseg);
 		parseBlock(comp, newseg);
 	}
 	else if (lexMatch(comp->lex, "{")) {
-		Value newseg = astInsSeg(th, astseg, vmlit(SymThisBlock), 3);
+		Value newseg = astInsSeg(th, astseg, vmlit(SymThisBlock), 5);
+		parseNewBlockVars(comp, newseg);
 		astAddValue(th, newseg, aNull);
 		parseBlock(comp, newseg);
 	}
+	comp->locvarseg = svlocalvars;
 }
 
 /** Expect ';' at this point. Error if not found, then scan to find it. */
@@ -643,11 +675,7 @@ void parseEachClause(CompInfo *comp, Value newseg) {
 	Value th = comp->th;
 
 	// Set up block variable list
-	Value blkvars = pushArray(th, vmlit(TypeListm), 8);
-	arrSet(th, blkvars, 0, comp->locvarseg);
-	comp->locvarseg = blkvars;
-	astAddValue(th, newseg, blkvars);
-	popValue(th); // blkvars
+	Value blkvars = parseNewBlockVars(comp, newseg);
 
 	// Parse list of 'each' variables (into new variable block)
 	AuintIdx bvarsz=2;
@@ -673,29 +701,54 @@ void parseEachClause(CompInfo *comp, Value newseg) {
 }
 
 /** Parse 'if', 'while' or 'each' statement clauses */
-void parseClause(CompInfo* comp, Value astseg) {
+void parseClause(CompInfo* comp, Value astseg, AuintIdx stmtvarsz) {
 	Value th = comp->th;
+	Value svlocalvars = comp->locvarseg; // Statement's local block
+	Value deeplocalvars = aNull; // First/deepest clause's local block
+	Value inslocalvars = aNull;  // prior/deeper clause's local block
 	// Handle multiple clauses so they execute in reverse order
 	while (lexMatch(comp->lex, "if") || lexMatch(comp->lex, "while") || lexMatch(comp->lex, "each")) {
+		Value ctlseg;
 		Value ctltype = comp->lex->token;
 		if (lexMatchNext(comp->lex, "if") || lexMatchNext(comp->lex, "while")) {
 			// Wrap 'if' single statement in a block (so that fixing implicit returns works)
 			if (ctltype==vmlit(SymIf))
 				astInsSeg(th, astseg, vmlit(SymSemicolon), 2);
-			Value ctlseg = astPushNew(th, ctltype, 4);
-			// astAddValue(th, ctlseg, aNull);
+			ctlseg = astPushNew(th, ctltype, 4);
+			parseNewBlockVars(comp, ctlseg);
 			parseLogicExp(comp, ctlseg);
-			astPopNew(th, astseg, ctlseg); // swap in place of block
 		}
 		else if (lexMatchNext(comp->lex, "each")) {
-			Value svlocalvars = comp->locvarseg;
-			Value ctlseg = astPushNew(th, ctltype, 4);
+			ctlseg = astPushNew(th, ctltype, 5);
 			parseEachClause(comp, ctlseg); // var and 'in' iterator
-			astPopNew(th, astseg, ctlseg); // swap in place of block
-			comp->locvarseg = svlocalvars;
 		}
+		astPopNew(th, astseg, ctlseg); // swap in place of block
+
+		// Linkage of variable scoping for clauses is intricate
+		if (inslocalvars != aNull) // link prior clause to current
+			arrSet(th, inslocalvars, 0, comp->locvarseg);
+		if (deeplocalvars == aNull)
+			deeplocalvars = comp->locvarseg; // Remember first/deepest
+		inslocalvars = comp->locvarseg; // Remember most recent
+		comp->locvarseg = svlocalvars; // Restore to statement block
 	}
 	parseSemi(comp, astseg);
+
+	// Move any new locals declared in statement to deepest clause's block scope
+	if (deeplocalvars!=aNull && stmtvarsz<arr_size(svlocalvars)) {
+		comp->locvarseg = deeplocalvars;
+		for (AuintIdx vari = arr_size(svlocalvars)-1; vari >= stmtvarsz; vari--) {
+			// Pop off statement's declared local, and if not found, add to deepest block
+			// Find check is needed to see each's declared variables, for example
+			Value varnm = pushValue(th, arrGet(th, svlocalvars, vari));
+			arrSetSize(th, svlocalvars, vari);
+			if (findLocalVar(comp, varnm)==-1)
+				arrAdd(th, deeplocalvars, varnm);
+			popValue(th);
+		}
+		arrSetSize(th, svlocalvars, stmtvarsz); // Remove from outer block vars
+		comp->locvarseg = svlocalvars;
+	}
 }
 
 /** Parse a sequence of statements, each ending with ';' */
@@ -705,20 +758,28 @@ void parseStmts(CompInfo* comp, Value astseg) {
 	Value newseg;
 	while (comp->lex->toktype != Eof_Token && !lexMatch(comp->lex, "}")) {
 		Value stmt = comp->lex->token;
+		AuintIdx stmtvarsz = arr_size(comp->locvarseg); // Remember for clauses
 		// 'if' block
 		if (lexMatchNext(comp->lex, "if")) {
-			newseg = astAddSeg(th, astseg, vmlit(SymIf), 3);
+			newseg = astAddSeg(th, astseg, vmlit(SymIf), 4);
+			Value svlocalvars = comp->locvarseg;
+			parseNewBlockVars(comp, newseg);
 			parseLogicExp(comp, newseg);
 			parseBlock(comp, newseg);
+			comp->locvarseg = svlocalvars;
 			parseSemi(comp, astseg);
 			while (lexMatchNext(comp->lex, "elif")) {
+				parseNewBlockVars(comp, newseg);
 				parseLogicExp(comp, newseg);
 				parseBlock(comp, newseg);
+				comp->locvarseg = svlocalvars;
 				parseSemi(comp, astseg);
 			}
 			if (lexMatchNext(comp->lex, "else")) {
+				parseNewBlockVars(comp, newseg);
 				astAddValue(th, newseg, vmlit(SymElse));
 				parseBlock(comp, newseg);
+				comp->locvarseg = svlocalvars;
 				parseSemi(comp, astseg);
 			}
 		}
@@ -726,9 +787,11 @@ void parseStmts(CompInfo* comp, Value astseg) {
 		// 'while' block
 		else if (lexMatchNext(comp->lex, "while")) {
 			newseg = astAddSeg(th, astseg, vmlit(SymWhile), 4);
-			astAddValue(th, newseg, aNull);
+			Value svlocalvars = comp->locvarseg;
+			parseNewBlockVars(comp, newseg);
 			parseLogicExp(comp, newseg);
 			parseBlock(comp, newseg);
+			comp->locvarseg = svlocalvars;
 			parseSemi(comp, astseg);
 		}
 
@@ -746,7 +809,7 @@ void parseStmts(CompInfo* comp, Value astseg) {
 		// 'break' or 'continue' statement
 		else if (lexMatchNext(comp->lex, "break") || lexMatchNext(comp->lex, "continue")) {
 			astAddSeg(th, astseg, stmt, 1);
-			parseClause(comp, astseg);
+			parseClause(comp, astseg, stmtvarsz);
 		}
 
 		// 'return' statement
@@ -757,14 +820,15 @@ void parseStmts(CompInfo* comp, Value astseg) {
 				parseThisExp(comp, newseg);
 			else
 				astAddValue(th, newseg, aNull);
-			parseClause(comp, astseg);
+			parseClause(comp, astseg, stmtvarsz);
 		}
 
 		// expression or 'this' block
 		else {
-			if (stmt != vmlit(SymSemicolon))
+			if (stmt != vmlit(SymSemicolon)) {
 				parseThisExp(comp, astseg);
-			parseClause(comp, astseg);
+				parseClause(comp, astseg, stmtvarsz);
+			}
 		}
 	}
 	return;

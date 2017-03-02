@@ -73,13 +73,15 @@ Value genLocalVars(CompInfo *comp, Value blockvarseg) {
 	Value th = comp->th;
 	Value svLocalVars = comp->locvarseg;
 	if (blockvarseg!=aNull) {
-		comp->locvarseg = blockvarseg;
-		arrSet(th, comp->locvarseg, 1, anInt(comp->nextreg));
-		int nbrvars = arr_size(comp->locvarseg)-2;
-		genAddInstr(comp, BCINS_ABC(OpLoadNulls, comp->nextreg, nbrvars, 0));
-		comp->nextreg += nbrvars;
-		if (comp->method->maxstacksize < comp->nextreg+nbrvars)
-			comp->method->maxstacksize = comp->nextreg+nbrvars;
+		int nbrvars = arr_size(blockvarseg)-2;
+		if (nbrvars>0) {
+			comp->locvarseg = blockvarseg;
+			arrSet(th, comp->locvarseg, 1, anInt(comp->nextreg));
+			genAddInstr(comp, BCINS_ABC(OpLoadNulls, comp->nextreg, nbrvars, 0));
+			comp->nextreg += nbrvars;
+			if (comp->method->maxstacksize < comp->nextreg+nbrvars)
+				comp->method->maxstacksize = comp->nextreg+nbrvars;
+		}
 	}
 	return svLocalVars;
 }
@@ -530,8 +532,9 @@ void genExp(CompInfo *comp, Value astseg) {
 			unsigned int svthis = comp->thisreg;
 			unsigned int svthisopreg = comp->thisopreg;
 			comp->thisopreg = 0;
+			Value svLocalVars = genLocalVars(comp, astGet(th, astseg, 2));
 			// Generate "using" operator, if specified
-			Value thisop = astGet(th, astseg, 2);
+			Value thisop = astGet(th, astseg, 3);
 			if (thisop != aNull) {
 				comp->thisopreg = comp->nextreg;
 				genExp(comp, thisop);
@@ -544,7 +547,7 @@ void genExp(CompInfo *comp, Value astseg) {
 			// Optimize "using" operator to a method
 			if (thisop != aNull)
 				genAddInstr(comp, BCINS_ABC(OpGetMeth, comp->thisopreg, 0, 0));
-			genStmts(comp, astGet(th, astseg, 3));
+			genStmts(comp, astGet(th, astseg, 4));
 			// Value of a this block is 'this'. Needed for returns or this blocks within this blocks.
 			if (thisop != aNull) {
 				// Move 'this' down, so its value is in the right place
@@ -553,6 +556,7 @@ void genExp(CompInfo *comp, Value astseg) {
 			}
 			else
 				comp->nextreg = comp->thisreg+1;
+			comp->locvarseg = svLocalVars;
 			comp->thisopreg = svthisopreg;
 			comp->thisreg = svthis;
 		} else if (vmlit(SymQuestion) == op) { // Ternary
@@ -607,19 +611,23 @@ void genIf(CompInfo *comp, Value astseg) {
 	// Process all condition/block pairs in astseg
 	AuintIdx ifindx = 1;		// Index into astseg for each pair
 	do {
+		unsigned int savereg = comp->nextreg;
+		Value svLocalVars = genLocalVars(comp, astGet(th, astseg, ifindx));
 		// Generate conditional jump for bypassing block on condition failure
-		Value condast = astGet(th, astseg, ifindx);
+		Value condast = astGet(th, astseg, ifindx+1);
 		int jumpNextIp = BCNO_JMP;	// Instruction pointer to jump to next elif/else block
 		if (condast != vmlit(SymElse))
 			genJumpExp(comp, condast, &jumpNextIp, NULL, false, true);
-		genStmts(comp, astGet(th, astseg, ifindx+1)); // Generate block
+		genStmts(comp, astGet(th, astseg, ifindx+2)); // Generate block
 		// Generate/fix jumps after clause's block
 		if (condast != vmlit(SymElse)) {
 			if (ifindx+2 < getSize(astseg))
 				genFwdJump(comp, OpJump, 0, &jumpEndIp);
 			genSetJumpList(comp, jumpNextIp, comp->method->size); // Fix jumps to next elif/else block
 		}
-		ifindx += 2;
+		comp->locvarseg = svLocalVars;
+		comp->nextreg = savereg;
+		ifindx += 3;
 	} while (ifindx < getSize(astseg));
 	genSetJumpList(comp, jumpEndIp, comp->method->size); // Fix jumps to end of 'if' 
 }
@@ -651,7 +659,7 @@ void genWhile(CompInfo *comp, Value astseg) {
 	comp->locvarseg = svLocalVars;
 }
 
-/** Generate while or each block */
+/** Generate each block */
 void genEach(CompInfo *comp, Value astseg) {
 	Value th = comp->th;
 	unsigned int savereg = comp->nextreg;
@@ -797,11 +805,12 @@ void genFixReturns(CompInfo *comp, Value aststmts) {
 	// Implicit return for 'if'
 	else if (lastop==vmlit(SymIf) || lastop==vmlit(SymMatch)) {
 		// Recursively handle implicit return for each clause's statement block
-		Auint i = lastop==vmlit(SymMatch)? 3 : 2;
-		for (; i<arr_size(laststmt); i+=2)
+		Auint i = lastop==vmlit(SymMatch)? 4 : 3;
+		for (; i<arr_size(laststmt); i+=3)
 			genFixReturns(comp, astGet(th, laststmt, i));
 		// If 'if' or 'match' has no 'else', add one that returns null
-		if (astGet(th, laststmt, i-3)!=vmlit(SymElse)) {
+		if (astGet(th, laststmt, i-4)!=vmlit(SymElse)) {
+			astAddValue(th, laststmt, aNull);
 			astAddValue(th, laststmt, vmlit(SymElse));
 			Value retseg = astAddSeg2(th, laststmt, vmlit(SymReturn), aNull);
 		}

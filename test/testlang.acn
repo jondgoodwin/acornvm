@@ -68,8 +68,8 @@ splat = [a, ...]
 		c,d = 4 if not c
 		b,c,d
 	elif a==='passon'
-		a,b = passon(5,8)
-		a*b
+		local n,m = passon(5,8)
+		n*m
 	elif a==='tolist'
 		+List
 			each n in ...
@@ -131,13 +131,14 @@ type = +Type
 		3
 	.:meth = m = [] {4}
 $test.True(type.meth==4, ".: override")
+meth = [] {5}
 type
-	meth:= m = [] {5}
+	meth:= meth
 $test.True(type.meth==5, ":= override")
-$test.True(m===type::meth, ":: indexing into type")
-$test.True(m===type::'meth', ":: indexing sym into type")
-m = 'meth'
-$test.True(5===type.(m), "calculated property")
+$test.True(meth===type::meth, ":: indexing into type")
+$test.True(meth===type::'meth', ":: indexing sym into type")
+meth = 'meth'
+$test.True(5===type.(meth), "calculated property")
 
 # this blocks
 a=+List
@@ -150,8 +151,18 @@ a using [x] {<< x*x;}
 	2;3
 $test.True(a.size===5 and a[4]===9, "this block using method")
 
-Vm.Print(n.Text) if n%2===0 each n in 1 .. 6
+# Define a simple way to sum integers in a list
+List.traits
+	Sum: []
+		local sum = 0
+		sum = sum + n each n in self
+		sum
 
+list = +List
+	<< n if n%2===0 each n in 1 .. 6
+$test.True(list.Sum===12, "if/each clause")
+
+# Add two methods to Integer: Sqrt and Primes
 Integer.traits
 	Sqrt: []
 		self.Float.Sqrt.Integer
@@ -163,8 +174,18 @@ Integer.traits
 					<< i
 					mults<<j each j in 2*i..self..i if i<=self.Sqrt
 
+$test.True((100).Primes.Sum===1060, "each/if clause for Primes")
+
+# Fun times with 'using' clause on this block for printing
 Vm using 'Print'
-	"\nPrimes: "
+	"Primes: "
 	each n in (100).Primes
 		n.Text;" "
 	"\n"
+
+$test.True(false, "while clause") while false
+
+a=2
+a
+	local a=3
+$test.True(a===2, "block scope for local vars")
