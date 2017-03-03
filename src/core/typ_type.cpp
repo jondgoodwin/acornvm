@@ -33,6 +33,44 @@ int type_set(Value th) {
 	return 1;
 }
 
+/** Recursively determine whether valtype uses type anywhere */
+bool type_matchR(Value type, Value valtype) {
+	if (isType(valtype))
+		return valtype==type || type_matchR(type, tbl_info(valtype)->inheritype);
+	
+	// Recursively examine each type in an array
+	else if (isArr(valtype)) {
+		Value *valtypes = arr_info(valtype)->arr;
+		AuintIdx ntypes = arr_size(valtype);
+		while (ntypes--) {
+			if (*valtypes==type || type_matchR(type, tbl_info(*valtypes)->inheritype))
+				return true;
+			valtypes++;
+		}
+	}
+	return false;
+}
+
+/* Match whether passed value uses this type's trait */
+int type_match(Value th) {
+	if (getTop(th)<2)
+		return 0;
+	Value val = getLocal(th, 1);
+
+	// Get self's traits
+	Value self = getLocal(th, 0);
+	pushSym(th, "traits");
+	pushValue(th, self);
+	getCall(th, 1, 1);
+	Value traits = popValue(th);
+	if (traits == aNull)
+		traits = self;
+
+	// See if we find traits in inheritance list
+	pushValue(th, (isPrototype(traits)&&traits==val)||self==vmlit(TypeAll)||type_matchR(traits,getType(th, val))? aTrue : aFalse);
+	return 1;
+}
+
 /** Initialize the Type type, used to create other types */
 void core_type_init(Value th) {
 	vmlit(TypeType) = pushType(th, aNull, 12);
@@ -44,6 +82,8 @@ void core_type_init(Value th) {
 		pushCMethod(th, type_set);
 		pushClosure(th, 2);
 		popProperty(th, 0, "[]");
+		pushCMethod(th, type_match);
+		popProperty(th, 0, "=~");
 	popGloVar(th, "Type");
 	return;
 }
