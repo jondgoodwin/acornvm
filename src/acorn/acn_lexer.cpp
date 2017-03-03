@@ -366,10 +366,10 @@ static VmLiterals ReservedNames[] = {
 	SymReturn,
 	SymSelf,
 	SymThis,
-	SymTo,
 	SymUsing,
 	SymWait,
 	SymWhile,
+	SymWith,
 	SymWorker,
 	SymYield
 };

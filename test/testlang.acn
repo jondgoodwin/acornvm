@@ -189,3 +189,13 @@ a=2
 a
 	local a=3
 $test.True(a===2, "block scope for local vars")
+
+# 'do' block test
+Res = +Type
+	val: 1
+	Begin:= [] {val: 2;}
+	End:= [] {val: 3;}
+do a,b = +Res, +Res
+	$test.True(a.val===2, "Res.Begin")
+	local x=1
+$test.True(b.val===3, "Res.End")

@@ -115,11 +115,11 @@ extern "C" {
 		SymReturn,		//!< 'return'
 		SymSelf,		//!< 'self'
 		SymThis,		//!< 'this'
-		SymTo,			//!< 'to'
 		SymUsing,		//!< 'using'
 		SymVar,			//!< 'var'
 		SymWait,		//!< 'wait'
 		SymWhile,		//!< 'while'
+		SymWith,		//!< 'with'
 		SymWorker,		//!< 'worker'
 		SymYield,		//!< 'yield'
 		SymLBrace,		//!< '{'
@@ -160,6 +160,8 @@ extern "C" {
 		SymNeg,		//!< '-@'
 		SymValue,	//!< 'value'
 		SymEachMeth, //!< 'Each'
+		SymBegin,	//!< 'Begin'
+		SymEnd,		//!< 'End'
 
 		SymFinalizer, //!< '_finalizer' method for CData
 		SymName,	//!< '_type' symbol

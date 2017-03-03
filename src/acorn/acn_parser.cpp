@@ -795,12 +795,25 @@ void parseStmts(CompInfo* comp, Value astseg) {
 			parseSemi(comp, astseg);
 		}
 
-		// 'each' block
+		// 'each': ('each', localvars, nretvals, iterator, block)
 		else if (lexMatchNext(comp->lex, "each")) {
-			// Build 'each' newseg ('each', localvars, nretvals, iterator, block);
 			newseg = astAddSeg(th, astseg, vmlit(SymEach), 5);
 			Value svlocalvars = comp->locvarseg;
-			parseEachClause(comp, newseg); // var and 'in' iterator
+			parseEachClause(comp, newseg); // vars and 'in' iterator
+			parseBlock(comp, newseg);
+			comp->locvarseg = svlocalvars;
+			parseSemi(comp, astseg);
+		}
+
+		// 'do': ('do', local, exp, block)
+		else if (lexMatchNext(comp->lex, "do")) {
+			newseg = astAddSeg(th, astseg, vmlit(SymDo), 4);
+			Value svlocalvars = comp->locvarseg;
+			parseNewBlockVars(comp, newseg);
+			if (!lexMatch(comp->lex, "{"))
+				parseExp(comp, newseg);
+			else
+				astAddValue(th, newseg, aNull);
 			parseBlock(comp, newseg);
 			comp->locvarseg = svlocalvars;
 			parseSemi(comp, astseg);

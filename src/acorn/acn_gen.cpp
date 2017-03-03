@@ -701,6 +701,39 @@ void genEach(CompInfo *comp, Value astseg) {
 	comp->locvarseg = svLocalVars;
 }
 
+/** Generate do block */
+void genDo(CompInfo *comp, Value astseg) {
+	Value th = comp->th;
+	unsigned int savereg = comp->nextreg;
+	unsigned int lowreg, highreg;
+
+	Value svLocalVars = genLocalVars(comp, astGet(th, astseg, 1));
+	Value exp = astGet(th, astseg, 2);
+	if (exp!=aNull) {
+		lowreg = comp->nextreg;
+		genExp(comp, exp);
+		highreg = comp->nextreg;
+		for (unsigned int reg=lowreg; reg<highreg; reg++) {
+			genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, vmlit(SymBegin))));
+			genAddInstr(comp, BCINS_ABC(OpLoadReg, genNextReg(comp), reg, 0));
+			genAddInstr(comp, BCINS_ABC(OpGetCall, highreg, 1, 0));
+		}
+	}
+	genStmts(comp, astGet(th, astseg, 3));
+	if (exp!=aNull) {
+		comp->nextreg = highreg;
+		for (unsigned int reg=highreg-1; reg>=lowreg; reg--) {
+			genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, vmlit(SymEnd))));
+			genAddInstr(comp, BCINS_ABC(OpLoadReg, genNextReg(comp), reg, 0));
+			genAddInstr(comp, BCINS_ABC(OpGetCall, highreg, 1, 0));
+		}
+	}
+
+	// Restore block's saved values
+	comp->nextreg = savereg;
+	comp->locvarseg = svLocalVars;
+}
+
 /** Generate a statement */
 void genStmt(CompInfo *comp, Value aststmt) {
 	Value th = comp->th;
@@ -720,6 +753,7 @@ void genStmt(CompInfo *comp, Value aststmt) {
 	if (op==vmlit(SymIf)) genIf(comp, aststmt); 
 	else if (op==vmlit(SymWhile)) genWhile(comp, aststmt);
 	else if (op==vmlit(SymEach)) genEach(comp, aststmt);
+	else if (op==vmlit(SymDo)) genDo(comp, aststmt);
 	else if (op==vmlit(SymBreak) && comp->whileBegIp!=-1)
 		genFwdJump(comp, OpJump, 0, &comp->whileEndIp);
 	else if (op==vmlit(SymContinue) && comp->whileBegIp!=-1)
