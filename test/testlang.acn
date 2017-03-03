@@ -199,3 +199,16 @@ do a,b = +Res, +Res
 	$test.True(a.val===2, "Res.Begin")
 	local x=1
 $test.True(b.val===3, "Res.End")
+
+$test.True(3 .'=='(3), "3==3")
+each n in 1 .. 4
+	match n
+	with 1 .. 2
+		$test.True(n>=1 and n<=2, "match with 1 .. 2")
+	with 3
+		$test.True(n===3, "match with 3")
+	else
+		$test.True(n===4, "match else")
+match Res using "==="
+with Res
+	$test.True(Res===Res, "match Res with Res using '==='")

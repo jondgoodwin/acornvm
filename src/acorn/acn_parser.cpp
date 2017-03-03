@@ -784,6 +784,32 @@ void parseStmts(CompInfo* comp, Value astseg) {
 			}
 		}
 
+		// 'match' block
+		if (lexMatchNext(comp->lex, "match")) {
+			newseg = astAddSeg(th, astseg, vmlit(SymMatch), 4);
+			Value svlocalvars = comp->locvarseg;
+			parseExp(comp, newseg);
+			if (lexMatchNext(comp->lex, "using"))
+				parseAssgnExp(comp, newseg);
+			else
+				astAddValue(comp, newseg, vmlit(SymMatchOp));
+			parseSemi(comp, astseg);
+			while (lexMatchNext(comp->lex, "with")) {
+				parseNewBlockVars(comp, newseg);
+				parseExp(comp, newseg);
+				parseBlock(comp, newseg);
+				comp->locvarseg = svlocalvars;
+				parseSemi(comp, astseg);
+			}
+			if (lexMatchNext(comp->lex, "else")) {
+				parseNewBlockVars(comp, newseg);
+				astAddValue(th, newseg, vmlit(SymElse));
+				parseBlock(comp, newseg);
+				comp->locvarseg = svlocalvars;
+				parseSemi(comp, astseg);
+			}
+		}
+
 		// 'while' block
 		else if (lexMatchNext(comp->lex, "while")) {
 			newseg = astAddSeg(th, astseg, vmlit(SymWhile), 4);

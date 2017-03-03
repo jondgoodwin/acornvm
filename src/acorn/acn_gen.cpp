@@ -616,8 +616,11 @@ void genIf(CompInfo *comp, Value astseg) {
 		// Generate conditional jump for bypassing block on condition failure
 		Value condast = astGet(th, astseg, ifindx+1);
 		int jumpNextIp = BCNO_JMP;	// Instruction pointer to jump to next elif/else block
-		if (condast != vmlit(SymElse))
+		if (condast != vmlit(SymElse)) {
+			unsigned int condreg = comp->nextreg;
 			genJumpExp(comp, condast, &jumpNextIp, NULL, false, true);
+			comp->nextreg = condreg;
+		}
 		genStmts(comp, astGet(th, astseg, ifindx+2)); // Generate block
 		// Generate/fix jumps after clause's block
 		if (condast != vmlit(SymElse)) {
@@ -630,6 +633,50 @@ void genIf(CompInfo *comp, Value astseg) {
 		ifindx += 3;
 	} while (ifindx < getSize(astseg));
 	genSetJumpList(comp, jumpEndIp, comp->method->size); // Fix jumps to end of 'if' 
+}
+
+/** Generate match block */
+void genMatch(CompInfo *comp, Value astseg) {
+	Value th = comp->th;
+
+	int jumpEndIp = BCNO_JMP;	// Instruction pointer to first jump to end of if
+	unsigned int matchreg = comp->nextreg;
+	genExp(comp, astGet(th, astseg, 1));
+	Value mtchmethexp = astGet(th, astseg, 2);
+	if (mtchmethexp==vmlit(SymMatchOp))
+		genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, mtchmethexp)));
+	else
+		genExp(comp, mtchmethexp);
+
+	// Process all condition/block pairs in astseg
+	AuintIdx mtchindx = 3;		// Index into astseg for each pair
+	while (mtchindx < getSize(astseg)) {
+		comp->nextreg = matchreg+2;
+		Value svLocalVars = genLocalVars(comp, astGet(th, astseg, mtchindx));
+		// Generate conditional jump for bypassing block on condition failure
+		Value condast = astGet(th, astseg, mtchindx+1);
+		int jumpNextIp = BCNO_JMP;	// Instruction pointer to jump to next elif/else block
+		if (condast != vmlit(SymElse)) {
+			genAddInstr(comp, BCINS_ABC(OpLoadReg, genNextReg(comp), matchreg+1, 0));
+			genExp(comp, condast);
+			comp->nextreg = matchreg+4; // only want one value from genExp
+			genAddInstr(comp, BCINS_ABC(OpLoadReg, genNextReg(comp), matchreg, 0));
+			genAddInstr(comp, BCINS_ABC(OpGetCall, matchreg+2, 2, 1));
+			genFwdJump(comp, OpJFalse, matchreg+2, &jumpNextIp);
+			comp->nextreg = matchreg+2;
+		}
+		genStmts(comp, astGet(th, astseg, mtchindx+2)); // Generate block
+		// Generate/fix jumps after clause's block
+		if (condast != vmlit(SymElse)) {
+			if (mtchindx+2 < getSize(astseg))
+				genFwdJump(comp, OpJump, 0, &jumpEndIp);
+			genSetJumpList(comp, jumpNextIp, comp->method->size); // Fix jumps to next elif/else block
+		}
+		comp->locvarseg = svLocalVars;
+		mtchindx += 3;
+	}
+	genSetJumpList(comp, jumpEndIp, comp->method->size); // Fix jumps to end of 'if'
+	comp->nextreg = matchreg;
 }
 
 /** Generate while block */
@@ -751,6 +798,7 @@ void genStmt(CompInfo *comp, Value aststmt) {
 	// Handle various kinds of statements
 	Value op = isArr(aststmt)? astGet(th, aststmt, 0) : aststmt;
 	if (op==vmlit(SymIf)) genIf(comp, aststmt); 
+	else if (op==vmlit(SymMatch)) genMatch(comp, aststmt);
 	else if (op==vmlit(SymWhile)) genWhile(comp, aststmt);
 	else if (op==vmlit(SymEach)) genEach(comp, aststmt);
 	else if (op==vmlit(SymDo)) genDo(comp, aststmt);
@@ -839,7 +887,7 @@ void genFixReturns(CompInfo *comp, Value aststmts) {
 	// Implicit return for 'if'
 	else if (lastop==vmlit(SymIf) || lastop==vmlit(SymMatch)) {
 		// Recursively handle implicit return for each clause's statement block
-		Auint i = lastop==vmlit(SymMatch)? 4 : 3;
+		Auint i = lastop==vmlit(SymMatch)? 5 : 3;
 		for (; i<arr_size(laststmt); i+=3)
 			genFixReturns(comp, astGet(th, laststmt, i));
 		// If 'if' or 'match' has no 'else', add one that returns null
