@@ -710,10 +710,14 @@ void parseClause(CompInfo* comp, Value astseg, AuintIdx stmtvarsz) {
 	while (lexMatch(comp->lex, "if") || lexMatch(comp->lex, "while") || lexMatch(comp->lex, "each")) {
 		Value ctlseg;
 		Value ctltype = comp->lex->token;
-		if (lexMatchNext(comp->lex, "if") || lexMatchNext(comp->lex, "while")) {
+		if (lexMatchNext(comp->lex, "if")) {
 			// Wrap 'if' single statement in a block (so that fixing implicit returns works)
-			if (ctltype==vmlit(SymIf))
-				astInsSeg(th, astseg, vmlit(SymSemicolon), 2);
+			astInsSeg(th, astseg, vmlit(SymSemicolon), 2);
+			ctlseg = astPushNew(th, ctltype, 4);
+			parseLogicExp(comp, ctlseg);
+			parseNewBlockVars(comp, ctlseg);
+		}
+		else if (lexMatchNext(comp->lex, "while")) {
 			ctlseg = astPushNew(th, ctltype, 4);
 			parseNewBlockVars(comp, ctlseg);
 			parseLogicExp(comp, ctlseg);
@@ -763,21 +767,21 @@ void parseStmts(CompInfo* comp, Value astseg) {
 		if (lexMatchNext(comp->lex, "if")) {
 			newseg = astAddSeg(th, astseg, vmlit(SymIf), 4);
 			Value svlocalvars = comp->locvarseg;
-			parseNewBlockVars(comp, newseg);
 			parseLogicExp(comp, newseg);
+			parseNewBlockVars(comp, newseg);
 			parseBlock(comp, newseg);
 			comp->locvarseg = svlocalvars;
 			parseSemi(comp, astseg);
 			while (lexMatchNext(comp->lex, "elif")) {
-				parseNewBlockVars(comp, newseg);
 				parseLogicExp(comp, newseg);
+				parseNewBlockVars(comp, newseg);
 				parseBlock(comp, newseg);
 				comp->locvarseg = svlocalvars;
 				parseSemi(comp, astseg);
 			}
 			if (lexMatchNext(comp->lex, "else")) {
-				parseNewBlockVars(comp, newseg);
 				astAddValue(th, newseg, vmlit(SymElse));
+				parseNewBlockVars(comp, newseg);
 				parseBlock(comp, newseg);
 				comp->locvarseg = svlocalvars;
 				parseSemi(comp, astseg);
@@ -793,21 +797,54 @@ void parseStmts(CompInfo* comp, Value astseg) {
 				parseAssgnExp(comp, newseg);
 			else
 				astAddValue(comp, newseg, vmlit(SymMatchOp));
+			Value matchInto = aNull;
+			if (lexMatchNext(comp->lex, "into")) {
+				matchInto = pushArray(th, aNull, 4);
+				do {
+					if (comp->lex->toktype==Name_Token) {
+						arrAdd(th, matchInto, comp->lex->token);
+						lexGetNextToken(comp->lex);
+					}
+					else
+						lexLog(comp->lex, "Expected variable name");
+				} while (lexMatchNext(comp->lex, ","));
+			}
 			parseSemi(comp, astseg);
 			while (lexMatchNext(comp->lex, "with")) {
-				parseNewBlockVars(comp, newseg);
 				parseExp(comp, newseg);
+				parseNewBlockVars(comp, newseg);
+				AuintIdx nInto = 2;
+				if (lexMatchNext(comp->lex, "into")) {
+					do {
+						if (comp->lex->toktype==Name_Token) {
+							arrSet(th, comp->locvarseg, nInto++, comp->lex->token);
+							lexGetNextToken(comp->lex);
+						}
+						else
+							lexLog(comp->lex, "Expected variable name");
+					} while (lexMatchNext(comp->lex, ","));
+				}
+				else if (matchInto!=aNull) {
+					for (AuintIdx i=0; i<arr_size(matchInto); i++) {
+						arrSet(th, comp->locvarseg, nInto, arrGet(th, matchInto, nInto-2));
+						nInto++;
+					}
+				}
+				astAddValue(th, newseg, anInt(nInto-2));
 				parseBlock(comp, newseg);
 				comp->locvarseg = svlocalvars;
 				parseSemi(comp, astseg);
 			}
 			if (lexMatchNext(comp->lex, "else")) {
-				parseNewBlockVars(comp, newseg);
 				astAddValue(th, newseg, vmlit(SymElse));
+				parseNewBlockVars(comp, newseg);
+				astAddValue(th, newseg, anInt(0));
 				parseBlock(comp, newseg);
 				comp->locvarseg = svlocalvars;
 				parseSemi(comp, astseg);
 			}
+			if (matchInto!=aNull)
+				popValue(th);
 		}
 
 		// 'while' block

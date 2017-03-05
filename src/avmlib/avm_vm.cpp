@@ -193,6 +193,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymElif, "elif"},
 	{SymIf, "if"},
 	{SymIn, "in"},
+	{SymInto, "into"},
 	{SymLocal, "local"},
 	{SymMatch, "match"},
 	{SymNot, "not"},

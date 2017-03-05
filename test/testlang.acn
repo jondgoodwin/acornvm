@@ -201,14 +201,24 @@ do a,b = +Res, +Res
 $test.True(b.val===3, "Res.End")
 
 $test.True(3 .'=='(3), "3==3")
-each n in 1 .. 4
+each n in 1 .. 5
 	match n
 	with 1 .. 2
 		$test.True(n>=1 and n<=2, "match with 1 .. 2")
-	with 3
-		$test.True(n===3, "match with 3")
+	with 3,5
+		$test.True(n===3 or n===5, "match with 3 or 5")
 	else
 		$test.True(n===4, "match else")
 match Res using "==="
 with Res
 	$test.True(Res===Res, "match Res with Res using '==='")
+
+each n in 4 .. 8
+	n = 6.0 if n===6
+	match n using [x] {x+1,x-1 if x =~ self;} into res
+	with 4 .. 5, 7
+		$test.True(res===n+1, "match method into res/4,5,7")
+	with Integer into r,s
+		$test.True(r===9 and s===7, "match method into r/Integer8")
+	else
+		$test.True(n==6.0, "matchmeth else")

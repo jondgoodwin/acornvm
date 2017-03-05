@@ -359,6 +359,7 @@ static VmLiterals ReservedNames[] = {
 	SymElif,
 	SymIf,
 	SymIn,
+	SymInto,
 	SymLocal,
 	SymMatch,
 	SymNot,

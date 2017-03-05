@@ -109,6 +109,7 @@ extern "C" {
 		SymElif,		//!< 'elif'
 		SymIf,			//!< 'if'
 		SymIn,			//!< 'in'
+		SymInto,		//!< 'into'
 		SymMatch,		//!< 'match'
 		SymNot,			//!< 'not'
 		SymOr,			//!< 'or'
