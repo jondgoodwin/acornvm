@@ -26,17 +26,26 @@ Value newCompiler(Value th, Value *dest, Value src, Value url) {
 	comp->method = NULL;
 	comp->prevcomp = aNull;
 
+	// pgmsrc is a Text collection of characters
 	if (isStr(src)) {
+		// Create lexer using source characters
 		newLex(th, (Value *) &comp->lex, src, url);
 		mem_markChk(th, comp, comp->lex);
 
 		// Prime the pump by getting the first token
 		lexGetNextToken(comp->lex);
-	} else {
+		comp->clovarseg = aNull;
+	} 
+	// pgmsrc is CompInfo. Make use of its info.
+	else {
 		comp->lex = ((CompInfo*)src)->lex;
 		mem_markChk(th, comp, comp->lex);
 		comp->prevcomp = src;
+		comp->clovarseg = ((CompInfo*)src)->clovarseg;
+		comp->newcloseg = ((CompInfo*)src)->newcloseg;
 	}
+
+	// Setup AST and method to parse and generate into
 	newArr(th, &comp->ast, aNull, 2);
 	mem_markChk(th, comp, comp->ast);
 	newBMethod(th, (Value *)&comp->method);
@@ -49,8 +58,9 @@ Value newCompiler(Value th, Value *dest, Value src, Value url) {
 	return *dest;
 }
 
-/* Method to compile an Acorn method.
-   Pass it a string containing the program source and a symbol or null for the baseurl.
+/* Method to compile an Acorn method. Parameters:
+   - pgmsrc: CompInfo or Text string containing the program source
+   - baseurl: a symbol or null
    It returns the compiled byte-code method. */
 int acn_newmethod(Value th) {
 	// Retrieve pgmsrc and baseurl from parameters

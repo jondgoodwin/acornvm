@@ -75,6 +75,7 @@ typedef struct CompInfo {
 	Value ast;				//!< Abstract Syntax Tree
 	Value locvarseg;		//!< Local variable AST segment
 	Value clovarseg;		//!< Closure variable AST segment
+	Value newcloseg;		//!< New closure segment
 
 	// Generation context
 	unsigned int nextreg;	//!< Next register available for use
@@ -83,7 +84,8 @@ typedef struct CompInfo {
 	int whileBegIp;			//!< ip of current while block's first instruction
 	int whileEndIp;			//!< ip of first jump statement to end of current while block
 
-	bool forcelocal;			//!< true if undeclared local must be local
+	bool forcelocal;		//!< true if undeclared local must be local
+	bool explicitclo;		//!< True if we are within an explicit closure
 } CompInfo;
 
 /** Mark values for garbage collection 

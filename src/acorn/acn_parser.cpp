@@ -181,27 +181,35 @@ int findLocalVar(CompInfo *comp, Value varnm) {
 int findClosureVar(CompInfo *comp, Value varnm) {
 	assert(isSym(varnm));
 
-	// Look to see if variable already defined as closure
-	int nbrclosures = arr_size(comp->clovarseg);
-	for (int idx = nbrclosures - 1; idx >= 0; idx--) {
-		if (arrGet(comp->th, comp->clovarseg, idx) == varnm)
-			return idx;
+	if (isArr(comp->clovarseg)) {
+		// Look to see if variable already defined as closure
+		int nbrclosures = arr_size(comp->clovarseg);
+		for (int idx = nbrclosures - 1; idx >= 0; idx--) {
+			if (arrGet(comp->th, comp->clovarseg, idx) == varnm)
+				return idx+2; // Adjust for position in closure array
+		}
 	}
 	return -1;
 }
 
 /** If variable not declared already, declare it */
 void declareLocal(CompInfo *comp, Value varnm) {
+	Value th = comp->th;
 	// If explicit 'local' declaration, declare if not found in block list
 	if (comp->forcelocal) {
-		if (findBlockVar(comp->th, comp->locvarseg, varnm))
-			arrAdd(comp->th, comp->locvarseg, varnm);
+		if (findBlockVar(th, comp->locvarseg, varnm))
+			arrAdd(th, comp->locvarseg, varnm);
 	}
 	// If implicit variable, declare as local or closure, if not found in this or any outer block
 	else if (findLocalVar(comp, varnm)==-1 && findClosureVar(comp, varnm)==-1)
-		// Declare as closure var if we are not forcing local and if found as local in outer method. Otherwise, declare as local
-		arrAdd(comp->th, comp->prevcomp!=aNull && findLocalVar((CompInfo*)comp->prevcomp, varnm)!=-1? 
-			comp->clovarseg : comp->locvarseg, varnm);
+		// Declare as closure var if found as local in outer method. Otherwise, declare as local
+		if (comp->prevcomp!=aNull && findLocalVar((CompInfo*)comp->prevcomp, varnm)!=-1) {
+			arrAdd(th, comp->clovarseg, varnm);
+			// Add initialization logic
+			astAddSeg2(th, comp->newcloseg, vmlit(SymLocal), varnm); // Add its initialization to new closure segment
+		}
+		else
+			arrAdd(th, comp->locvarseg, varnm);
 }
 
 /** Parse an atomic value: literal, variable or pseudo-variable */
@@ -261,14 +269,38 @@ void parseValue(CompInfo* comp, Value astseg) {
 	}
 	// Method definition
 	else if (lexMatch(comp->lex, "[")) {
-		// New compilation context for method's parms and code block
+		Value svclovars = comp->clovarseg;
+		Value svnewcloseg = comp->newcloseg;
+		Value newcloseg = astseg;
+		// Create closure segment just in case, if we are not already inside one...
+		// ('Closure', clovars, ('callprop', Closure, New, getmethod, setmethod))
+		if (!comp->explicitclo) {
+			Value closeg = astAddSeg(th, astseg, vmlit(SymClosure), 3);
+			comp->clovarseg = pushArray(th, aNull, 4);
+			arrAdd(th, closeg, comp->clovarseg);
+			popValue(th);
+			comp->newcloseg = newcloseg = astAddSeg(th, closeg, vmlit(SymCallProp), 8);
+			astAddSeg2(th, newcloseg, vmlit(SymGlobal), vmlit(SymClosure));
+			astAddSeg2(th, newcloseg, vmlit(SymLit), vmlit(SymNew));
+			astAddSeg2(th, newcloseg, vmlit(SymLit), vmlit(SymNull));
+			astAddSeg2(th, newcloseg, vmlit(SymLit), vmlit(SymNull));
+		}
+		// Go compile method parms and code block using new compiler context but same lexer
 		pushValue(th, vmlit(SymNew));
 		pushGloVar(th, "Method");
 		pushValue(th, comp);
 		getCall(th, 2, 1);
 		// Stick returned compiled method reference in extern section of this method's literals
-		astAddSeg2(th, astseg, vmlit(SymExt), anInt(genAddMethodLit(comp, getFromTop(th, 0))));
+		astAddSeg2(th, newcloseg, vmlit(SymExt), anInt(genAddMethodLit(comp, getFromTop(th, 0))));
 		popValue(th);
+		// Move method to its rightful place in closure segment
+		if (!comp->explicitclo) {
+			AuintIdx last = arr_size(newcloseg)-1;
+			arrSet(th, newcloseg, 3, arrGet(th, newcloseg, last));
+			arrSetSize(th, newcloseg, last);
+		}
+		comp->newcloseg = svnewcloseg;
+		comp->clovarseg = svclovars;
 	}
 	return;
 }
@@ -938,10 +970,8 @@ void parseProgram(CompInfo* comp) {
 	comp->locvarseg = astAddSeg(th, methast, aNull, 16);
 	astAddValue(th, comp->locvarseg, anInt(1));
 
-	// closure variable list
-	comp->clovarseg = pushArray(th, aNull, 4);
-	arrAdd(th, methast, comp->clovarseg);
-	popValue(th);
+	// closure variable list already retrieved from outer method
+	comp->explicitclo = false;
 
 	Value parminitast = astAddSeg(th, methast, vmlit(SymSemicolon), 4);
 

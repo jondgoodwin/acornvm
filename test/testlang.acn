@@ -228,3 +228,9 @@ fact = [x, prod=1]
 	return prod if x<=1
 	selfmethod(x-1, prod*x)
 $test.True(fact(4)===24, "selfmethod")
+
+# Implicit closure
+a = 'a'
+meth = []
+	a
+$test.True(meth()==='a', "Implicit closure")

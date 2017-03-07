@@ -15,18 +15,7 @@ extern "C" {
 
 /** Create a new Closure. Parameters fill the Closure */
 int clo_new(Value th) {
-	Value traits = pushProperty(th, 0, "traits"); popValue(th);
-	if (getTop(th)==1)
-		pushArray(th, traits, 2);
-	else {
-		int arrsz = getTop(th)-1;
-		Value arr = pushArray(th, traits, arrsz);
-		int idx = 0;
-		while (arrsz--) {
-			arrSet(th, arr, idx, getLocal(th, idx+1));
-			idx++;
-		}
-	}
+	pushClosure(th, getTop(th)-1);
 	return 1;
 }
 

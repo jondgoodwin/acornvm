@@ -515,6 +515,14 @@ void genExp(CompInfo *comp, Value astseg) {
 			genAddInstr(comp, BCINS_ABx(OpGetGlobal, genNextReg(comp), genAddLit(comp, astGet(th, astseg, 1))));
 		} else if (vmlit(SymAssgn) == op) {
 			genAssign(comp, astGet(th, astseg, 1), astGet(th, astseg, 2));
+		} else if (vmlit(SymClosure) == op) {
+			Value newcloseg = astGet(th, astseg, 2);
+			// If no closure variables nor set method, don't generate closure, just the 'get' method
+			Value setmethseg = astGet(th, newcloseg, 4);
+			if (arr_size(newcloseg)==5 && isArr(setmethseg) && astGet(th, setmethseg, 1)==vmlit(SymNull))
+				genExp(comp, astGet(th, newcloseg, 3));
+			else
+				genExp(comp, newcloseg);
 		} else if (vmlit(SymOrAssgn) == op) {
 			// Assumes that lvar is a local variable
 			assert(astGet(th, astGet(th, astseg, 1), 0)==vmlit(SymLocal));
@@ -940,14 +948,13 @@ void genBMethod(CompInfo *comp) {
 	comp->thisopreg = 0;
 	comp->locvarseg = astGet(comp->th, comp->ast, 1);
 	arrSet(comp->th, comp->locvarseg, 1, anInt(1));
-	comp->clovarseg = astGet(comp->th, comp->ast, 2);
 
 	// Generate the method's code based on AST
 	int nbrnull = comp->method->nbrlocals - methodNParms(comp->method);
 	if (nbrnull>0) // Initialize non-parm locals to null
 		genAddInstr(comp, BCINS_ABC(OpLoadNulls, methodNParms(comp->method), nbrnull, 0));
-	genStmts(comp, astGet(comp->th, comp->ast, 3)); // Generate code for parameter defaults
-	Value aststmts = astGet(comp->th, comp->ast, 4);
+	genStmts(comp, astGet(comp->th, comp->ast, 2)); // Generate code for parameter defaults
+	Value aststmts = astGet(comp->th, comp->ast, 3);
 	genFixReturns(comp, aststmts); // Turn implicit returns into explicit returns
 	genStmts(comp, aststmts); // Generate method's code block
 }
