@@ -186,6 +186,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymAsync, "async"},
 	{SymBaseurl, "baseurl"},
 	{SymBreak, "break"},
+	{SymContext, "context"},
 	{SymContinue, "continue"},
 	{SymDo, "do"},
 	{SymEach, "each"},
@@ -200,12 +201,12 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymOr, "or"},
 	{SymReturn, "return"},
 	{SymSelf, "self"},
+	{SymSelfMeth, "selfmethod"},
 	{SymThis, "this"},
 	{SymUsing, "using"},
 	{SymWait, "wait"},
 	{SymWhile, "while"},
 	{SymWith, "with"},
-	{SymWorker, "worker"},
 	{SymYield, "yield"},
 	{SymLBrace, "{"},
 	{SymRBrace, "}"},
@@ -263,6 +264,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymLit, "lit"},
 	{SymExt, "ext"},
 	{SymRange, "Range"},
+	{SymClosure, "Closure"},
 	{SymResource, "Resource"},
 
 	// End of literal table
@@ -331,6 +333,7 @@ void core_symbol_init(Value th);
 void core_range_init(Value th);
 void core_text_init(Value th);
 void core_list_init(Value th);
+void core_clo_init(Value th);
 void core_index_init(Value th);
 void core_type_init(Value th);
 
@@ -356,6 +359,7 @@ void core_init(Value th) {
 	core_range_init(th);
 	core_text_init(th);
 	core_list_init(th);
+	core_clo_init(th);
 	core_index_init(th);
 
 	core_vm_init(th);

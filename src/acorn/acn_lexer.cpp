@@ -352,6 +352,7 @@ static VmLiterals ReservedNames[] = {
 	SymAsync,
 	SymBaseurl,
 	SymBreak,
+	SymContext,
 	SymContinue,
 	SymDo,
 	SymEach,
@@ -366,12 +367,12 @@ static VmLiterals ReservedNames[] = {
 	SymOr,
 	SymReturn,
 	SymSelf,
+	SymSelfMeth,
 	SymThis,
 	SymUsing,
 	SymWait,
 	SymWhile,
 	SymWith,
-	SymWorker,
 	SymYield
 };
 

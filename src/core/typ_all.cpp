@@ -115,7 +115,7 @@ void core_all_init(Value th) {
 		pushCMethod(th, all_greateq);
 		popProperty(th, 0, ">=");
 		pushCMethod(th, all_isexec);
-		popProperty(th, 0, "executable?");
+		popProperty(th, 0, "callable?");
 		pushCMethod(th, all_property);
 		popProperty(th, 0, "property");
 		pushCMethod(th, all_type);

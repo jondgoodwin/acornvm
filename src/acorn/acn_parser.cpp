@@ -241,6 +241,14 @@ void parseValue(CompInfo* comp, Value astseg) {
 	else if (lexMatchNext(comp->lex, "self")) {
 		astAddValue(th, astseg, vmlit(SymSelf));
 	}
+	// 'selfmethod' pseudo-variable
+	else if (lexMatchNext(comp->lex, "selfmethod")) {
+		astAddValue(th, astseg, vmlit(SymSelfMeth));
+	}
+	// 'context' pseudo-variable
+	else if (lexMatchNext(comp->lex, "context")) {
+		astAddValue(th, astseg, vmlit(SymContext));
+	}
 	// '...' splat
 	else if (lexMatchNext(comp->lex, "...")) {
 		astAddValue(th, astseg, vmlit(SymSplat));

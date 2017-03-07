@@ -475,6 +475,10 @@ void genExp(CompInfo *comp, Value astseg) {
 			genAddInstr(comp, BCINS_ABC(OpLoadReg, genNextReg(comp), comp->thisreg, 0));
 		else if (vmlit(SymSelf) == astseg)
 			genAddInstr(comp, BCINS_ABC(OpLoadReg, genNextReg(comp), 0, 0));
+		else if (vmlit(SymContext) == astseg)
+			genAddInstr(comp, BCINS_ABC(OpLoadContext, genNextReg(comp), 0, 0));
+		else if (vmlit(SymSelfMeth) == astseg)
+			genAddInstr(comp, BCINS_ABC(OpLoadContext, genNextReg(comp), 1, 0));
 		else if (vmlit(SymBaseurl) == astseg)
 			genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, comp->lex->url)));
 		else if (vmlit(SymSplat) == astseg)

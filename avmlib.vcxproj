@@ -47,6 +47,7 @@
     <ClCompile Include="src\avmlib\avm_vm.cpp" />
     <ClCompile Include="src\core\typ_all.cpp" />
     <ClCompile Include="src\core\typ_bool.cpp" />
+    <ClCompile Include="src\core\typ_closure.cpp" />
     <ClCompile Include="src\core\typ_file.cpp" />
     <ClCompile Include="src\core\typ_float.cpp" />
     <ClCompile Include="src\core\typ_index.cpp" />

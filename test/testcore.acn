@@ -88,6 +88,9 @@ $test.True(3 .'>'(2), "3 .'>'(2)")
 $test.True(2 .'<='(2), "2 .'<='(2)")
 $test.True(2 .'>='(2), "2 .'>='(2)")
 
+# Closure
+$test.True(Closure.traits::'[]'.setmethod.callable?, "Closure.setmethod")
+
 # Type
 $test.True(4 =~ 2 .. 5, "4 =~ 2 .. 5")
 $test.True(Type =~ Type, "Res =~ Res")

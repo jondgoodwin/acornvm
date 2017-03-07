@@ -309,6 +309,11 @@ void methodRunBC(Value th) {
 			} while (b--);}
 			break;
 
+		// OpLoadContext: R(A) := B==0? th, B==1? ci->methodbase
+		case OpLoadContext:
+			*rega = bc_b(i)==0? th : *(ci->methodbase);
+			break;
+
 		// OpLoadVararg: R(A), R(A+1), ..., R(A+B-1) := vararg
 		// if (B == 0xFF), use actual number of varargs and set top
 		case OpLoadVararg: {
@@ -739,6 +744,7 @@ void methSerialize(Value th, Value str, int indent, Value method) {
 		case OpLoadLitx: methALSerialize(th, str, "LoadLitx ", i, *(lits + bc_ax(i))); ip++; break;
 		case OpLoadPrim: methALSerialize(th, str, "LoadPrim ", i, (Value)((((Auint)bc_b(i)) << ValShift) + ValCons)); break;
 		case OpLoadNulls: methABCSerialize(th, str, "LoadNulls ", i); break;
+		case OpLoadContext: methABCSerialize(th, str, "LoadContext ", i); break;
 		case OpLoadVararg: methABCSerialize(th, str, "LoadVararg ", i); break;
 		case OpGetGlobal: methALSerialize(th, str, "GetGlobal ", i, *(lits + bc_bx(i))); break;
 		case OpSetGlobal: methALSerialize(th, str, "SetGlobal ", i, *(lits + bc_bx(i))); break;

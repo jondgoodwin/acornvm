@@ -120,6 +120,7 @@ enum ByteCodeOps {
 	OpExtraArg,
 	OpLoadPrim,
 	OpLoadNulls,
+	OpLoadContext,
 	OpLoadVararg,
 	OpGetGlobal,
 	OpSetGlobal,
