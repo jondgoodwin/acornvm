@@ -342,8 +342,9 @@ AuintIdx resource_resolve(Value th, Value meth, Value *externp) {
 		pushSym(th, "Link");
 		pushValue(th, *externp);
 		getCall(th, 1, 1);
-		if (isInt(getFromTop(th, 0)))
-			return toAint(getFromTop(th, 0)); // include its count in ours
+		Value retcount = popValue(th);
+		if (isInt(retcount))
+			return toAint(retcount); // include its count in ours
 	}
 	return counter;
 }

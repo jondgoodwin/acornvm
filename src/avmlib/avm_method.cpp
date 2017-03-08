@@ -341,14 +341,14 @@ void methodRunBC(Value th) {
 
 		// OpGetClosure: R(A) := Closure(D)
 		case OpGetClosure:
-			if (isArr(ci->methodbase))
-				*rega = arrGet(th, ci->methodbase, bc_bx(i));
+			if (isArr(*ci->methodbase))
+				*rega = arrGet(th, *ci->methodbase, bc_b(i));
 			break;
 
 		// OpSetClosure: Closure(D) := R(A)
 		case OpSetClosure:
-			if (isArr(ci->methodbase))
-				arrSet(th, ci->methodbase, bc_bx(i), *rega);
+			if (isArr(*ci->methodbase))
+				arrSet(th, *ci->methodbase, bc_b(i), *rega);
 			break;
 
 		// OpJump: ip += sBx

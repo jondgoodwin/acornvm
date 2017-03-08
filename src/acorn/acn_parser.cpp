@@ -212,6 +212,23 @@ void declareLocal(CompInfo *comp, Value varnm) {
 			arrAdd(th, comp->locvarseg, varnm);
 }
 
+/** Create and return new Closure AST segment 
+	Modifies comp->clovarseg and -> newcloseg */
+Value parseNewClo(CompInfo* comp, Value astseg) {
+	Value th = comp->th;
+	// ('Closure', clovars, ('callprop', Closure, New, getmethod, setmethod))
+	Value closeg = astAddSeg(th, astseg, vmlit(SymClosure), 3);
+	comp->clovarseg = pushArray(th, aNull, 4);
+	arrAdd(th, closeg, comp->clovarseg);
+	popValue(th);
+	Value newcloseg = astAddSeg(th, closeg, vmlit(SymCallProp), 8);
+	astAddSeg2(th, newcloseg, vmlit(SymGlobal), vmlit(SymClosure));
+	astAddSeg2(th, newcloseg, vmlit(SymLit), vmlit(SymNew));
+	astAddSeg2(th, newcloseg, vmlit(SymLit), vmlit(SymNull));
+	astAddSeg2(th, newcloseg, vmlit(SymLit), vmlit(SymNull));
+	return newcloseg;
+}
+
 /** Parse an atomic value: literal, variable or pseudo-variable */
 void parseValue(CompInfo* comp, Value astseg) {
 	Value th = comp->th;
@@ -274,17 +291,8 @@ void parseValue(CompInfo* comp, Value astseg) {
 		Value newcloseg = astseg;
 		// Create closure segment just in case, if we are not already inside one...
 		// ('Closure', clovars, ('callprop', Closure, New, getmethod, setmethod))
-		if (!comp->explicitclo) {
-			Value closeg = astAddSeg(th, astseg, vmlit(SymClosure), 3);
-			comp->clovarseg = pushArray(th, aNull, 4);
-			arrAdd(th, closeg, comp->clovarseg);
-			popValue(th);
-			comp->newcloseg = newcloseg = astAddSeg(th, closeg, vmlit(SymCallProp), 8);
-			astAddSeg2(th, newcloseg, vmlit(SymGlobal), vmlit(SymClosure));
-			astAddSeg2(th, newcloseg, vmlit(SymLit), vmlit(SymNew));
-			astAddSeg2(th, newcloseg, vmlit(SymLit), vmlit(SymNull));
-			astAddSeg2(th, newcloseg, vmlit(SymLit), vmlit(SymNull));
-		}
+		if (!comp->explicitclo)
+			newcloseg = comp->newcloseg = parseNewClo(comp,astseg);
 		// Go compile method parms and code block using new compiler context but same lexer
 		pushValue(th, vmlit(SymNew));
 		pushGloVar(th, "Method");
@@ -299,6 +307,67 @@ void parseValue(CompInfo* comp, Value astseg) {
 			arrSet(th, newcloseg, 3, arrGet(th, newcloseg, last));
 			arrSetSize(th, newcloseg, last);
 		}
+		comp->newcloseg = svnewcloseg;
+		comp->clovarseg = svclovars;
+	}
+	// Explicit closure definition
+	else if (lexMatchNext(comp->lex, "*[")) {
+		Value svclovars = comp->clovarseg;
+		Value svnewcloseg = comp->newcloseg;
+		bool svexplicitclo = comp->explicitclo;
+
+		Value newcloseg = parseNewClo(comp,astseg);
+
+		// Process explicit closure variable declarations
+		if (!lexMatch(comp->lex, "]")) {
+			do {
+				if (comp->lex->toktype == Name_Token || lexMatch(comp->lex, "self")) {
+					// Closure variable name
+					Value symnm = comp->lex->token;
+					const char first = (toStr(symnm))[0];
+					if (first=='$' || (first>='A' && first<='Z'))
+						lexLog(comp->lex, "A global name may not be a closure variable");
+					arrAdd(th, comp->clovarseg, symnm);
+					lexGetNextToken(comp->lex);
+
+					// Handle specified initializer expression
+					if (lexMatchNext(comp->lex, "=")) {
+						parseExp(comp, newcloseg);
+					}
+					// No initializer expression? Initialize it using same named 'local' variable
+					else if (symnm == vmlit(SymSelf))
+						astAddValue(th, newcloseg, symnm);
+					else
+						astAddSeg2(th, newcloseg, vmlit(SymLocal), symnm);
+				}
+			} while (lexMatchNext(comp->lex, ","));
+		}
+		if (!lexMatchNext(comp->lex, "]"))
+			lexLog(comp->lex, "Expected ']'.");
+
+		comp->explicitclo = true;
+		comp->newcloseg = newcloseg;
+		// For get/set explicit closure, look for both
+		if (lexMatchNext(comp->lex, "{")) {
+			for (int i=0; i<2; i++) {
+				parseExp(comp, newcloseg);
+				AuintIdx last = arr_size(newcloseg)-1;
+				arrSet(th, newcloseg, 3+i, arrGet(th, newcloseg, last));
+				arrSetSize(th, newcloseg, last);
+				lexMatchNext(comp->lex, ";");
+			}
+			lexMatchNext(comp->lex, "}");
+		}
+		// Not get/set? Get method, then move to its rightful place in closure segment
+		else {
+			parseExp(comp, newcloseg);
+			AuintIdx last = arr_size(newcloseg)-1;
+			arrSet(th, newcloseg, 3, arrGet(th, newcloseg, last));
+			arrSetSize(th, newcloseg, last);
+		}
+
+		// Restore saved values
+		comp->explicitclo = svexplicitclo;
 		comp->newcloseg = svnewcloseg;
 		comp->clovarseg = svclovars;
 	}

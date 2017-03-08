@@ -606,7 +606,7 @@ bool lexScanOp(LexInfo *lex) {
 		|| (ch1=='|' && ch2=='|')
 		|| (ch1=='*' && ch2=='*')
 		|| (ch1=='.' && ch2=='&')
-		|| (ch1=='+' && ch2=='[')
+		|| (ch1=='*' && ch2=='[')
 		) lex_skipchar(lex);
 
 	newSym(lex->th, &lex->token, begp, &toStr(lex->source)[lex->bytepos]-begp);

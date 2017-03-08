@@ -234,3 +234,30 @@ a = 'a'
 meth = []
 	a
 $test.True(meth()==='a', "Implicit closure")
+
+# Explicit closure
+meth = *[a='a'] []
+	a
+$test.True(meth()==='a', "Explicit closure")
+
+# unbound and bound 'self' testing
+meth = [x]
+	sq = []
+		self*self
+	sq(), x.(sq)()
+a,b = (2).(meth)(3)
+$test.True(a===4 and b===9, "Passed self")
+meth = []
+	sq = *[self][]
+		self*self
+a = (4).(meth)()
+$test.True(a()===16, "Bind self #1")
+$test.True((3).(a)()===16, "Bind self #2")
+
+Integer.traits
+	clo:= *[n=1]
+		[] {n;}
+		[x] {n=x;}
+$test.True((2).clo===1, "Computed property closure get")
+(7).clo = 4
+$test.True((3).clo===4, "Computed property closure set")
