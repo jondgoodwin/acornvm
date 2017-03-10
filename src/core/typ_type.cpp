@@ -59,10 +59,8 @@ int type_match(Value th) {
 
 	// Get self's traits
 	Value self = getLocal(th, 0);
-	pushSym(th, "traits");
-	pushValue(th, self);
-	getCall(th, 1, 1);
-	Value traits = popValue(th);
+	Value traits = pushProperty(th, 0, "traits");
+	popValue(th);
 	if (traits == aNull)
 		traits = self;
 
@@ -83,7 +81,7 @@ void core_type_init(Value th) {
 		pushClosure(th, 2);
 		popProperty(th, 0, "[]");
 		pushCMethod(th, type_match);
-		popProperty(th, 0, "=~");
+		popProperty(th, 0, "~~");
 	popGloVar(th, "Type");
 	return;
 }

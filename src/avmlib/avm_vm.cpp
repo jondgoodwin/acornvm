@@ -228,7 +228,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymDiv, "/"},
 	{SymRocket, "<=>"},
 	{SymEquiv, "==="},
-	{SymMatchOp, "=~"},
+	{SymMatchOp, "~~"},
 	{SymLt, "<"},
 	{SymLe, "<="},
 	{SymGt, ">"},

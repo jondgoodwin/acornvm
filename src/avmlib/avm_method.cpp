@@ -532,14 +532,8 @@ void methodRunBC(Value th) {
 		// so next open instruction (CALL, RETURN, VAR) may use top.
 		case OpGetCall: {
 			// Get property value. If executable, we can do call
-			if (!isCallable(*rega)) {
+			if (!isCallable(*rega))
 				*rega = getProperty(th, *(rega+1), *rega); // Find executable
-				if (!isCallable(*rega)) {
-					// If not callable, set up an indexed get/set
-					*(rega+1) = *rega;
-					*rega = getProperty(th, *(rega+1), vmlit(SymBrackets));
-				}
-			}
 
 			// Reset frame top for fixed parms (var already has it adjusted)
 			int b = bc_b(i); // nbr of parms
@@ -555,16 +549,8 @@ void methodRunBC(Value th) {
 		// so next open instruction (CALL, RETURN, VAR) may use top.
 		case OpSetCall: {
 			// Get property value. If executable, we can do call
-			if (!isCallable(*rega)) {
-				Value propcall = getProperty(th, *(rega+1), *rega); // Find executable
-				if (isCallable(propcall)) 
-					*rega = propcall;
-				else {
-					// If not callable, do an indexed get/set
-					*(rega+1) = *rega;
-					*rega = getProperty(th, *(rega+1), vmlit(SymBrackets));
-				}
-			}
+			if (!isCallable(*rega))
+				*rega = getProperty(th, *(rega+1), *rega); // Find executable
 
 			// Reset frame top for fixed parms (var already has it adjusted)
 			int b = bc_b(i); // nbr of parms
@@ -655,10 +641,12 @@ void getCall(Value th, int nparms, int nexpected) {
 	// If "method" is not a method (likely a symbol), treat it as a property to lookup
 	if (!isCallable(*methodpos)) {
 		*methodpos = getProperty(th, *(methodpos+1), *methodpos);
-		// If property's value is not callable, set up an indexed get/set using '()' property
+		// If property's value is not callable, return nulls
 		if (!isCallable(*methodpos)) {
-			*(methodpos+1) = *methodpos;	// property value we got becomes 'self'
-			*methodpos = getProperty(th, *(methodpos+1), vmlit(SymParas)); // look up '()' method
+			while (nexpected--)
+				*methodpos++ = aNull;
+			th(th)->stk_top = methodpos; // Restore stack top
+			return;
 		}
 	}
 

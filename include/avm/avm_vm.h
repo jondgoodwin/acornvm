@@ -144,7 +144,7 @@ extern "C" {
 		SymDiv,		//!< '/'
 		SymRocket,	//!< '<=>'
 		SymEquiv,	//!< '==='
-		SymMatchOp,	//!< '=~'
+		SymMatchOp,	//!< '~~'
 		SymLt,		//!< '<'
 		SymLe,		//!< '<='
 		SymGt,		//!< '>'

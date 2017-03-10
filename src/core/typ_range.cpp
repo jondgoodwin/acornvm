@@ -206,7 +206,7 @@ void core_range_init(Value th) {
 			pushCMethod(th, range_each);
 			popProperty(th, 1, "Each");
 			pushCMethod(th, range_match);
-			popProperty(th, 1, "=~");
+			popProperty(th, 1, "~~");
 		popProperty(th, 0, "traits");
 
 		pushCMethod(th, range_new);

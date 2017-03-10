@@ -244,15 +244,20 @@ void parseValue(CompInfo* comp, Value astseg) {
 	}
 	// Local or global variable / name token
 	else if (comp->lex->toktype == Name_Token) {
-		const char first = (toStr(comp->lex->token))[0];
-		if (first=='$' || (first>='A' && first<='Z'))
-			astAddSeg2(th, astseg, vmlit(SymGlobal), comp->lex->token);
-		else {
-			declareLocal(comp, comp->lex->token); // declare local if not already declared
-			// We do not resolve to index until gen because of else clauses (declaration after use)
-			astAddSeg2(th, astseg, vmlit(SymLocal), comp->lex->token);
-		}
+		Value symnm = pushValue(th, comp->lex->token);
 		lexGetNextToken(comp->lex);
+		const char first = (toStr(symnm))[0];
+		// If followed by ":" or ":=", it is a literal symbol
+		if (lexMatch(comp->lex, ":") || lexMatch(comp->lex, ":="))
+			astAddSeg2(th, astseg, vmlit(SymLit), symnm);
+		else if (first=='$' || (first>='A' && first<='Z'))
+			astAddSeg2(th, astseg, vmlit(SymGlobal), symnm);
+		else {
+			declareLocal(comp, symnm); // declare local if not already declared
+			// We do not resolve locals to index until gen because of control clauses (declaration after use)
+			astAddSeg2(th, astseg, vmlit(SymLocal), symnm);
+		}
+		popValue(th);
 	}
 	// 'baseurl' pseudo-variable
 	else if (lexMatchNext(comp->lex, "baseurl")) {
@@ -584,7 +589,7 @@ void parseCompExp(CompInfo* comp, Value astseg) {
 		astAddSeg2(th, newseg, vmlit(SymLit), op);
 		parseRangeExp(comp, newseg);
 	}
-	else if (lexMatchNext(comp->lex, "===") || lexMatchNext(comp->lex, "=~")
+	else if (lexMatchNext(comp->lex, "===") || lexMatchNext(comp->lex, "~~")
 		|| lexMatchNext(comp->lex, "==") || lexMatchNext(comp->lex, "!=")
 		|| lexMatchNext(comp->lex, "<=") || lexMatchNext(comp->lex, ">=")
 		|| lexMatchNext(comp->lex, "<") || lexMatchNext(comp->lex, ">")) {
@@ -685,7 +690,6 @@ void parseAssgnExp(CompInfo* comp, Value astseg) {
 	// Presence of 'local' ensures unknown locals are declared as locals vs. closure vars
 	bool saveforcelocal = comp->forcelocal;
 	comp->forcelocal = lexMatchNext(comp->lex, "local");
-	bool inparens = lexMatch(comp->lex, "(");
 	parseCommaExp(comp, astseg);
 	comp->forcelocal = saveforcelocal;
 
@@ -710,13 +714,6 @@ void parseAssgnExp(CompInfo* comp, Value astseg) {
 		parseAssgnExp(comp, assgnseg); // Get the values to the right
 	}
 	else if ((isColonEq = lexMatchNext(comp->lex, ":=")) || lexMatchNext(comp->lex, ":")) {
-		// Turn variable name before ':' into a literal
-		if (!inparens) {
-			Value lval = arrGet(th, astseg, arr_size(astseg)-1);
-			Value op = isArr(lval)? arrGet(th, lval, 0) : aNull;
-			if (op==vmlit(SymLocal) || op==vmlit(SymGlobal))
-				arrSet(th, lval, 0, vmlit(SymLit));
-		}
 		// ('=', ('activeprop'/'callprop', 'this', ('[]',) property), value)
 		Value assgnseg = astInsSeg(th, astseg, vmlit(SymAssgn), 3);
 		Value indexseg = astPushNew(th, vmlit(isColonEq? SymCallProp : SymActProp), 4);

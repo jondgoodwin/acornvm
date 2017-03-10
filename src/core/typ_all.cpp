@@ -37,7 +37,7 @@ int all_same(Value th) {
 	getCall(th, 2, 1); \
 	Value ret = popValue(th);
 
-/** =~, == equal using <=> */
+/** ~~, == equal using <=> */
 int all_equal(Value th) {
 	all_rocket;
 	pushValue(th, ret == anInt(0)? aTrue : aFalse);
@@ -101,7 +101,7 @@ void core_all_init(Value th) {
 		pushCMethod(th, all_compare);
 		popProperty(th, 0, "<=>");
 		pushCMethod(th, all_equal);
-		popProperty(th, 0, "=~");
+		popProperty(th, 0, "~~");
 		pushCMethod(th, all_equal);
 		popProperty(th, 0, "==");
 		pushCMethod(th, all_same);

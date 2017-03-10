@@ -93,7 +93,7 @@ each b in splat('tolist',0,1,2)
 	cnt = cnt + 1
 
 # Range test
-$test.True(4 =~ 0 .. 6, "Range match")
+$test.True(4 ~~ 0 .. 6, "Range match")
 
 cnt = 0
 each a:b in 0 .. 3
@@ -209,13 +209,13 @@ each n in 1 .. 5
 		$test.True(n===3 or n===5, "match with 3 or 5")
 	else
 		$test.True(n===4, "match else")
-match Res using "==="
+match Res using '==='
 with Res
 	$test.True(Res===Res, "match Res with Res using '==='")
 
 each n in 4 .. 8
 	n = 6.0 if n===6
-	match n using [x] {x+1,x-1 if x =~ self;} into res
+	match n using [x] {x+1,x-1 if x ~~ self;} into res
 	with 4 .. 5, 7
 		$test.True(res===n+1, "match method into res/4,5,7")
 	with Integer into r,s

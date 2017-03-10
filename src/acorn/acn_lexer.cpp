@@ -592,7 +592,7 @@ bool lexScanOp(LexInfo *lex) {
 		lex_skipchar(lex);
 	} else if ((ch1=='>' && ch2=='=')
 		|| (ch1=='!' && ch2=='=')
-		|| (ch1=='=' && ch2=='~')
+		|| (ch1=='~' && ch2=='~')
 		|| (ch1=='<' && ch2=='<')
 		|| (ch1=='>' && ch2=='>')
 		|| (ch1=='+' && ch2=='=')

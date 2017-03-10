@@ -209,10 +209,10 @@ void genJumpExp(CompInfo *comp, Value astseg, int *failjump, int *passjump, bool
 		return;
 	}
 
-	// '=~' pattern match
+	// '~~' pattern match
 	else if (condop == vmlit(SymMatchOp)) {
 		genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, vmlit(SymMatchOp))));
-		genExp(comp, astGet(th, astseg, 2)); // '=~' uses right hand value for object call
+		genExp(comp, astGet(th, astseg, 2)); // '~~' uses right hand value for object call
 		genExp(comp, astGet(th, astseg, 1));
 		genAddInstr(comp, BCINS_ABC(OpGetCall, svnextreg, comp->nextreg - svnextreg-1, 1));
 		genFwdJump(comp, revjump? OpJFalse : OpJTrue, svnextreg,  lastjump? failjump : passjump);
@@ -545,7 +545,6 @@ void genExp(CompInfo *comp, Value astseg) {
 			unsigned int svthis = comp->thisreg;
 			unsigned int svthisopreg = comp->thisopreg;
 			comp->thisopreg = 0;
-			Value svLocalVars = genLocalVars(comp, astGet(th, astseg, 2), 0);
 			// Generate "using" operator, if specified
 			Value thisop = astGet(th, astseg, 3);
 			if (thisop != aNull) {
@@ -560,6 +559,7 @@ void genExp(CompInfo *comp, Value astseg) {
 			// Optimize "using" operator to a method
 			if (thisop != aNull)
 				genAddInstr(comp, BCINS_ABC(OpGetMeth, comp->thisopreg, 0, 0));
+			Value svLocalVars = genLocalVars(comp, astGet(th, astseg, 2), 0);
 			genStmts(comp, astGet(th, astseg, 4));
 			// Value of a this block is 'this'. Needed for returns or this blocks within this blocks.
 			if (thisop != aNull) {
@@ -650,7 +650,7 @@ void genIf(CompInfo *comp, Value astseg) {
 
 /* Generate specific match call */
 void genMatchWith(CompInfo *comp, Value pattern, unsigned int matchreg, int nexpected) {
-	// pattern '=~' matchval
+	// pattern '~~' matchval
 	comp->nextreg = matchreg+2;
 	genAddInstr(comp, BCINS_ABC(OpLoadReg, genNextReg(comp), matchreg+1, 0));
 	genExp(comp, pattern);
