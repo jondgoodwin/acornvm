@@ -580,8 +580,7 @@ bool lexScanOp(LexInfo *lex) {
 	Auchar ch2 = lex_thischar(lex);
 
 	// Look for 2- and 3- character combos
-	if (ch1=='<' && ch2=='>' && '['==lex_thischar(lex)) {lex_skipchar(lex); lex_skipchar(lex);}
-	else if (ch1=='.' && ch2=='.') {
+	if (ch1=='.' && ch2=='.') {
 		if ('.'==lex_nextchar(lex)) lex_skipchar(lex);
 		lex_skipchar(lex);
 	} else if (ch1=='=' && ch2=='=') {
@@ -593,6 +592,7 @@ bool lexScanOp(LexInfo *lex) {
 	} else if ((ch1=='>' && ch2=='=')
 		|| (ch1=='!' && ch2=='=')
 		|| (ch1=='~' && ch2=='~')
+		|| (ch1=='<' && ch2=='>')
 		|| (ch1=='<' && ch2=='<')
 		|| (ch1=='>' && ch2=='>')
 		|| (ch1=='+' && ch2=='=')

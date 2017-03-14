@@ -57,7 +57,7 @@ Value getType(Value th, Value val) {
 		switch (((MemInfo*)val)->enctyp) {
 		// For fixed type encodings, use its default type
 		case SymEnc: return vmlit(TypeSymm);
-		case ThrEnc: return vmlit(TypeThrm);
+		case ThrEnc: return vmlit(TypeYieldm);
 		case VmEnc: return vmlit(TypeVmm);
 		case MethEnc: return vmlit(TypeMethm);
 		// Otherwise, use the type the instance claims

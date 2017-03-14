@@ -62,6 +62,13 @@ typedef struct ThreadInfo {
 	CallInfo entrymethod;	//!< Call info for C-method that started this thread
 } ThreadInfo;
 
+/* flags1 flags */
+// 0x80 reserved for Locked
+#define ThreadYielder 0x40	//!< Flags1 bit, if thread is a yielder
+#define ThreadThread  0x20	//!< Flags1 bit, if thread is a thread
+#define ThreadActive  0x10	//!< Flags1 bit, if thread has been started
+#define ThreadDone    0x08	//!< Flags1 bit, if thread has finished
+
 /** Mark all in-use thread values for garbage collection 
  * Increments how much allocated memory the thread uses. */
 #define thrMark(th, t) \
@@ -84,7 +91,7 @@ typedef struct ThreadInfo {
 void stkRealloc(Value th, int newsize);
 
 /** Initialize a thread */
-void thrInit(ThreadInfo* thr, VmInfo* vm, AuintIdx stksz);
+void thrInit(ThreadInfo* thr, VmInfo* vm, AuintIdx stksz, char flags);
 
 /** Free everything allocated for thread */
 void thrFreeStacks(Value th);
@@ -98,7 +105,7 @@ Value gloGet(Value th, Value var);
 void gloSet(Value th, Value var, Value val);
 
 /** Create a new Thread with a starter stack. */
-Value newThread(Value th, Value *dest, AuintIdx stksz);
+Value newThread(Value th, Value *dest, AuintIdx stksz, char flags);
 /** Push and return a new CompInfo value, compiler state for an Acorn method */
 Value pushCompiler(Value th, Value src, Value url);
 

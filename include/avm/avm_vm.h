@@ -197,8 +197,8 @@ extern "C" {
 		TypeFlom,	//!< Float mixin
 		TypeMethc,	//!< Method class
 		TypeMethm,	//!< Method mixin
-		TypeThrc,	//!< Thread class
-		TypeThrm,	//!< Thread mixin
+		TypeYieldc,	//!< Yielder class
+		TypeYieldm,	//!< Yielder mixin
 		TypeVmc,	//!< Vm class
 		TypeVmm,	//!< Vm mixin
 		TypeSymc,	//!< Symbol class

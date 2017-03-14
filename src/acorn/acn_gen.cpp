@@ -198,7 +198,7 @@ void genJumpExp(CompInfo *comp, Value astseg, int *failjump, int *passjump, bool
 	else if (condop == vmlit(SymEquiv)) {
 		genExp(comp, astGet(th, astseg, 1));
 		Value arg2 = astGet(th, astseg, 2);
-		if (astGet(th, arg2, 0)==vmlit(SymLit) && astGet(th, arg2, 1)==aNull) {
+		if (isArr(arg2) && astGet(th, arg2, 0)==vmlit(SymLit) && astGet(th, arg2, 1)==aNull) {
 			genFwdJump(comp, revjump? OpJNNull : OpJNull, svnextreg, lastjump? failjump : passjump);
 		}
 		else {

@@ -28,7 +28,7 @@ int bool_compare(Value th) {
 	return 0;
 }
 
-/** Initialize the Null type */
+/** Initialize the Bool type */
 void core_bool_init(Value th) {
 	vmlit(TypeBoolc) = pushType(th, vmlit(TypeType), 4);
 		pushSym(th, "Bool");

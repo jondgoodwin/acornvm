@@ -15,7 +15,7 @@ if !1===1
 	$test.True(false, "!1===1")
 if !true
 	$test.True(false, "!true")
-if !(2<3 && 1<2 || 0<1 && 0<4)
+if not (2<3 and 1<2 or 0<1 and 0<4)
 	$test.True(false, "!(2<3 && 1<2 || 0<1 && 0<4)")
 
 # if / clause

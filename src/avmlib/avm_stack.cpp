@@ -187,7 +187,7 @@ Value pushCMethod(Value th, AcMethodp meth) {
 /* Push and return a new Stack value */
 Value pushThread(Value th) {
 	stkCanIncTop(th); /* Check if there is room */
-	return newThread(th, th(th)->stk_top++, 200);
+	return newThread(th, th(th)->stk_top++, 256, ThreadYielder);
 }
 
 /* Push and return the VM's value */

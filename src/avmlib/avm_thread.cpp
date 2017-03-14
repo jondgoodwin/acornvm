@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 /* Return a new Thread with a starter namespace and stack. */
-Value newThread(Value th, Value *dest, AuintIdx stksz) {
+Value newThread(Value th, Value *dest, AuintIdx stksz, char flags) {
 	ThreadInfo *newth;
 
 	// Create and initialize a thread
@@ -26,17 +26,17 @@ Value newThread(Value th, Value *dest, AuintIdx stksz) {
 	((MemInfo*)newth)->next = *list;
 	*list = (MemInfo*)newth;
 
-	thrInit(newth, vm(th), stksz);
+	thrInit(newth, vm(th), stksz, flags);
 	return *dest = (Value)newth;
 }
 
 /* Initialize a thread.
  * We do this separately, as Vm allocates main thread as part of VmInfo */
-void thrInit(ThreadInfo* thr, VmInfo* vm, AuintIdx stksz) {
+void thrInit(ThreadInfo* thr, VmInfo* vm, AuintIdx stksz, char flags) {
 
 	thr->vm = vm;
 	thr->size = 0;
-	thr->flags1 = 0;	// Initialize Flags1 flags
+	thr->flags1 = flags;
 
 	// Allocate and initialize thread's stack
 	thr->stack = NULL;

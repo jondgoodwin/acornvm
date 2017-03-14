@@ -91,6 +91,18 @@ $test.True(2 .'>='(2), "2 .'>='(2)")
 # Closure
 $test.True(Closure.traits::'[]'.setmethod.callable?, "Closure.setmethod")
 
+# Yielder
+meth=[f]
+	$test.True(context.status==='active', "context.status==='active'")
+	$test.True(+Yielder.status==='ready', "+Yielder.status==='ready'")
+	b = +Yielder
+	each n in 1 .. 10000
+		+List
+	$test.True(context.stack(0,0)===self, "context.stack(0,0)===self")
+	$test.True(context.method(0)===selfmethod, "context.method(0)===selfmethod")
+	$test.True(f+1===context.frames, "context.frames increment")
+meth(context.frames)
+
 # Type
 $test.True(4 ~~ 2 .. 5, "4 ~~ 2 .. 5")
 $test.True(Type ~~ Type, "Res ~~ Res")
