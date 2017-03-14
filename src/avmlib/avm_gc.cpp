@@ -406,6 +406,15 @@ void mem_freeAll(Value th) {
 	for (i = 0; i < vm->sym_table.nbrAvail; i++)  /* free all symbol lists */
 		mem_sweepwholelist(th, (MemInfo**) &vm->sym_table.symArray[i]);
 	assert(vm->sym_table.nbrUsed == 0);
+
+	// Sweep all threads except main thread
+	ThreadInfo *thread = (ThreadInfo*) vm(th)->threads;
+	while (thread) {
+		ThreadInfo* nextth = (ThreadInfo*) thread->next;
+		if (thread != vm->main_thread)
+			mem_sweepfree(th, (MemInfo*)thread);
+		thread = nextth;
+	}
 }
 
 
