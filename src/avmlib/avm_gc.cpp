@@ -230,7 +230,7 @@ void mem_marktopgray(Value th) {
 	// Thread/Stacks use a different strategy for avoiding invariance violations:
 	// keeping it gray until atomic marking, so it is never black pointing to a white value.
 	// Threads are not write protected, so it makes little sense to waste time marking it
-	case ThrEnc: 
+	case ThrEnc:
 		if (vm(th)->gcstate == GCSmark)
 			black2gray(o);
 		break;
@@ -249,32 +249,43 @@ void mem_markallgray(Value th) {
 
 /** Mark everything that should not be interrupted by ongoing object changes */
 void mem_markatomic(Value th) {
-	assert(!iswhite((ThreadInfo*)th));
+	assert(vm(th)->gcmode==GC_GENMODE || !iswhite((ThreadInfo*)th));
 
-	// Clear out any grays that might have accumulated
+	// Clear out any grays by tracing them and marking them all black
 	mem_markallgray(th);
 
-	// Mark and sweep threads (note: we have not flipped white yet)
+	// Set up to mark the contents of all threads (should all be gray)
+	// (even threads that turn out to be unreferenced and swept away in a moment)
 	MemInfo **threads = &vm(th)->threads;
 	while (*threads) {
 		ThreadInfo* thread = (ThreadInfo*) *threads;
+		if (thread == vm(th)->main_thread)
+			gray2black(thread);
+		thrMark(th, thread);
+		threads = &(*threads)->next;
+	}
+	mem_markallgray(th); // Complete the marking process
+
+	// Sweep away any unmarked threads (note: we have not flipped white yet)
+	threads = &vm(th)->threads;
+	while (*threads) {
+		ThreadInfo* thread = (ThreadInfo*) *threads;
 		if (thread->marked & vm(th)->currentwhite & WHITEBITS
-			&& !(vm(th)->gcnextmode == GC_GENMODE && thread->marked & bitmask(OLDBIT))) {
+			&& !(vm(th)->gcnextmode == GC_GENMODE && thread->marked & bitmask(OLDBIT))
+			&& th!=thread) {
 			*threads = thread->next;
 			mem_sweepfree(th, (MemInfo*)thread);
 			vm(th)->gcstepunits -= GCSWEEPDEADCOST;
 		}
 		else {
-			thrMark(th, thread);
 			if (vm(th)->gcnextmode == GC_GENMODE)
 				thread->marked |= bitmask(OLDBIT);
 			else
-				thread->marked = (thread->marked & ~WHITEBITS) | otherwhite(th);
+				thread->marked = (thread->marked & maskcolors) | otherwhite(th);
 			vm(th)->gcstepunits -= GCSWEEPLIVECOST;
+			threads = &(*threads)->next;
 		}
-		threads = &(*threads)->next;
 	}
-	mem_markallgray(th);
 }
 
 /* Keep value alive, if dead but not yet collected */

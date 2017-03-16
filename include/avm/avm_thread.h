@@ -72,9 +72,10 @@ typedef struct ThreadInfo {
 /** Mark all in-use thread values for garbage collection 
  * Increments how much allocated memory the thread uses. */
 #define thrMark(th, t) \
-	{for (Value *stkp = (t)->stk_top - 1; stkp >= (t)->stack; stkp--) \
+	{if ((t)->stack) { \
+	for (Value *stkp = (t)->stk_top - 1; stkp >= (t)->stack; stkp--) \
 		mem_markobj(th, *stkp); \
-	mem_markobj(th, (t)->global);}
+	} mem_markobj(th, (t)->global);}
 
 /** Free all of an array's allocated memory */
 #define thrFree(th, t) \

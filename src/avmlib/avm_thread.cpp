@@ -38,6 +38,8 @@ void thrInit(ThreadInfo* thr, VmInfo* vm, AuintIdx stksz, char flags) {
 	thr->size = 0;
 	thr->flags1 = flags;
 
+	thr->global = aNull;
+
 	// Allocate and initialize thread's stack
 	thr->stack = NULL;
 	thr->size = 0;
@@ -55,8 +57,6 @@ void thrInit(ThreadInfo* thr, VmInfo* vm, AuintIdx stksz, char flags) {
 	ci->end = thr->stk_top + STACK_MINSIZE;
 	ci->method = aNull;
 	thr->curmethod = ci;
-
-	thr->global = aNull;
 }
 
 /** Return 1 if it is a Thread, else return 0 */
