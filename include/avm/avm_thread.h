@@ -93,7 +93,7 @@ typedef struct ThreadInfo {
 void stkRealloc(Value th, int newsize);
 
 /** Initialize a thread */
-void thrInit(ThreadInfo* thr, VmInfo* vm, AuintIdx stksz, char flags);
+void thrInit(ThreadInfo* thr, VmInfo* vm, Value method, AuintIdx stksz, char flags);
 
 /** Free everything allocated for thread */
 void thrFreeStacks(Value th);
@@ -107,7 +107,7 @@ Value gloGet(Value th, Value var);
 void gloSet(Value th, Value var, Value val);
 
 /** Create a new Thread with a starter stack. */
-Value newThread(Value th, Value *dest, AuintIdx stksz, char flags);
+Value newThread(Value th, Value *dest, Value method, AuintIdx stksz, char flags);
 /** Push and return a new CompInfo value, compiler state for an Acorn method */
 Value pushCompiler(Value th, Value src, Value url);
 

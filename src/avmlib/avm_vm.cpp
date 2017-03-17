@@ -55,7 +55,7 @@ AVM_API Value newVM(void) {
 	((ThreadInfo*) th)->marked = vm->currentwhite;
 	((ThreadInfo*) th)->enctyp = ThrEnc;
 	((ThreadInfo*) th)->next = NULL;
-	thrInit(&vm->main_thr, vm, STACK_NEWSIZE, ThreadActive);
+	thrInit(&vm->main_thr, vm, aNull, STACK_NEWSIZE, ThreadActive);
 	vm->threads = NULL;
 
 	// Initialize PCG random number generator to starting values
@@ -265,6 +265,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 	{SymExt, "ext"},
 	{SymRange, "Range"},
 	{SymClosure, "Closure"},
+	{SymYielder, "Yielder"},
 	{SymResource, "Resource"},
 
 	// End of literal table

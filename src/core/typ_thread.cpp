@@ -15,7 +15,9 @@ extern "C" {
 
 /** new creates a new Yielder using specified method */
 int yielder_new(Value th) {
-	pushThread(th);
+	if (getTop(th)<2)
+		return 0;
+	pushYielder(th, getLocal(th, 0));
 	return 1;
 }
 

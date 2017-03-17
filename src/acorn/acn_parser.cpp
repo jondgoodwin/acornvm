@@ -289,6 +289,14 @@ void parseValue(CompInfo* comp, Value astseg) {
 		if (!lexMatchNext(comp->lex, ")"))
 			lexLog(comp->lex, "Expected ')'.");
 	}
+	// Yielder creation: ('callprop', Yielder, New, method)
+	else if (lexMatchNext(comp->lex, "<>")) {
+		parseValue(comp, astseg);
+		Value newseg = astPushNew(th, vmlit(SymCallProp), 4);
+		astAddSeg2(th, newseg, vmlit(SymGlobal), vmlit(SymYielder));
+		astAddSeg2(th, newseg, vmlit(SymLit), vmlit(SymNew));
+		astPopNew(th, astseg, newseg);
+	}
 	// Method definition
 	else if (lexMatch(comp->lex, "[")) {
 		Value svclovars = comp->clovarseg;
@@ -365,7 +373,7 @@ void parseValue(CompInfo* comp, Value astseg) {
 		}
 		// Not get/set? Get method, then move to its rightful place in closure segment
 		else {
-			parseExp(comp, newcloseg);
+			parseValue(comp, newcloseg);
 			AuintIdx last = arr_size(newcloseg)-1;
 			arrSet(th, newcloseg, 3, arrGet(th, newcloseg, last));
 			arrSetSize(th, newcloseg, last);

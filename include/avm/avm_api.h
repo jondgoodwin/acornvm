@@ -212,7 +212,7 @@ AVM_API Value pushType(Value th, Value type, AuintIdx size);
 /*^ Push and return a new Mixin value */
 AVM_API Value pushMixin(Value th, Value type, Value inheritype, AuintIdx size);
 /** Push and return a new Stack value */
-AVM_API Value pushThread(Value th);
+AVM_API Value pushYielder(Value th, Value method);
 /** Push and return the VM's value */
 AVM_API Value pushVM(Value th);
 /** Push a value's serialized Text, an abridged, human-readable view of the contents of a value,

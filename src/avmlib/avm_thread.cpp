@@ -15,7 +15,7 @@ extern "C" {
 #endif
 
 /* Return a new Thread with a starter namespace and stack. */
-Value newThread(Value th, Value *dest, AuintIdx stksz, char flags) {
+Value newThread(Value th, Value *dest, Value method, AuintIdx stksz, char flags) {
 	ThreadInfo *newth;
 
 	// Create and initialize a thread
@@ -27,13 +27,13 @@ Value newThread(Value th, Value *dest, AuintIdx stksz, char flags) {
 	((MemInfo*)newth)->next = *list;
 	*list = (MemInfo*)newth;
 
-	thrInit(newth, vm(th), stksz, flags);
+	thrInit(newth, vm(th), method, stksz, flags);
 	return newth;
 }
 
 /* Initialize a thread.
  * We do this separately, as Vm allocates main thread as part of VmInfo */
-void thrInit(ThreadInfo* thr, VmInfo* vm, AuintIdx stksz, char flags) {
+void thrInit(ThreadInfo* thr, VmInfo* vm, Value method, AuintIdx stksz, char flags) {
 
 	thr->vm = vm;
 	thr->size = 0;
@@ -53,10 +53,10 @@ void thrInit(ThreadInfo* thr, VmInfo* vm, AuintIdx stksz, char flags) {
 	// ci->callstatus = 0;
 	ci->nresults = 0;
 	ci->methodbase = ci->retTo = thr->stk_top;
-	*thr->stk_top++ = aNull;  // Place for non-existent function
+	*thr->stk_top++ = isArr(method)? arrGet(thr, method, 0) : method;
 	ci->begin = thr->stk_top;
 	ci->end = thr->stk_top + STACK_MINSIZE;
-	ci->method = aNull;
+	ci->method = method;
 	thr->curmethod = ci;
 }
 

@@ -183,6 +183,7 @@ extern "C" {
 		SymExt,		//!< 'ext'
 		SymRange,	//!< 'Range'
 		SymClosure, //!< 'Closure'
+		SymYielder, //!< 'Yielder'
 		SymResource, //!< 'Resource'
 
 		// Core type type
