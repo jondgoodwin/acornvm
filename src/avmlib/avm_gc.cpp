@@ -57,8 +57,9 @@ extern "C" {
 #define GCSbegin	0		//!< The start of the GC collection cycle
 #define GCSmark	1			//!< Incrementally mark gray objects
 #define GCSatomic	2		//!< Atomic marking of threads
-#define GCSsweepsymbol	3	//!< Sweeping symbol table
-#define GCSsweep	4		//!< General purpose sweep stage
+#define GCSsweepsymbol	3	//!< Sweep symbol table
+#define GCSsweepthread 4	//!< Sweep threads
+#define GCSsweep	5		//!< General purpose sweep stage
 
 /** true during all sweep stages */
 #define GCSsweepphases (bitmask(GCSsweepsymbol) | bitmask(GCSsweep))
@@ -260,33 +261,13 @@ void mem_markatomic(Value th) {
 	thrMark(th, mainthread);
 
 	// Mark the contents of all other threads (should all be gray)
-	// (even threads that turn out to be unreferenced and swept away in a moment)
+	// (even threads that will turn out to be dead)
 	MemInfo **threads = &vm(th)->threads;
 	while (*threads) {
 		thrMark(th, (ThreadInfo*) *threads);
 		threads = &(*threads)->next;
 	}
 	mem_markallgray(th); // Complete the marking process
-
-	// Sweep away any unmarked threads (note: we have not flipped white yet)
-	threads = &vm(th)->threads;
-	while (*threads) {
-		ThreadInfo* thread = (ThreadInfo*) *threads;
-		if (thread->marked & vm(th)->currentwhite & WHITEBITS
-			&& !(vm(th)->gcnextmode == GC_GENMODE && thread->marked & bitmask(OLDBIT))) {
-			*threads = thread->next;
-			mem_sweepfree(th, (MemInfo*)thread);
-			vm(th)->gcstepunits -= GCSWEEPDEADCOST;
-		}
-		else {
-			if (vm(th)->gcnextmode == GC_GENMODE)
-				thread->marked |= bitmask(OLDBIT);
-			else
-				thread->marked = (thread->marked & maskcolors) | otherwhite(th);
-			vm(th)->gcstepunits -= GCSWEEPLIVECOST;
-			threads = &(*threads)->next;
-		}
-	}
 }
 
 /* Keep value alive, if dead but not yet collected */
@@ -494,7 +475,6 @@ void mem_gconestep(Value th) {
 		vm->currentwhite = otherwhite(th);  // flip current white
 		assert(vm(th)->sweepgc == NULL);
 		vm(th)->sweepsymgc = 0;
-		vm(th)->sweepgc = &vm(th)->objlist; // Point to list of objects at start of sweep
 
 		if (vm->gcnextmode == GC_FULLMODE)
 			vm->gcbarrieron = 0;
@@ -509,10 +489,25 @@ void mem_gconestep(Value th) {
 		for (i = 0; i < GCSWEEPMAX && vm->sweepsymgc + i < vm->sym_table.nbrAvail; i++)
 			mem_sweepwholelist(th, (MemInfo**) &vm->sym_table.symArray[vm->sweepsymgc + i]);
 		vm->sweepsymgc += i;
-		if (vm->sweepsymgc >= vm->sym_table.nbrAvail)  /* no more symbols to sweep? */
-			vm->gcstate = GCSsweep;
+		// If no more symbols to sweep, set up to sweep threads
+		if (vm->sweepsymgc >= vm->sym_table.nbrAvail) {
+			vm->gcstate = GCSsweepthread;
+			vm(th)->sweepgc = &vm(th)->threads;
+		}
 		return;
     }
+
+	// Sweep threads
+	case GCSsweepthread: {
+		if (vm->sweepgc) {
+			vm->sweepgc = mem_sweeplist(th, vm->sweepgc, 0);
+			return;
+		}
+		else {
+			vm->gcstate = GCSsweep;
+			vm(th)->sweepgc = &vm(th)->objlist;
+		}
+	}
 
 	// Sweep all other unreferenced objects
 	case GCSsweep: {
