@@ -247,9 +247,10 @@ void mem_markallgray(Value th) {
 		mem_marktopgray(th);
 }
 
-/** Mark everything that should not be interrupted by ongoing object changes */
+/** Mark everything that should not be interrupted by ongoing object changes,
+	especially threads, which use no write barriers due to the transient life of stack values. */
 void mem_markatomic(Value th) {
-	assert(vm(th)->gcmode==GC_GENMODE || !iswhite((ThreadInfo*)th));
+	assert(!iswhite((MemInfo*)vm(th)->main_thread));
 
 	// Clear out any grays by tracing them and marking them all black
 	mem_markallgray(th);
@@ -271,8 +272,7 @@ void mem_markatomic(Value th) {
 	while (*threads) {
 		ThreadInfo* thread = (ThreadInfo*) *threads;
 		if (thread->marked & vm(th)->currentwhite & WHITEBITS
-			&& !(vm(th)->gcnextmode == GC_GENMODE && thread->marked & bitmask(OLDBIT))
-			&& th!=thread) {
+			&& !(vm(th)->gcnextmode == GC_GENMODE && thread->marked & bitmask(OLDBIT))) {
 			*threads = thread->next;
 			mem_sweepfree(th, (MemInfo*)thread);
 			vm(th)->gcstepunits -= GCSWEEPDEADCOST;

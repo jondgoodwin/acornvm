@@ -20,6 +20,7 @@ Value newThread(Value th, Value *dest, AuintIdx stksz, char flags) {
 
 	// Create and initialize a thread
 	newth = (ThreadInfo *) mem_newnolink(th, ThrEnc, sizeof(ThreadInfo));
+	*dest = (Value)newth;
 
 	// Add to the list of threads
 	MemInfo **list = &vm(th)->threads;
@@ -27,7 +28,7 @@ Value newThread(Value th, Value *dest, AuintIdx stksz, char flags) {
 	*list = (MemInfo*)newth;
 
 	thrInit(newth, vm(th), stksz, flags);
-	return *dest = (Value)newth;
+	return newth;
 }
 
 /* Initialize a thread.

@@ -79,7 +79,8 @@ typedef struct ThreadInfo {
 
 /** Free all of an array's allocated memory */
 #define thrFree(th, t) \
-	{thrFreeStacks(t); \
+	{assert(th!=t && "Never sweep thread we are using"); \
+	thrFreeStacks(t); \
 	mem_free(th, (t));}
 
 /** Turn the thread value into a pointer */
