@@ -250,19 +250,20 @@ void mem_markallgray(Value th) {
 /** Mark everything that should not be interrupted by ongoing object changes,
 	especially threads, which use no write barriers due to the transient life of stack values. */
 void mem_markatomic(Value th) {
-	assert(!iswhite((MemInfo*)vm(th)->main_thread));
-
 	// Clear out any grays by tracing them and marking them all black
 	mem_markallgray(th);
 
-	// Set up to mark the contents of all threads (should all be gray)
+	// Mark the main thread
+	ThreadInfo *mainthread = (ThreadInfo*)vm(th)->main_thread;
+	assert(!iswhite(mainthread));
+	gray2black(mainthread);
+	thrMark(th, mainthread);
+
+	// Mark the contents of all other threads (should all be gray)
 	// (even threads that turn out to be unreferenced and swept away in a moment)
 	MemInfo **threads = &vm(th)->threads;
 	while (*threads) {
-		ThreadInfo* thread = (ThreadInfo*) *threads;
-		if (thread == vm(th)->main_thread)
-			gray2black(thread);
-		thrMark(th, thread);
+		thrMark(th, (ThreadInfo*) *threads);
 		threads = &(*threads)->next;
 	}
 	mem_markallgray(th); // Complete the marking process
@@ -403,29 +404,13 @@ void mem_sweepcleanup(Value th) {
 /* Free all allocated objects, ahead of VM shut-down */
 void mem_freeAll(Value th) {
 	VmInfo* vm = vm(th);
-	Auint i;
-
-	// Handle objects with finalizers
-	// separatetobefnz(th, 1);  /* separate all objects with finalizers */
-	// assert(vm->finobj == NULL);
-	// callallpendingfinalizers(th, 0);
-
-	vm->currentwhite = WHITEBITS; /* this "white" makes all objects look dead */
+	vm->currentwhite = WHITEBITS; // this "white" makes all objects look dead
 	vm->gcstate = GC_FULLMODE;
-	// mem_sweepwholelist(th, &vm->finobj);  /* finalizers can create objs. in 'finobj' */
 	mem_sweepwholelist(th, &vm->objlist);
-	for (i = 0; i < vm->sym_table.nbrAvail; i++)  /* free all symbol lists */
+	for (Auint i = 0; i < vm->sym_table.nbrAvail; i++)
 		mem_sweepwholelist(th, (MemInfo**) &vm->sym_table.symArray[i]);
 	assert(vm->sym_table.nbrUsed == 0);
-
-	// Sweep all threads except main thread
-	ThreadInfo *thread = (ThreadInfo*) vm(th)->threads;
-	while (thread) {
-		ThreadInfo* nextth = (ThreadInfo*) thread->next;
-		if (thread != vm->main_thread)
-			mem_sweepfree(th, (MemInfo*)thread);
-		thread = nextth;
-	}
+	mem_sweepwholelist(th, &vm->threads);
 }
 
 
@@ -513,6 +498,8 @@ void mem_gconestep(Value th) {
 
 		if (vm->gcnextmode == GC_FULLMODE)
 			vm->gcbarrieron = 0;
+		MemInfo *mt = (MemInfo*) vm(th)->main_thread;
+		mem_sweeplist(th, &mt, 1);
 		return;
 	}
 
