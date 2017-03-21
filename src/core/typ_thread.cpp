@@ -16,7 +16,7 @@ extern "C" {
 /** new creates a new Yielder using specified method */
 int yielder_new(Value th) {
 	Value method = getTop(th)<2? aNull : getLocal(th,1);
-	if (!canCall(method))
+	if (!isMethod(method) || isCMethod(method))
 		return 0;
 	pushYielder(th, method);
 	return 1;

@@ -63,8 +63,8 @@ MethodTypes returnNulls(Value th) {
 
 /* Prepare call to method or closure value on stack (with parms above it). 
  * Specify how many return values to expect to find on stack.
- * Flags is 0 for normal get, 1 for set, and 2 for repeat get
- * Returns 0 if bad method, 1 if bytecode, 2 if C-method
+ * Flags is 0 for normal get, 1 for set, and >>1 for retTo
+ * It returns an enum indicating what to do next: bad method, bytecode, C-method.
  *
  * For c-methods, all parameters are passed, reserving 20 slots of stack space.
  * and then it is actually run.
@@ -226,81 +226,64 @@ MethodTypes tailcallMorCPrep(Value th, Value *methodval, int getset) {
 
 /* Prepare call to yielder value on stack (with parms above it). 
  * Specify how many return values to expect to find on stack.
- * Flags is 0 for normal get, 1 for set, and 2 for repeat get
- * Returns 0 if bad method, 1 if bytecode, 2 if C-method
+ * Flags>>1 is retTo displacement
+ * Returns MethodY
  *
- * For c-methods, all parameters are passed, reserving 20 slots of stack space.
- * and then it is actually run.
- *
- * For byte code, parameters are massaged to ensure the expected number of
+ * Parameters are massaged to ensure the expected number of
  * fixed parameters and establish a holding place for the variable parameters.
  */
 MethodTypes callYielderPrep(Value th, Value *methodval, int nexpected, int flags) {
+	assert(isYielder(*methodval));
+	ThreadInfo *yielder = (ThreadInfo*)*methodval;
 
-	// Capture the actual method whose code we will running
-	Value realmethod;
-	if (isEnc(*methodval, ArrEnc)) { // closure
-		// Extract appropriate 'get' or 'set' method from closure. Be sure it is a method.
-		realmethod = arrGet(th, *methodval, flags&1);
-		if (!isMethod(realmethod))
-			return invalidCall(th, methodval, nexpected);
-	}
-	else
-		realmethod = *methodval; // This is the actual method
+	// A completed thread is no longer executable. Return nulls instead.
+	if (yielder->flags1 & ThreadDone)
+		return invalidCall(th, methodval, nexpected);
 
-	// Start and initialize a new CallInfo block
-	CallInfo * ci = th(th)->curmethod = th(th)->curmethod->next ? th(th)->curmethod->next : thrGrowCI(th);
-	ci->nresults = nexpected;
-	ci->retTo = (ci->methodbase = methodval) + (flags>>1);  // Address of method value, varargs and return values
-	ci->begin = ci->end = methodval + 1; // Parameter values are right after method value
-	ci->method = realmethod;
+	// Set return info in yielder's existing call frame, which is mostly set up correctly
+	CallInfo *ycf = yielder->curmethod;
+	ycf->nresults = nexpected;
+	ycf->retTo = ycf->methodbase + (flags>>1);  // Address of method value, varargs and return values
+	yielder->yieldTo = th;  // Preserve the current thread we will yield back to
 
-	// C-method call - Does the whole thing: setup, call and stack clean up after return
-	if (isCMethod(ci->method)) {
-		// ci->callstatus=0;
+	// Copy parameters over to top of yielder's stack
+	Value *from = methodval+1;
+	int nparms = th(th)->stk_top - methodval - 1; // Actual number of parameters pushed
+	needMoreLocal(yielder, nparms); // ensure we have room for them
+	int parmcnt = nparms;
+	while (parmcnt--)
+		*yielder->stk_top++ = *from++;
 
-		// Allocate room for local variables, no parm adjustments needed
-		needMoreLocal(th, STACK_MINSIZE);
-		methodRunC(th); // .. and then go ahead and run it
+	// Further initialize yielder, if first time run (state of 'ready')
+	if (!(yielder->flags1 & ThreadActive)) {
+		yielder->flags1 |= ThreadActive; // Change state to 'active'
 
-		return MethodC; // C-method return
-	}
-
-	// Bytecode method call - Only does set-up, call done by caller
-	else {
-		int nparms = th(th)->stk_top - methodval - 1; // Actual number of parameters pushed
-		BMethodInfo *bmethod = (BMethodInfo*) ci->method; // Capture it now before it moves
-
-		// Initialize byte-code's call info
-		ci->ip = bmethod->code; // Start with first instruction
-
-		// Ensure sufficient data stack space.
-		needMoreLocal(th, bmethod->maxstacksize); // methodval may no longer be reliable
+		// Use method's info to set up ip, stack size and parameters
+		assert(isMethod(ycf->method) && !isCMethod(ycf->method));
+		BMethodInfo *bmethod = (BMethodInfo*) ycf->method;
+		ycf->ip = bmethod->code; // Start with first instruction
+		needMoreLocal(yielder, bmethod->maxstacksize); // Ensure we have enough stack space
 
 		// If we do not have enough fixed parameters then add in nulls
 		for (; nparms < methodNParms(bmethod); nparms++)
-			*th(th)->stk_top++ = aNull;
+			*th(yielder)->stk_top++ = aNull;
 
 		// If we expected variable number of parameters, tidy them
 		if (isVarParm(bmethod)) {
-			int i;
-
 			// Reset where fixed parms start (where we are about to put them)
-			Value *from = ci->begin; // Capture where fixed parms are now
-			ci->begin = th(th)->stk_top;
+			Value *from = ycf->begin; // Capture where fixed parms are now
+			ycf->begin = th(yielder)->stk_top;
 
 			// Copy fixed parms up into new frame start
-			for (i=0; i<methodNParms(bmethod); i++) {
-				*th(th)->stk_top++ = *from;
+			for (int i=0; i<methodNParms(bmethod); i++) {
+				*th(yielder)->stk_top++ = *from;
 				*from++ = aNull;  // we don't want dupes that might confuse garbage collector
 			}
 		}
-
-		// Bytecode rarely uses stk_top; put it above local frame stack.
-		th(th)->stk_top = ci->end;
-
-		return MethodBC; // byte-code method return
 	}
+	// Bytecode rarely uses stk_top; put it above local frame stack.
+	th(yielder)->stk_top = ycf->end;
+	return MethodY; // byte-code method return
 }
 
 /** Execute C method (and do return) at thread's current call frame 
@@ -338,6 +321,8 @@ void methodRunC(Value th) {
 	switch (canCallMorC(*firstreg)? callMorCPrep(th, firstreg, nexpected, flags) \
 		: isYielder(*firstreg)? callYielderPrep(th, firstreg, nexpected, flags) \
 		: invalidCall(th, firstreg, nexpected)) { \
+	case MethodY: \
+		th = *rega; \
 	case MethodBC: \
 		ci = th(th)->curmethod; \
 		meth = (BMethodInfo*) (ci->method); \
@@ -730,9 +715,12 @@ void getCall(Value th, int nparms, int nexpected) {
 		*methodpos = getProperty(th, *(methodpos+1), *methodpos);
 
 	// Prepare call frame and stack, then perform the call
-	switch (canCallMorC(*methodpos)? callMorCPrep(th, methodpos, nexpected, 0) \
-		: isYielder(*methodpos)? callYielderPrep(th, methodpos, nexpected, 0) \
-		: invalidCall(th, methodpos, nexpected)) { \
+	switch (canCallMorC(*methodpos)? callMorCPrep(th, methodpos, nexpected, 0)
+		: isYielder(*methodpos)? callYielderPrep(th, methodpos, nexpected, 0)
+		: invalidCall(th, methodpos, nexpected)) {
+	case MethodY:
+		methodRunBC(*methodpos);
+		break;
 	case MethodBC:
 		methodRunBC(th);
 		break;

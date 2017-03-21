@@ -58,6 +58,7 @@ typedef struct ThreadInfo {
 	Value *stk_last;	//!< Points to EXTRA slots below the highest stack value
 
 	// Call stack
+	Value yieldTo;			//!< Thread to yield back to
 	CallInfo *curmethod;	//!< Call info for current method
 	CallInfo entrymethod;	//!< Call info for C-method that started this thread
 } ThreadInfo;
@@ -75,7 +76,8 @@ typedef struct ThreadInfo {
 	{if ((t)->stack) { \
 	for (Value *stkp = (t)->stk_top - 1; stkp >= (t)->stack; stkp--) \
 		mem_markobj(th, *stkp); \
-	} mem_markobj(th, (t)->global);}
+	} mem_markobj(th, (t)->yieldTo); \
+	mem_markobj(th, (t)->global);}
 
 /** Free all of an array's allocated memory */
 #define thrFree(th, t) \

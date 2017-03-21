@@ -211,6 +211,7 @@ Value newCMethod(Value th, Value *dest, AcMethodp method);
 /** Return codes from callMorCPrep */
 enum MethodTypes {
 	MethodBad,	//!< Not a valid method (probably unknown method)
+	MethodY,	//!< Yielder/Byte-code method
 	MethodBC,	//!< Byte-code method
 	MethodC,	//!< C-method
 };

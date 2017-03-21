@@ -46,6 +46,7 @@ void thrInit(ThreadInfo* thr, VmInfo* vm, Value method, AuintIdx stksz, char fla
 	thr->size = 0;
 	stkRealloc(thr, stksz);
 	thr->stk_top = thr->stack;
+	thr->yieldTo = aNull;
 
 	// initialize call stack
 	CallInfo *ci = &thr->entrymethod; // Initial callinfo struct is already allocated
