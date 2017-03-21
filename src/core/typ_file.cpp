@@ -32,7 +32,7 @@ int file_get(Value th) {
 	FILE *file;
 	if (!(file = fopen(fn, "rb"))) {
 		// Do callback, passing null for stream and an error diagnostic
-		if (nparms>2 && isCallable(getLocal(th,2))) {
+		if (nparms>2 && canCall(getLocal(th,2))) {
 			pushLocal(th, 2);
 			pushValue(th, aNull);
 			pushValue(th, aNull);
@@ -54,7 +54,7 @@ int file_get(Value th) {
 	fclose(file);
 
 	// Call the success method, passing it the stream
-	if (nparms>2 && isCallable(getLocal(th,2))) {
+	if (nparms>2 && canCall(getLocal(th,2))) {
 		pushLocal(th, 2);
 		pushValue(th, aNull);
 		pushValue(th, strbuf);

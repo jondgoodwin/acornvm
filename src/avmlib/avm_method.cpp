@@ -25,11 +25,40 @@ Value newCMethod(Value th, Value *dest, AcMethodp method) {
 	return *dest = (Value) meth;
 }
 
-/* Return 1 if callable: a method or closure */
-int isCallable(Value val) {
-	return (isPtr(val) && (
-		((MemInfo*) val)->enctyp==MethEnc
-		|| (((MemInfo*) val)->enctyp==ArrEnc && arr_info(val)->flags1 & TypeClo)));
+/** Rather than perform invalid call, set up nulls as if they were returned */
+MethodTypes invalidCall(Value th, int nexpected, int flags) {
+	CallInfo *ci =th(th)->curmethod;
+	Value* to = ci->retTo + (flags>>1);
+	if (nexpected == BCVARRET)
+		nexpected = 1;
+	while (nexpected--)
+		*to++ = aNull;
+	return MethodBad;
+}
+
+/** Return nulls to caller */
+MethodTypes returnNulls(Value th) {
+	// Copy the desired number of return values (nulls) where indicated
+	CallInfo *ci =th(th)->curmethod;
+	Value* to = ci->retTo;
+	AintIdx want = ci->nresults; // how many caller wants
+	if (want == BCVARRET)
+		want = 1;
+	while (want--)
+		*to++ = aNull;
+
+	// Update thread's values
+	th(th)->stk_top = to; // Mark position of last returned
+	ci = th(th)->curmethod = ci->previous; // Back up a frame
+
+	// Return to 'c' method caller, if we were called from there
+	if (!isMethod(ci->method) || isCMethod(ci->method))
+		return MethodC;
+
+	// For bytecode, restore info from the previous call stack frame
+	if (want != BCVARRET) 
+		th(th)->stk_top = ci->end; // Restore top to end for known # of returns
+	return MethodBC;
 }
 
 /* Prepare call to method value on stack (with parms above it). 
@@ -46,31 +75,26 @@ int isCallable(Value val) {
 MethodTypes callPrep(Value th, Value *methodval, int nexpected, int flags) {
 
 	// Do not call if we do not have a valid method to call - return nulls or set val instead
-	if (!isCallable(*methodval)) {
-		// Copy the desired number of return values (nulls) where indicated
-		CallInfo *ci =th(th)->curmethod;
-		Value* to = ci->retTo + (flags>>1);
-		AintIdx want = ci->nresults; // how many caller wants
-		if (flags==1) {
-			*to++ = *(methodval+2); // For set call, return set value by default
-			want--;
-		}
-		while (want--)
-			*to++ = aNull;
-		return MethodBad;
+	if (!canCall(*methodval))
+		return invalidCall(th, nexpected, flags);
+
+	// Capture the actual method whose code we will running
+	Value realmethod;
+	if (isEnc(*methodval, ArrEnc)) { // closure
+		// Extract appropriate 'get' or 'set' method from closure. Be sure it is a method.
+		realmethod = arrGet(th, *methodval, flags&1);
+		if (!isMethod(realmethod))
+			return invalidCall(th, nexpected, flags);
 	}
+	else
+		realmethod = *methodval; // This is the actual method
 
 	// Start and initialize a new CallInfo block
 	CallInfo * ci = th(th)->curmethod = th(th)->curmethod->next ? th(th)->curmethod->next : thrGrowCI(th);
 	ci->nresults = nexpected;
 	ci->retTo = (ci->methodbase = methodval) + (flags>>1);  // Address of method value, varargs and return values
 	ci->begin = ci->end = methodval + 1; // Parameter values are right after method value
-
-	// Capture the actual method whose code we are running
-	if (isEnc(*methodval, ArrEnc))
-		ci->method = arrGet(th, *methodval, flags&1); // extract from closure variables
-	else
-		ci->method = *methodval; // We already have the method
+	ci->method = realmethod;
 
 	// C-method call - Does the whole thing: setup, call and stack clean up after return
 	if (isCMethod(ci->method)) {
@@ -120,11 +144,12 @@ MethodTypes callPrep(Value th, Value *methodval, int nexpected, int flags) {
 	}
 }
 
-/** A tailcall is effectively a call that does not increase the call stack size.
+/** A tailcall is effectively a call that does not increase the call stack size (a goto).
  * It replaces the current call frame state with state for the called method.
  * This function is only used at the end of a bytecode method and never from a C method.
  * Specify address where method value is store and how many return values expected on stack.
- * It returns an enum indicating what to do next: bad method, bytecode, C-method
+ * It returns an enum indicating what to do next: bad method, bytecode, C-method.
+ * We can assume the call is for a method or a closure.
  *
  * For c-methods, all parameters are passed, reserving 20 slots of stack space.
  * and then it is actually run and the return values are managed.
@@ -134,38 +159,21 @@ MethodTypes callPrep(Value th, Value *methodval, int nexpected, int flags) {
  */
 MethodTypes tailcallPrep(Value th, Value *methodval, int getset) {
 
-	// If we do not have a valid method to call, treat tailcall as just a return to caller,
-	// Return setval or nulls
-	if (!isMethod(*methodval) && !isClosure(*methodval)) {
-		// Copy the desired number of return values (nulls) where indicated
-		CallInfo *ci =th(th)->curmethod;
-		Value* to = ci->retTo;
-		AintIdx want = ci->nresults; // how many caller wants
-		if (getset==1) {
-			*to++ = *(methodval+2); // For set call, return set value by default
-			want--;
-		}
-		while (want--)
-			*to++ = aNull;
-
-		// Update thread's values
-		th(th)->stk_top = to; // Mark position of last returned
-		ci = th(th)->curmethod = ci->previous; // Back up a frame
-
-		// Return to 'c' method caller, if we were called from there
-		if (!isMethod(ci->method) || isCMethod(ci->method))
-			return MethodC;
-
-		// For bytecode, restore info from the previous call stack frame
-		if (want != BCVARRET) 
-			th(th)->stk_top = ci->end; // Restore top to end for known # of returns
-		return MethodBC;
+	// Capture the actual method whose code we will running
+	Value realmethod;
+	if (isEnc(*methodval, ArrEnc)) { // closure
+		// Extract appropriate 'get' or 'set' method from closure. Be sure it is a method.
+		realmethod = arrGet(th, *methodval, getset);
+		if (!isMethod(realmethod))
+			return returnNulls(th);
 	}
+	else
+		realmethod = *methodval; // This is the actual method
 
 	// Alter current call frame to specify method we are calling and parms
 	CallInfo * ci = th(th)->curmethod;
 	// Capture method whose code we are running, extracting from closure if needed
-	ci->method = isEnc(*methodval, ArrEnc)? arrGet(th, *methodval, getset) : *methodval;
+	ci->method = realmethod;
 	int nparms = th(th)->stk_top - methodval - 1;
 	memmove(ci->methodbase, methodval, (nparms+1)*sizeof(Value)); // Move new parms down over old ones
 	th(th)->stk_top = ci->methodbase + nparms + 1;
@@ -437,7 +445,7 @@ void methodRunBC(Value th) {
 		// OpEachPrep: R(A) := R(B).Each
 		case OpEachPrep:
 			*rega = *(stkbeg + bc_b(i));
-			if (!isCallable(*rega)) {
+			if (!canCall(*rega)) {
 				*(rega+1) = *rega;
 				*rega = getProperty(th, *rega, vmlit(SymEachMeth));
 				th(th)->stk_top = rega+2;
@@ -464,7 +472,7 @@ void methodRunBC(Value th) {
 		// OpGetMeth: R(A) := R(A).*R(A+1)
 		// Get property's method value (unless property is an executable method)
 		case OpGetMeth:
-			if (!isCallable(*rega))
+			if (!canCall(*rega))
 				*rega = getProperty(th, *(rega+1), *rega); // Find executable
 			break;
 
@@ -486,7 +494,7 @@ void methodRunBC(Value th) {
 		// Get active property value
 		case OpGetActProp: {
 			*rega = getProperty(th, *(rega+1), *rega);
-			if (isCallable(*rega)) {
+			if (canCall(*rega)) {
 				th(th)->stk_top = rega+2; // Set fixed top for 2 values
 				methCall(rega, bc_c(i), 0);
 			}
@@ -496,7 +504,7 @@ void methodRunBC(Value th) {
 		// Set active property value
 		case OpSetActProp: {
 			Value propval = getProperty(th, *(rega+1), *rega);
-			if (isCallable(propval)) {
+			if (canCall(propval)) {
 				*rega = propval;
 				th(th)->stk_top = rega+3; // Set fixed top for 2 values
 				methCall(rega, 1, 1);
@@ -513,7 +521,7 @@ void methodRunBC(Value th) {
 		// so next open instruction (CALL, RETURN, VAR) may use top.
 		case OpEachCall: {
 			// Get property value. If executable, we can do call
-			if (isCallable(*rega)) {
+			if (canCall(*rega)) {
 				// Reset frame top for fixed parms (var already has it adjusted)
 				int b = bc_b(i); // nbr of parms
 				if (b != BCVARRET) 
@@ -532,7 +540,7 @@ void methodRunBC(Value th) {
 		// so next open instruction (CALL, RETURN, VAR) may use top.
 		case OpGetCall: {
 			// Get property value. If executable, we can do call
-			if (!isCallable(*rega))
+			if (!canCall(*rega))
 				*rega = getProperty(th, *(rega+1), *rega); // Find executable
 
 			// Reset frame top for fixed parms (var already has it adjusted)
@@ -549,7 +557,7 @@ void methodRunBC(Value th) {
 		// so next open instruction (CALL, RETURN, VAR) may use top.
 		case OpSetCall: {
 			// Get property value. If executable, we can do call
-			if (!isCallable(*rega))
+			if (!canCall(*rega))
 				*rega = getProperty(th, *(rega+1), *rega); // Find executable
 
 			// Reset frame top for fixed parms (var already has it adjusted)
@@ -570,9 +578,10 @@ void methodRunBC(Value th) {
 				th(th)->stk_top = rega+b+1;
 
 			// Prepare call frame and stack, then perform the call
-			if (!isCallable(*rega))
+			if (!canCall(*rega))
 				*rega = getProperty(th, *(rega+1), *rega);
-			switch (tailcallPrep(th, rega, 0)) {
+			switch (canCallMorC(*rega)? tailcallPrep(th, rega, 0)
+				: returnNulls(th)) {
 			case MethodC:
 				return; // Return to C caller on bad tailcall attempt
 			case MethodBC:
@@ -580,8 +589,8 @@ void methodRunBC(Value th) {
 				meth = (BMethodInfo*) (ci->method);
 				lits = meth->lits; // literals
 				stkbeg = ci->begin;
-			} }
-			break;
+			}
+			} break;
 
 		// OpReturn: retTo(0 .. wanted) := R(A .. A+B-1); Return
 	    //	if (B == 0xFF), it uses Top-1 (resets Top) rather than A+B-1 (Top=End)
@@ -639,10 +648,10 @@ void getCall(Value th, int nparms, int nexpected) {
 	Value* methodpos = th(th)->stk_top - nparms - 1;
 
 	// If "method" is not a method (likely a symbol), treat it as a property to lookup
-	if (!isCallable(*methodpos)) {
+	if (!canCall(*methodpos)) {
 		*methodpos = getProperty(th, *(methodpos+1), *methodpos);
 		// If property's value is not callable, return nulls
-		if (!isCallable(*methodpos)) {
+		if (!canCall(*methodpos)) {
 			while (nexpected--)
 				*methodpos++ = aNull;
 			th(th)->stk_top = methodpos; // Restore stack top
@@ -666,10 +675,10 @@ void setCall(Value th, int nparms, int nexpected) {
 	Value* methodpos = th(th)->stk_top - nparms - 1;
 
 	// If "method" is a symbol, treat it as a property to lookup
-	if (!isCallable(*methodpos)) {
+	if (!canCall(*methodpos)) {
 		*methodpos = getProperty(th, *(methodpos+1), *methodpos);
 		// If property's value is not callable, set up an indexed get/set using '()' property
-		if (!isCallable(*methodpos)) {
+		if (!canCall(*methodpos)) {
 			*(methodpos+1) = *methodpos;	// property value we got becomes 'self'
 			*methodpos = getProperty(th, *(methodpos+1), vmlit(SymParas)); // look up '()' method
 		}

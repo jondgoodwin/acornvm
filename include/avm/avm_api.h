@@ -136,7 +136,7 @@ AVM_API Value tblNext(Value tbl, Value key);
 AVM_API void addMixin(Value th, Value type, Value mixin);
 
 // Implemented in avm_method.cpp
-/** Return 1 if callable: a method or closure */
+/** Return 1 if callable: a method, closure or yielder */
 AVM_API int isCallable(Value val);
 /** Get a value's property using indexing parameters. Will call a method if found.
  * The stack holds the property symbol followed by nparms parameters (starting with self).

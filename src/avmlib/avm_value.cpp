@@ -74,6 +74,11 @@ Value getType(Value th, Value val) {
 	return aNull; // Should not ever get here
 }
 
+/* Return 1 if callable: a method, closure or yielder */
+int isCallable(Value val) {
+	return canCall(val);
+}
+
 /* Append serialized val to end of str. */
 void serialize(Value th, Value str, int indent, Value val) {
 	// Decode the encoded Value

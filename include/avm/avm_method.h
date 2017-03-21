@@ -56,6 +56,16 @@ typedef struct MethodInfo {
 /** Does the method have variable parameters? (assumes we know it is a method) */
 #define isVarParm(val) (assert_exp(isMethod(val), methodFlags(val) & METHOD_FLG_VARPARM))
 
+/** Is the value a method or closure? */
+#define canCallMorC(val) (isPtr(val) && ( \
+		((MemInfo*) val)->enctyp==MethEnc \
+		|| (((MemInfo*) val)->enctyp==ArrEnc && arr_info(val)->flags1 & TypeClo)))
+
+/** Is the value a method, closure or thread? */
+#define canCall(val) (isPtr(val) && ( \
+		((MemInfo*) val)->enctyp==MethEnc \
+		|| ((MemInfo*) val)->enctyp==ThrEnc \
+		|| (((MemInfo*) val)->enctyp==ArrEnc && arr_info(val)->flags1 & TypeClo)))
 
 /* ************************************
    C methods

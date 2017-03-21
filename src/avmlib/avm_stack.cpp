@@ -259,7 +259,7 @@ Value pushGetActProp(Value th, AintIdx selfidx, const char *propnm) {
 	Value ret = *(th(th)->stk_top-1) = getProperty(th, self, *(th(th)->stk_top-1));
 
 	// If it is callable (e.g., a method), call it to get property value
-	if (isCallable(ret)) {
+	if (canCall(ret)) {
 		// Finish setting up stack for call
 		stkCanIncTop(th); /* Check if there is room for self */
 		*(th(th)->stk_top++) = self;
@@ -286,7 +286,7 @@ void popSetActProp(Value th, AintIdx selfidx, const char *mbrnm) {
 	Value propval = getProperty(th, self, *(th(th)->stk_top-1));
 
 	// If it is callable (e.g., a method), call it to set property value
-	if (isCallable(propval)) {
+	if (canCall(propval)) {
 		// Set up stack for call
 		stkCanIncTop(th); /* Check if there is room for self */
 		Value set = getFromTop(th, 1); // the value to set

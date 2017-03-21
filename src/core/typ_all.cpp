@@ -74,7 +74,7 @@ int all_greateq(Value th) {
 
 /** executable? */
 int all_isexec(Value th) {
-	pushValue(th, isCallable(getLocal(th,0))? aTrue : aFalse);
+	pushValue(th, canCall(getLocal(th,0))? aTrue : aFalse);
 	return 1;
 }
 
