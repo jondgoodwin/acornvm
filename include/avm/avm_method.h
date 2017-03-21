@@ -208,14 +208,14 @@ typedef struct BMethodInfo {
 /** Build a new c-method value, pointing to a method written in C */
 Value newCMethod(Value th, Value *dest, AcMethodp method);
 
-/** Return codes from callPrep */
+/** Return codes from callMorCPrep */
 enum MethodTypes {
 	MethodBad,	//!< Not a valid method (probably unknown method)
 	MethodBC,	//!< Byte-code method
 	MethodC,	//!< C-method
 };
 
-/** Prepare call to method value on stack (with parms above it). 
+/** Prepare call to method or closure value on stack (with parms above it). 
  * Specify how many return values to expect to find on stack.
  * Flags is 0 for normal get, 1 for set, and 2 for repeat get
  * Returns 0 if bad method, 1 if bytecode, 2 if C-method
@@ -226,7 +226,20 @@ enum MethodTypes {
  * For byte code, parameters are massaged to ensure the expected number of
  * fixed parameters and establish a holding place for the variable parameters.
  */
-MethodTypes callPrep(Value th, Value *methodval, int nexpected, int flags);
+MethodTypes callMorCPrep(Value th, Value *methodval, int nexpected, int flags);
+
+/** Prepare call to yielder value on stack (with parms above it). 
+ * Specify how many return values to expect to find on stack.
+ * Flags is 0 for normal get, 1 for set, and 2 for repeat get
+ * Returns 0 if bad method, 1 if bytecode, 2 if C-method
+ *
+ * For c-methods, all parameters are passed, reserving 20 slots of stack space.
+ * and then it is actually run.
+ *
+ * For byte code, parameters are massaged to ensure the expected number of
+ * fixed parameters and establish a holding place for the variable parameters.
+ */
+MethodTypes callYielderPrep(Value th, Value *methodval, int nexpected, int flags);
 
 /** Execute byte-code method pointed at by thread's current call frame */
 void methodRunBC(Value th);

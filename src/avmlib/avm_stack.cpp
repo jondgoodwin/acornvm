@@ -264,7 +264,8 @@ Value pushGetActProp(Value th, AintIdx selfidx, const char *propnm) {
 		stkCanIncTop(th); /* Check if there is room for self */
 		*(th(th)->stk_top++) = self;
 		// Do the call, expecting (and returning) just one return value
-		switch (callPrep(th, th(th)->stk_top-2, 1, 0)) {
+		switch (canCallMorC(th(th)->stk_top-2)? callMorCPrep(th, th(th)->stk_top-2, 1, 0)
+			: callYielderPrep(th, th(th)->stk_top-2, 1, 0)) {
 			case MethodBC:
 				methodRunBC(th);
 				break;
@@ -294,7 +295,8 @@ void popSetActProp(Value th, AintIdx selfidx, const char *mbrnm) {
 		*(th(th)->stk_top-1) = self;
 		*(th(th)->stk_top++) = set;
 		// Do the set call, expecting (and returning) just one return value
-		switch (callPrep(th, th(th)->stk_top-3, 0, 1)) {
+		switch (canCallMorC(th(th)->stk_top-3)? callMorCPrep(th, th(th)->stk_top-3, 1, 0)
+			: callYielderPrep(th, th(th)->stk_top-3, 1, 0)) {
 			case MethodBC:
 				methodRunBC(th);
 				break;

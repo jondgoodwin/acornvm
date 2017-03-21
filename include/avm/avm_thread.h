@@ -89,6 +89,9 @@ typedef struct ThreadInfo {
 /** Point to thread's vm info */
 #define vm(th) (((ThreadInfo*)th)->vm)
 
+/** Is thread a yielder? */
+#define isYielder(th) (isThread(th) && (((ThreadInfo*)th)->flags1) & ThreadYielder)
+
 /** Is thread finished running */
 #define thrIsDone(th) (isThread(th) && (((ThreadInfo*)th)->flags1) & ThreadDone)
 
