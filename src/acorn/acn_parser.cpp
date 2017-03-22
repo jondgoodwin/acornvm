@@ -120,6 +120,7 @@ bool astIsLval(Value th, Value astseg) {
 void parseBlock(CompInfo* comp, Value astseg);
 void parseAppendExp(CompInfo* comp, Value astseg);
 void parseExp(CompInfo* comp, Value astseg);
+void parseThisExp(CompInfo* comp, Value astseg);
 
 /* Add a url literal and return its index */
 bool resource_equal(Value res1, Value res2);
@@ -282,6 +283,11 @@ void parseValue(CompInfo* comp, Value astseg) {
 	// '...' splat
 	else if (lexMatchNext(comp->lex, "...")) {
 		astAddValue(th, astseg, vmlit(SymSplat));
+	}
+	// 'yield' expression
+	else if (lexMatchNext(comp->lex, "yield")) {
+		Value newseg = astAddSeg(th, astseg, vmlit(SymYield), 2);
+		parseThisExp(comp, newseg);
 	}
 	// parenthetically-enclosed expression
 	else if (lexMatchNext(comp->lex, "(")) {

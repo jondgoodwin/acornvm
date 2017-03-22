@@ -261,3 +261,13 @@ Integer.traits
 $test.True((2).clo===1, "Computed property closure get")
 (7).clo = 4
 $test.True((3).clo===4, "Computed property closure set")
+
+# Yielders
+meth = <>[]
+	local n = 5
+	while n<100
+		yield n
+		n = n + 2
+
+each a in 1 .. 5
+	Vm.Print(meth().Text)

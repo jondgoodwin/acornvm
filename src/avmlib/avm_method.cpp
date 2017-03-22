@@ -94,7 +94,6 @@ MethodTypes callMorCPrep(Value th, Value *methodval, int nexpected, int flags) {
 
 	// C-method call - Does the whole thing: setup, call and stack clean up after return
 	if (isCMethod(ci->method)) {
-		// ci->callstatus=0;
 
 		// Allocate room for local variables, no parm adjustments needed
 		needMoreLocal(th, STACK_MINSIZE);
@@ -179,7 +178,6 @@ MethodTypes tailcallMorCPrep(Value th, Value *methodval, int getset) {
 
 	// C-method call - Does the whole thing: setup, call and stack clean up after return
 	if (isCMethod(ci->method)) {
-		// ci->callstatus=0;
 
 		// Allocate room for local variables, no parm adjustments needed
 		needMoreLocal(th, STACK_MINSIZE);
@@ -696,6 +694,48 @@ void methodRunBC(Value th) {
 			}
 			break;
 
+		// OpYield: retTo(0 .. wanted) := R(A .. A+B-1); Return
+	    //	if (B == 0xFF), it uses Top-1 (resets Top) rather than A+B-1 (Top=End)
+		//	Caller sets retTo and wanted (if 0xFF, all return values)
+		//  Return restores previous thread
+		case OpYield:
+		{
+			Value yieldTo = th(th)->yieldTo;
+			th(th)->yieldTo = aNull;
+
+			// Calculate how any we have to copy down and how many nulls for padding
+			Value* to = th(th)->curmethod->retTo;
+			AintIdx have = bc_b(i); // return values we have
+			if (have == BCVARRET) // have variable # of return values?
+				have = th(th)->stk_top - rega; // Get all up to top
+			AintIdx want = th(th)->curmethod->nresults; // how many caller wants
+			AintIdx nulls = 0; // how many nulls for padding
+			if (have != want && want!=BCVARRET) { // performance penalty only to mismatches
+				if (have > want) have = want; // cap down to what we want
+				else /* if (have < want) */ nulls = want - have; // need some null padding
+			}
+
+			// Copy return values into previous frame's data stack
+			while (have--)
+				*to++ = *rega++;
+			while (nulls--)
+				*to++ = aNull;  // Fill rest with nulls
+
+			// Update thread's values
+			th(th)->stk_top = rega;
+			th = yieldTo;
+			th(th)->stk_top = to; // Mark position of last returned
+			ci = th(th)->curmethod;
+
+			// Restore info from the call stack frame
+			if (want != BCVARRET) 
+				th(th)->stk_top = ci->end; // Restore top to end for known # of returns
+			meth = (BMethodInfo*) (ci->method);
+			lits = meth->lits; 
+			stkbeg = ci->begin;
+			}
+			break;
+
 		// Should never reach here
 		default:
 			assert(0 && "Invalid byte code");
@@ -835,6 +875,7 @@ void methSerialize(Value th, Value str, int indent, Value method) {
 		case OpSetCall:  methABCSerialize(th, str, "SetCall ", i); break;
 		case OpTailCall:  methABCSerialize(th, str, "TailCall ", i); break;
 		case OpReturn: methABCSerialize(th, str, "Return ", i); break;
+		case OpYield: methABCSerialize(th, str, "Yield ", i); break;
 		default: strAppend(th, str, "Unknown Opcode", 14);
 		}
 	}

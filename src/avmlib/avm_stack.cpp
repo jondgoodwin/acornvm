@@ -295,7 +295,7 @@ void popSetActProp(Value th, AintIdx selfidx, const char *mbrnm) {
 		*(th(th)->stk_top-1) = self;
 		*(th(th)->stk_top++) = set;
 		// Do the set call, expecting (and returning) just one return value
-		switch (canCallMorC(th(th)->stk_top-3)? callMorCPrep(th, th(th)->stk_top-3, 1, 0)
+		switch (canCallMorC(propval)? callMorCPrep(th, th(th)->stk_top-3, 1, 0)
 			: callYielderPrep(th, th(th)->stk_top-3, 1, 0)) {
 			case MethodBC:
 				methodRunBC(th);

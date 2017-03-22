@@ -164,6 +164,7 @@ enum ByteCodeOps {
 	OpGetCall,
 	OpSetCall,
 	OpReturn,
+	OpYield,
 	OpTailCall,
 	OpEachPrep,
 	OpEachSplat,
