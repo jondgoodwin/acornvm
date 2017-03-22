@@ -76,7 +76,6 @@ AVM_API Value newVM(void) {
 	sym_init(th); // Initialize hash table for symbols
 	newTbl(th, &vm->global, aNull, GLOBAL_NEWSIZE); // Create global hash table
 	mem_markChk(th, vm, vm->global);
-	((ThreadInfo*) th)->global = vm->global; // For now, main thread needs global too
 	vm_litinit(th); // Load reserved and standard symbols into literal list
 	core_init(th); // Load up global table and literal list with core types
 	setType(th, vm->global, vmlit(TypeIndexm)); // Fix up type info for global table

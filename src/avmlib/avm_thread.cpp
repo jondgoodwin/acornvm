@@ -39,8 +39,6 @@ void thrInit(ThreadInfo* thr, VmInfo* vm, Value method, AuintIdx stksz, char fla
 	thr->size = 0;
 	thr->flags1 = flags;
 
-	thr->global = aNull;
-
 	// Allocate and initialize thread's stack
 	thr->stack = NULL;
 	thr->size = 0;
@@ -101,14 +99,14 @@ void thrFreeStacks(Value th) {
 
 /* Retrieve a value from global namespace */
 Value gloGet(Value th, Value var) {
-	assert(isTbl(th(th)->global));
-	return tblGet(th, th(th)->global, var);
+	assert(isTbl(vm(th)->global));
+	return tblGet(th, vm(th)->global, var);
 }
 
 /* Add or change a global variable */
 void gloSet(Value th, Value var, Value val) {
-	assert(isTbl(th(th)->global));
-	tblSet(th, th(th)->global, var, val);
+	assert(isTbl(vm(th)->global));
+	tblSet(th, vm(th)->global, var, val);
 }
 
 #ifdef __cplusplus

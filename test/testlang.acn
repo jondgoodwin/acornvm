@@ -265,9 +265,10 @@ $test.True((3).clo===4, "Computed property closure set")
 # Yielders
 meth = <>[]
 	local n = 5
-	while n<100
+	each n in 5 .. 100 .. 2
+		Vm using 'Print'
+			"Yielding ";n.Text;"\n"
 		yield n
-		n = n + 2
 
 each a in 1 .. 5
 	Vm.Print(meth().Text)

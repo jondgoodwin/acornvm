@@ -49,7 +49,6 @@ typedef struct ThreadInfo {
 
 	// VM and global namespace
 	VmInfo *vm;			//!< Virtual machine that thread is part of
-	Value global;		//!< thread's global namespace
 
 	// Data stack pointers
 	// Note: "size" is the data stack's allocated size
@@ -76,8 +75,7 @@ typedef struct ThreadInfo {
 	{if ((t)->stack) { \
 	for (Value *stkp = (t)->stk_top - 1; stkp >= (t)->stack; stkp--) \
 		mem_markobj(th, *stkp); \
-	} mem_markobj(th, (t)->yieldTo); \
-	mem_markobj(th, (t)->global);}
+	} mem_markobj(th, (t)->yieldTo);}
 
 /** Free all of an array's allocated memory */
 #define thrFree(th, t) \

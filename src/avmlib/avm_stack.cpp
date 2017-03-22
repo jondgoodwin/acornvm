@@ -367,26 +367,26 @@ void setTop(Value th, AintIdx idx) {
 /* Push and return the symbolically-named global variable's value */
 Value pushGloVar(Value th, const char *var) {
 	stkCanIncTop(th); /* Check if there is room */
-	assert(isTbl(th(th)->global));
+	assert(isTbl(vm(th)->global));
 	Value val = newSym(th, th(th)->stk_top++, var, strlen(var));
 	mem_markChk(th, th, val); /* Mark it if needed */
-	return *(th(th)->stk_top-1) = tblGet(th, th(th)->global, val);
+	return *(th(th)->stk_top-1) = tblGet(th, vm(th)->global, val);
 }
 
 /* Alter the symbolically-named global variable to have the value popped off the local stack */
 void popGloVar(Value th, const char *var) {
 	assert(stkSz(th)>0); // Must be at least one value to remove!
-	assert(isTbl(th(th)->global));
+	assert(isTbl(vm(th)->global));
 	stkCanIncTop(th); /* Check if there is room */
 	Value val = newSym(th, th(th)->stk_top++, var, strlen(var));
-	tblSet(th, th(th)->global, *(th(th)->stk_top-1), *(th(th)->stk_top-2));
+	tblSet(th, vm(th)->global, *(th(th)->stk_top-1), *(th(th)->stk_top-2));
 	th(th)->stk_top -= 2; // Pop key & value after value is safely in Global
 }
 
 /* Push the value of the current process thread's global variable table. */
 Value pushGlobal(Value th) {
 	stkCanIncTop(th); /* Check if there is room */
-	return *th(th)->stk_top++ = th(th)->global;
+	return *th(th)->stk_top++ = vm(th)->global;
 }
 
 /* ****************************************
