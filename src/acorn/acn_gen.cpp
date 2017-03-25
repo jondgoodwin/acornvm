@@ -479,7 +479,7 @@ void genReturn(CompInfo *comp, Value aststmt, int op) {
 		if (reg>=0)
 			genAddInstr(comp, BCINS_ABC(op, reg, 1, 0));
 		// Do tail call if we are calling another method as the return value
-		else if (isArr(retexp) && astGet(th, retexp, 0)==vmlit(SymCallProp))
+		else if (op==OpReturn && isArr(retexp) && astGet(th, retexp, 0)==vmlit(SymCallProp))
 			genDoProp(comp, retexp, OpTailCall, aNull, 1);
 		// For solo splat, load parameter varargs and return them
 		else if (retexp == vmlit(SymSplat)) {

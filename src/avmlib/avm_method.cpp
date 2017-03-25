@@ -241,15 +241,18 @@ MethodTypes callYielderPrep(Value th, Value *methodval, int nexpected, int flags
 	// Set return info in yielder's existing call frame, which is mostly set up correctly
 	CallInfo *ycf = yielder->curmethod;
 	ycf->nresults = nexpected;
-	ycf->retTo = ycf->methodbase + (flags>>1);  // Address of method value, varargs and return values
+	ycf->retTo = methodval + (flags>>1);  // Address of method value, varargs and return values
 	yielder->yieldTo = th;  // Preserve the current thread we will yield back to
 
 	// Copy parameters over to top of yielder's stack
 	Value *from = methodval+1;
 	int nparms = th(th)->stk_top - methodval - 1; // Actual number of parameters pushed
 	needMoreLocal(yielder, nparms); // ensure we have room for them
+	if (yielder->flags1 & ThreadActive) {
+		from++; nparms--; // For active yielders, do not copy 'self' again
+	}
 	int parmcnt = nparms;
-	while (parmcnt--)
+	while (parmcnt-- > 0)
 		*yielder->stk_top++ = *from++;
 
 	// Further initialize yielder, if first time run (state of 'ready')
@@ -637,20 +640,62 @@ void methodRunBC(Value th) {
 			if (b != BCVARRET) 
 				th(th)->stk_top = rega+b+1;
 
-			// Prepare call frame and stack, then perform the call
-			if (!canCall(*rega))
-				*rega = getProperty(th, *(rega+1), *rega);
-			switch (canCallMorC(*rega)? tailcallMorCPrep(th, rega, 0)
-				: isYielder(*rega)? callYielderPrep(th, rega, b, 0)
-				: returnNulls(th)) {
-			case MethodC:
-				return; // Return to C caller on bad tailcall attempt
-			case MethodBC:
+			// Cannot do a tailcall if the return would switch threads
+			// In this situation, we must do a normal call then a return afterwards
+			if (isYielder(th) && ci==&th(th)->entrymethod) {
+				getCall(th, b, bc_c(i)); // Call
+
+				// Return: Calculate how any we have to copy down and how many nulls for padding
+				AintIdx have = th(th)->stk_top - rega; // Get all up to top
+				AintIdx want = th(th)->curmethod->nresults; // how many caller wants
+				AintIdx nulls = 0; // how many nulls for padding
+				if (have != want && want!=BCVARRET) { // performance penalty only to mismatches
+					if (have > want) have = want; // cap down to what we want
+					else /* if (have < want) */ nulls = want - have; // need some null padding
+				}
+
+				// Copy return values into previous frame's data stack
+				Value *from = rega;
+				Value *to = th(th)->curmethod->retTo;
+				while (have--)
+					*to++ = *from++;
+				while (nulls--)
+					*to++ = aNull;  // Fill rest with nulls
+
+				// Back up for thread switching
+				// Mark that yielder is finished and cannot be used further
+				th(th)->flags1 |= ThreadDone;
+
+				// Switch current thread to caller
+				th = th(th)->yieldTo;
 				ci = th(th)->curmethod;
-				meth = (BMethodInfo*) (ci->method);
-				lits = meth->lits; // literals
-				stkbeg = ci->begin;
+				th(th)->stk_top = to; // Mark position of last returned
+
+				// Return to 'c' method caller, if we were called from there
+				meth = (BMethodInfo*) ci->method;
+				if (!isMethod(meth) || isCMethod(meth))
+					return;
+
+				// For bytecode, restore info from the previous call stack frame
+				if (want != BCVARRET)
+					th(th)->stk_top = ci->end; // Restore top to end for known # of returns
 			}
+			else {
+				// Prepare call frame and stack, then perform the call
+				if (!canCall(*rega))
+					*rega = getProperty(th, *(rega+1), *rega);
+				switch (canCallMorC(*rega)? tailcallMorCPrep(th, rega, 0)
+					: isYielder(*rega)? callYielderPrep(th, rega, bc_c(i), 0)
+					: returnNulls(th)) {
+				case MethodC:
+					return; // Return to C caller on bad tailcall attempt
+				case MethodBC:
+					ci = th(th)->curmethod;
+					meth = (BMethodInfo*) (ci->method);
+				}
+			}
+			lits = meth->lits;
+			stkbeg = ci->begin;
 			} break;
 
 		// OpReturn: retTo(0 .. wanted) := R(A .. A+B-1); Return
@@ -660,7 +705,6 @@ void methodRunBC(Value th) {
 		case OpReturn:
 		{
 			// Calculate how any we have to copy down and how many nulls for padding
-			Value* to = th(th)->curmethod->retTo;
 			AintIdx have = bc_b(i); // return values we have
 			if (have == BCVARRET) // have variable # of return values?
 				have = th(th)->stk_top - rega; // Get all up to top
@@ -672,23 +716,35 @@ void methodRunBC(Value th) {
 			}
 
 			// Copy return values into previous frame's data stack
+			Value *from = rega;
+			Value *to = th(th)->curmethod->retTo;
 			while (have--)
-				*to++ = *rega++;
+				*to++ = *from++;
 			while (nulls--)
 				*to++ = aNull;  // Fill rest with nulls
 
-			// Update thread's values
+			// Back up differently for thread switching vs. frame rollback
+			if (isYielder(th) && ci==&th(th)->entrymethod) {
+				// Mark that yielder is finished and cannot be used further
+				th(th)->flags1 |= ThreadDone;
+
+				// Switch current thread to caller
+				th = th(th)->yieldTo;
+				ci = th(th)->curmethod;
+			}
+			else
+				// Back up a frame
+				ci = th(th)->curmethod = ci->previous;
 			th(th)->stk_top = to; // Mark position of last returned
-			ci = th(th)->curmethod = ci->previous; // Back up a frame
 
 			// Return to 'c' method caller, if we were called from there
-			if (!isMethod(ci->method) || isCMethod(ci->method))
+			meth = (BMethodInfo*) ci->method;
+			if (!isMethod(meth) || isCMethod(meth))
 				return;
 
 			// For bytecode, restore info from the previous call stack frame
 			if (want != BCVARRET) 
 				th(th)->stk_top = ci->end; // Restore top to end for known # of returns
-			meth = (BMethodInfo*) (ci->method);
 			lits = meth->lits; 
 			stkbeg = ci->begin;
 			}
@@ -700,11 +756,7 @@ void methodRunBC(Value th) {
 		//  Return restores previous thread
 		case OpYield:
 		{
-			Value yieldTo = th(th)->yieldTo;
-			th(th)->yieldTo = aNull;
-
-			// Calculate how any we have to copy down and how many nulls for padding
-			Value* to = th(th)->curmethod->retTo;
+			// Calculate how many return values we have to copy down and how many nulls for padding
 			AintIdx have = bc_b(i); // return values we have
 			if (have == BCVARRET) // have variable # of return values?
 				have = th(th)->stk_top - rega; // Get all up to top
@@ -716,21 +768,33 @@ void methodRunBC(Value th) {
 			}
 
 			// Copy return values into previous frame's data stack
+			Value *from = rega;
+			Value *to = th(th)->curmethod->retTo;
 			while (have--)
-				*to++ = *rega++;
+				*to++ = *from++;
 			while (nulls--)
 				*to++ = aNull;  // Fill rest with nulls
 
-			// Update thread's values
+			// Fix yielder stack pointer for callback
 			th(th)->stk_top = rega;
-			th = yieldTo;
-			th(th)->stk_top = to; // Mark position of last returned
+
+			// Switch current thread/frame to caller
+			th = th(th)->yieldTo;
 			ci = th(th)->curmethod;
 
-			// Restore info from the call stack frame
+			// Mark position of last returned
+			th(th)->stk_top = to; // Mark position of last returned
+
+			// Return to 'c' method caller, if we were called from there
+			meth = (BMethodInfo*) ci->method;
+			if (!isMethod(meth) || isCMethod(meth))
+				return;
+
+			// For bytecode, restore info from the previous call stack frame
 			if (want != BCVARRET) 
 				th(th)->stk_top = ci->end; // Restore top to end for known # of returns
-			meth = (BMethodInfo*) (ci->method);
+
+			// Restore info from the call stack frame
 			lits = meth->lits; 
 			stkbeg = ci->begin;
 			}

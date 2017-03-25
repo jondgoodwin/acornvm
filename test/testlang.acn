@@ -262,13 +262,56 @@ $test.True((2).clo===1, "Computed property closure get")
 (7).clo = 4
 $test.True((3).clo===4, "Computed property closure set")
 
-# Yielders
-meth = <>[]
-	local n = 5
-	each n in 5 .. 100 .. 2
-		Vm using 'Print'
-			"Yielding ";n.Text;"\n"
-		yield n
+# Yielder testing: silly example with data passing both ways
+meth = <>[x]
+	local a = yield 2,x
+	local b = yield a+10
+	yield a+b
+	x
+$test.True(meth.status === 'ready', "meth.status === 'ready'")
+a,b=meth(9)
+$test.True(a===2 and b===9, "yielder: a===2 and b===9")
+$test.True(meth.status === 'active', "meth.status === 'active'")
+$test.True(meth(3)===13, "yielder: meth(3)===13")
+$test.True(meth(1)===4, "yielder: meth(1)===4")
+$test.True(meth()===9, "yielder: meth()===9")
+$test.True(meth.status === 'done', "meth.status === 'done'")
+meth.Reset
+$test.True(meth.status === 'ready', "Yielder reset: meth.status === 'ready'")
+a,b=meth(9)
+$test.True(a===2 and b===9, "Yielder reset: a===2 and b===9")
 
-each a in 1 .. 5
-	Vm.Print(meth().Text)
+# Yielder as a computed property
+Integer.traits
+	Fibo:= <>[]
+		local start, inc = 1, 0
+		while true
+			yield start
+			start,inc = start+inc, start
+each n in 1 .. 10
+	a = n.Fibo
+$test.True(a===55, "10th fibonacci number is 55")
+
+# Yielder with 'do' (.Begin/.End)
+meth = <>[]
+	local a = 3
+	yield
+	a = a + 5
+	yield
+	a+1
+do meth
+	local a = 1
+$test.True(meth()===9, "Yielder with do")
+
+# Yielder in each, using Reset with parms
+meth = <>[start=1, inc=0]
+	local i=1
+	while true
+		yield i, start
+		start,inc,i = start+inc, start, i+1
+each i:n in meth.Reset(self, 2, 4)
+	break if n>100
+	Vm using 'Print'
+		i.Text;": ";n.Text;", "
+Vm.Print("\n")
+$test.True(meth()===10, "Fibo Yielder with Reset and Each")

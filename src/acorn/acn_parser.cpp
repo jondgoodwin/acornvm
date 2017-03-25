@@ -351,7 +351,7 @@ void parseValue(CompInfo* comp, Value astseg) {
 
 					// Handle specified initializer expression
 					if (lexMatchNext(comp->lex, "=")) {
-						parseExp(comp, newcloseg);
+						parseAppendExp(comp, newcloseg);
 					}
 					// No initializer expression? Initialize it using same named 'local' variable
 					else if (symnm == vmlit(SymSelf))
@@ -1082,7 +1082,7 @@ void parseProgram(CompInfo* comp) {
 					// Produce this ast: parm||=default-expression
 					Value oreqseg = astAddSeg(th, parminitast, vmlit(SymOrAssgn), 3);
 					astAddSeg2(th, oreqseg, vmlit(SymLocal), symnm);
-					parseExp(comp, oreqseg);
+					parseAppendExp(comp, oreqseg);
 				}
 			}
 		} while (lexMatchNext(comp->lex, ","));
