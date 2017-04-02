@@ -47,7 +47,7 @@ void thrInit(ThreadInfo* thr, VmInfo* vm, Value method, AuintIdx stksz, char fla
 	thr->yieldTo = aNull;
 
 	// initialize call stack
-	CallInfo *ci = &thr->entrymethod; // Initial callinfo struct is already allocated
+	CallInfo *ci = thr->curmethod = &thr->entrymethod; // Initial callinfo struct is already allocated
 	ci->next = ci->previous = NULL;
 	// ci->callstatus = 0;
 	ci->nresults = 0;
@@ -56,7 +56,13 @@ void thrInit(ThreadInfo* thr, VmInfo* vm, Value method, AuintIdx stksz, char fla
 	ci->begin = thr->stk_top;
 	ci->end = thr->stk_top + STACK_MINSIZE;
 	ci->method = method;
-	thr->curmethod = ci;
+
+	// Use byte-code method's info to set up ip and stack size
+	if (method != aNull) {
+		assert(isMethod(method) && !isCMethod(method));
+		ci->ip = ((BMethodInfo*) method)->code; // Start with first instruction
+		needMoreLocal(thr, ((BMethodInfo*) method)->maxstacksize); // Ensure we have enough stack space
+	}
 }
 
 /** Return 1 if it is a Thread, else return 0 */

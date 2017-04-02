@@ -46,9 +46,13 @@ typedef struct MethodInfo {
 // 0x80 reserved for Locked
 #define METHOD_FLG_C			0x40 //!< The method is coded in C (vs. Bytecode)
 #define METHOD_FLG_VARPARM		0x20 //!< The method accepts a variable number of parameters
+#define METHOD_FLG_YIELDER		0x10 //!< Method call creates a yielder
 
 /** Is the value a method? */
 #define isMethod(val) (isEnc(val, MethEnc))
+
+/** Does the method create a yielder? */
+#define isYieldMeth(val) (methodFlags(val) & METHOD_FLG_YIELDER)
 
 /** Is the value a C method? (assumes we know it is a method) */
 #define isCMethod(val) (assert_exp(isMethod(val), methodFlags(val) & METHOD_FLG_C))

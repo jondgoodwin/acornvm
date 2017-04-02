@@ -295,16 +295,8 @@ void parseValue(CompInfo* comp, Value astseg) {
 		if (!lexMatchNext(comp->lex, ")"))
 			lexLog(comp->lex, "Expected ')'.");
 	}
-	// Yielder creation: ('callprop', Yielder, New, method)
-	else if (lexMatchNext(comp->lex, "<>")) {
-		parseValue(comp, astseg);
-		Value newseg = astPushNew(th, vmlit(SymCallProp), 4);
-		astAddSeg2(th, newseg, vmlit(SymGlobal), vmlit(SymYielder));
-		astAddSeg2(th, newseg, vmlit(SymLit), vmlit(SymNew));
-		astPopNew(th, astseg, newseg);
-	}
 	// Method definition
-	else if (lexMatch(comp->lex, "[")) {
+	else if (lexMatch(comp->lex, "[") || lexMatch(comp->lex, "*[")) {
 		Value svclovars = comp->clovarseg;
 		Value svnewcloseg = comp->newcloseg;
 		Value newcloseg = astseg;
@@ -330,7 +322,7 @@ void parseValue(CompInfo* comp, Value astseg) {
 		comp->clovarseg = svclovars;
 	}
 	// Explicit closure definition
-	else if (lexMatchNext(comp->lex, "*[")) {
+	else if (lexMatchNext(comp->lex, "+[")) {
 		Value svclovars = comp->clovarseg;
 		Value svnewcloseg = comp->newcloseg;
 		bool svexplicitclo = comp->explicitclo;
@@ -1056,7 +1048,12 @@ void parseProgram(CompInfo* comp) {
 	Value parminitast = astAddSeg(th, methast, vmlit(SymSemicolon), 4);
 
 	// process parameters as local variables
-	if (lexMatchNext(comp->lex, "[")) {
+	bool isYielder = false;
+	if (lexMatchNext(comp->lex, "[") || (isYielder = lexMatchNext(comp->lex, "*["))) {
+		if (isYielder)
+			methodFlags(comp->method) |= METHOD_FLG_YIELDER;
+
+		// Process parameter declaration
 		do {
 			if (lexMatchNext(comp->lex, "...")) {
 				methodFlags(comp->method) |= METHOD_FLG_VARPARM;

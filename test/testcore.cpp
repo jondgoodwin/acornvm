@@ -37,7 +37,7 @@ int test_equal(Value th) {
 int test_true(Value th) {
 	tests++;
 	if (getTop(th)<3) {
-		printf("Insufficient parameters for $test.True\n");
+		printf("Insufficient parameters for $test.True: %s\n", toStr(getLocal(th, getTop(th)-1)));
 		fails++;
 		return 0;
 	}

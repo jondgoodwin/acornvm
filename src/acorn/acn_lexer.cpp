@@ -300,6 +300,10 @@ bool lexScanNumber(LexInfo *lex) {
 		if (base>0) {
 			// Decimal point means it is floating point after all
 			if (base==10 && lex_thischar(lex)=='.') {
+				// If next character is a symbol/range, treat '.' as method operator instead
+				Auchar nchr = lex_nextchar(lex);
+				if (isualpha(nchr) || nchr=='_' || nchr=='$' || nchr=='(' || nchr=='\'' || nchr=='.')
+					break;
 				lex_skipchar(lex);
 				base = -1;
 				continue;
@@ -592,7 +596,6 @@ bool lexScanOp(LexInfo *lex) {
 	} else if ((ch1=='>' && ch2=='=')
 		|| (ch1=='!' && ch2=='=')
 		|| (ch1=='~' && ch2=='~')
-		|| (ch1=='<' && ch2=='>')
 		|| (ch1=='<' && ch2=='<')
 		|| (ch1=='>' && ch2=='>')
 		|| (ch1=='+' && ch2=='=')
@@ -606,6 +609,7 @@ bool lexScanOp(LexInfo *lex) {
 		|| (ch1=='|' && ch2=='|')
 		|| (ch1=='*' && ch2=='*')
 		|| (ch1=='.' && ch2=='&')
+		|| (ch1=='+' && ch2=='[')
 		|| (ch1=='*' && ch2=='[')
 		) lex_skipchar(lex);
 

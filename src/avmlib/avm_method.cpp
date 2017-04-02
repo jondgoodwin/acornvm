@@ -85,6 +85,51 @@ MethodTypes callMorCPrep(Value th, Value *methodval, int nexpected, int flags) {
 	else
 		realmethod = *methodval; // This is the actual method
 
+	/* Generate yielder, if that is what this method does */
+	if (isYieldMeth(realmethod)) {
+		// Create a new yielder on top of stack
+		ThreadInfo *yielder = (ThreadInfo*) newThread(th, th(th)->stk_top, *methodval, 64, ThreadYielder);
+
+		// Calculate number of parms to copy over, number of fill nulls
+		int nparms = th(th)->stk_top - methodval - 1;
+		int nulls = methodNParms(*methodval) - nparms;
+		if (nulls < 0) {
+			nulls = 0;
+			nparms = methodNParms(*methodval);
+		}
+		needMoreLocal(yielder, nparms+nulls); // ensure we have room for them
+
+		// Copy parameters/nulls over into yielder's stack
+		Value *from = methodval+1;
+		while (nparms--)
+			*yielder->stk_top++ = *from++;
+		while (nulls--)
+			*yielder->stk_top++ = aNull;
+
+		// If we expected variable number of parameters, tidy them
+		if (isVarParm(*methodval)) {
+			// Reset where fixed parms start (where we are about to put them)
+			CallInfo *ci = yielder->curmethod;
+			Value *from = ci->begin; // Capture where fixed parms are now
+			ci->begin = th(yielder)->stk_top;
+
+			// Copy fixed parms up into new frame start
+			for (int i=0; i<methodNParms(*methodval); i++) {
+				*th(yielder)->stk_top++ = *from;
+				*from++ = aNull;  // we don't want dupes that might confuse garbage collector
+			}
+		}
+
+		// Move yielder down to return value position, plus expected nulls
+		methodval += flags >> 1;
+		if (nexpected)
+			*methodval++ = yielder;
+		while (--nexpected > 0)
+			*methodval++ = aNull;
+		th(th)->stk_top = methodval;
+		return MethodBad;
+	}
+
 	// Start and initialize a new CallInfo block
 	CallInfo * ci = th(th)->curmethod = th(th)->curmethod->next ? th(th)->curmethod->next : thrGrowCI(th);
 	ci->nresults = nexpected;
@@ -238,50 +283,27 @@ MethodTypes callYielderPrep(Value th, Value *methodval, int nexpected, int flags
 	if (yielder->flags1 & ThreadDone)
 		return invalidCall(th, methodval, nexpected);
 
-	// Set return info in yielder's existing call frame, which is mostly set up correctly
+	// Copy parameters over to top of yielder's stack
 	CallInfo *ycf = yielder->curmethod;
+	Value *from = methodval+2; // skip 'self'
+	int nparms = th(th)->stk_top - methodval - 2; // Actual number of parameters pushed
+	int nulls = 0;
+	if (ycf->nresults != BCVARRET) {
+		if ((nulls = ycf->nresults - nparms) < 0) {
+			nparms = ycf->nresults;
+			nulls = 0;
+		}
+	}
+	while (nparms-- > 0)
+		*yielder->stk_top++ = *from++;
+	while (nulls--)
+		*yielder->stk_top++ = aNull;
+
+	// Set return info in yielder's existing call frame, which is mostly set up correctly
 	ycf->nresults = nexpected;
 	ycf->retTo = methodval + (flags>>1);  // Address of method value, varargs and return values
 	yielder->yieldTo = th;  // Preserve the current thread we will yield back to
 
-	// Copy parameters over to top of yielder's stack
-	Value *from = methodval+1;
-	int nparms = th(th)->stk_top - methodval - 1; // Actual number of parameters pushed
-	needMoreLocal(yielder, nparms); // ensure we have room for them
-	if (yielder->flags1 & ThreadActive) {
-		from++; nparms--; // For active yielders, do not copy 'self' again
-	}
-	int parmcnt = nparms;
-	while (parmcnt-- > 0)
-		*yielder->stk_top++ = *from++;
-
-	// Further initialize yielder, if first time run (state of 'ready')
-	if (!(yielder->flags1 & ThreadActive)) {
-		yielder->flags1 |= ThreadActive; // Change state to 'active'
-
-		// Use method's info to set up ip, stack size and parameters
-		assert(isMethod(ycf->method) && !isCMethod(ycf->method));
-		BMethodInfo *bmethod = (BMethodInfo*) ycf->method;
-		ycf->ip = bmethod->code; // Start with first instruction
-		needMoreLocal(yielder, bmethod->maxstacksize); // Ensure we have enough stack space
-
-		// If we do not have enough fixed parameters then add in nulls
-		for (; nparms < methodNParms(bmethod); nparms++)
-			*th(yielder)->stk_top++ = aNull;
-
-		// If we expected variable number of parameters, tidy them
-		if (isVarParm(bmethod)) {
-			// Reset where fixed parms start (where we are about to put them)
-			Value *from = ycf->begin; // Capture where fixed parms are now
-			ycf->begin = th(yielder)->stk_top;
-
-			// Copy fixed parms up into new frame start
-			for (int i=0; i<methodNParms(bmethod); i++) {
-				*th(yielder)->stk_top++ = *from;
-				*from++ = aNull;  // we don't want dupes that might confuse garbage collector
-			}
-		}
-	}
 	// Bytecode rarely uses stk_top; put it above local frame stack.
 	th(yielder)->stk_top = ycf->end;
 	return MethodY; // byte-code method return
@@ -508,13 +530,17 @@ void methodRunBC(Value th) {
 		// OpEachPrep: R(A) := R(B).Each
 		case OpEachPrep:
 			*rega = *(stkbeg + bc_b(i));
-			if (!canCall(*rega)) {
+			if (isMethod(*rega)) {
+				*(rega+1) = *(ci->begin); // self
+				th(th)->stk_top = rega+2;
+				methCall(rega, 1, 1);
+			}
+			else if (!canCall(*rega)) {
 				*(rega+1) = *rega;
 				*rega = getProperty(th, *rega, vmlit(SymEachMeth));
 				th(th)->stk_top = rega+2;
-				methCall(rega, 1, 0);
+				methCall(rega, 1, 1);
 			}
-			//	*rega = getProperty(th, *rega, vmlit(SymEachMeth));
 			break;
 
 		// OpEachSplat: R(A+1) := R(A)/null, R(A+2) := ...[R(A)], R(A):=R(A)+1

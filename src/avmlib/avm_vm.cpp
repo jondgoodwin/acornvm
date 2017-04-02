@@ -55,7 +55,7 @@ AVM_API Value newVM(void) {
 	((ThreadInfo*) th)->marked = vm->currentwhite;
 	((ThreadInfo*) th)->enctyp = ThrEnc;
 	((ThreadInfo*) th)->next = NULL;
-	thrInit(&vm->main_thr, vm, aNull, STACK_NEWSIZE, ThreadActive);
+	thrInit(&vm->main_thr, vm, aNull, STACK_NEWSIZE, 0);
 	vm->threads = NULL;
 
 	// Initialize PCG random number generator to starting values

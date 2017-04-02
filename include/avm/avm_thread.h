@@ -66,8 +66,7 @@ typedef struct ThreadInfo {
 // 0x80 reserved for Locked
 #define ThreadYielder 0x40	//!< Flags1 bit, if thread is a yielder
 #define ThreadThread  0x20	//!< Flags1 bit, if thread is a thread
-#define ThreadActive  0x10	//!< Flags1 bit, if thread has been started
-#define ThreadDone    0x08	//!< Flags1 bit, if thread has finished
+#define ThreadDone    0x10	//!< Flags1 bit, if thread has finished
 
 /** Mark all in-use thread values for garbage collection 
  * Increments how much allocated memory the thread uses. */

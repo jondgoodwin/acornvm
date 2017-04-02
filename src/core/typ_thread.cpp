@@ -13,24 +13,9 @@ namespace avm {
 extern "C" {
 #endif
 
-/** new creates a new Yielder using specified method */
-int yielder_new(Value th) {
-	Value method = getTop(th)<2? aNull : getLocal(th,1);
-	if (!isMethod(method) || isCMethod(method))
-		return 0;
-	pushYielder(th, method);
-	return 1;
-}
-
-/** Return symbol corresponding to thread's status */
-int context_status(Value th) {
-	ThreadInfo *context = (ThreadInfo*) getLocal(th, 0);
-	if (context->flags1 & ThreadDone)
-		pushSym(th, "done");
-	else if (context->flags1 & ThreadActive)
-		pushSym(th, "active");
-	else
-		pushSym(th, "ready");
+/** Return true if thread is done */
+int context_isdone(Value th) {
+	pushValue(th, th(getLocal(th, 0))->flags1 & ThreadDone? aTrue : aFalse);
 	return 1;
 }
 
@@ -38,34 +23,13 @@ int context_status(Value th) {
 int context_reset(Value th) {
 	// Re-initialize thread info that resets it
 	ThreadInfo *context = (ThreadInfo*) getLocal(th, 0);
-	context->flags1 &= ~(ThreadDone | ThreadActive);
-	context->stk_top = context->stack + 1;
+	context->flags1 &= ~(ThreadDone);
 	context->yieldTo = aNull;
-	context->curmethod = &context->entrymethod;
+	CallInfo *cf = context->curmethod = &context->entrymethod;
+	cf->nresults = 0;
+	cf->ip = ((BMethodInfo*) cf->method)->code; // Start with first instruction
 
-	// If any parameters are given, use them to initialize parameters
-	if (getTop(th)>1) {
-		context->flags1 |= ThreadActive;
-
-		// Copy parameters over to top of yielder's stack
-		AuintIdx fromi = 1;
-		int nparms = getTop(th)-1;
-		needMoreLocal(context, nparms); // ensure we have room for them
-		while (nparms--)
-			*context->stk_top++ = getLocal(th, fromi++);
-
-		// Use method's info to set up ip, stack size and parameters
-		CallInfo *cf = context->curmethod;
-		BMethodInfo *bmethod = (BMethodInfo*) cf->method;
-		assert(isMethod(bmethod) && !isCMethod(bmethod));
-		cf->ip = bmethod->code; // Start with first instruction
-		needMoreLocal(context, bmethod->maxstacksize); // Ensure we have enough stack space
-
-		// If we do not have enough fixed parameters then add in nulls
-		for (; nparms < methodNParms(bmethod); nparms++)
-			*th(context)->stk_top++ = aNull;
-	}
-	// Return the reset thread
+	// Return the thread
 	setTop(th, 1);
 	return 1;
 }
@@ -141,8 +105,8 @@ void core_thread_init(Value th) {
 		vmlit(TypeYieldm) = pushMixin(th, vmlit(TypeType), aNull, 16);
 			pushSym(th, "*Yielder");
 			popProperty(th, 1, "_name");
-			pushCMethod(th, context_status);
-			popProperty(th, 1, "status");
+			pushCMethod(th, context_isdone);
+			popProperty(th, 1, "done?");
 			pushCMethod(th, context_reset);
 			popProperty(th, 1, "Reset");
 			pushCMethod(th, context_call);
@@ -159,8 +123,6 @@ void core_thread_init(Value th) {
 			popProperty(th, 1, "stack");
 		popProperty(th, 0, "traits");
 
-		pushCMethod(th, yielder_new);
-		popProperty(th, 0, "New");
 	popGloVar(th, "Yielder");
 	return;
 }

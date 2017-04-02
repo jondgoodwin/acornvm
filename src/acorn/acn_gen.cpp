@@ -527,7 +527,7 @@ void genExp(CompInfo *comp, Value astseg) {
 			genAddInstr(comp, BCINS_ABx(OpLoadLit, genNextReg(comp), genAddLit(comp, comp->lex->url)));
 		else if (vmlit(SymSplat) == astseg)
 			genAddInstr(comp, BCINS_ABC(OpLoadVararg, genNextReg(comp), 1, 0)); // By default, only get one value
-	} else {
+	} else if (isArr(astseg)) {
 		Value op = astGet(th, astseg, 0);
 		char opcode = genIsProp(th, op, false);
 		if (opcode) // Property or method use

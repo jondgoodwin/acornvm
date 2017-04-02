@@ -184,12 +184,6 @@ Value pushCMethod(Value th, AcMethodp meth) {
 	return newCMethod(th, th(th)->stk_top++, meth);
 }
 
-/* Push and return a new Stack value */
-Value pushYielder(Value th, Value method) {
-	stkCanIncTop(th); /* Check if there is room */
-	return newThread(th, th(th)->stk_top++, method, 64, ThreadYielder);
-}
-
 /* Push and return the VM's value */
 Value pushVM(Value th) {
 	stkCanIncTop(th); /* Check if there is room */
