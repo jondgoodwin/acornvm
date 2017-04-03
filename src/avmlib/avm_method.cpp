@@ -97,7 +97,6 @@ MethodTypes callMorCPrep(Value th, Value *methodval, int nexpected, int flags) {
 			nulls = 0;
 			nparms = methodNParms(*methodval);
 		}
-		needMoreLocal(yielder, nparms+nulls); // ensure we have room for them
 
 		// Copy parameters/nulls over into yielder's stack
 		Value *from = methodval+1;
@@ -287,12 +286,11 @@ MethodTypes callYielderPrep(Value th, Value *methodval, int nexpected, int flags
 	CallInfo *ycf = yielder->curmethod;
 	Value *from = methodval+2; // skip 'self'
 	int nparms = th(th)->stk_top - methodval - 2; // Actual number of parameters pushed
+	if (nparms<0) nparms = 0;
 	int nulls = 0;
-	if (ycf->nresults != BCVARRET) {
-		if ((nulls = ycf->nresults - nparms) < 0) {
-			nparms = ycf->nresults;
-			nulls = 0;
-		}
+	if (ycf->nresults != BCVARRET && (nulls = ycf->nresults - nparms) < 0) {
+		nparms = ycf->nresults;
+		nulls = 0;
 	}
 	while (nparms-- > 0)
 		*yielder->stk_top++ = *from++;
@@ -655,7 +653,15 @@ void methodRunBC(Value th) {
 				th(th)->stk_top = rega+b+1;
 
 			// Prepare call frame and stack, then perform the call
-			methCall(rega, bc_c(i), 1);
+			// Only closures have 'set' methods
+			switch (isClosure(*rega)? callMorCPrep(th, rega, bc_c(i), 1)
+					: invalidCall(th, rega, bc_c(i))) {
+			case MethodBC:
+				ci = th(th)->curmethod;
+				meth = (BMethodInfo*) (ci->method);
+				lits = meth->lits;
+				stkbeg = ci->begin;
+			}
 			} break;
 
 		// OpTailCall: R(A .. A+C-1) := R(A+1).R(A)(R(A+1) .. A+B-1))
@@ -668,7 +674,7 @@ void methodRunBC(Value th) {
 
 			// Cannot do a tailcall if the return would switch threads
 			// In this situation, we must do a normal call then a return afterwards
-			if (isYielder(th) && ci==&th(th)->entrymethod) {
+			if ((isYielder(th) && ci==&th(th)->entrymethod) || (isMethod(*rega) && isYieldMeth(*rega))) {
 				getCall(th, b, bc_c(i)); // Call
 
 				// Return: Calculate how any we have to copy down and how many nulls for padding
@@ -689,12 +695,16 @@ void methodRunBC(Value th) {
 					*to++ = aNull;  // Fill rest with nulls
 
 				// Back up for thread switching
-				// Mark that yielder is finished and cannot be used further
-				th(th)->flags1 |= ThreadDone;
-
-				// Switch current thread to caller
-				th = th(th)->yieldTo;
-				ci = th(th)->curmethod;
+				if (isYielder(th)) {
+					// Mark that yielder is finished and cannot be used further
+					th(th)->flags1 |= ThreadDone;
+					// Switch current thread to caller
+					th = th(th)->yieldTo;
+					ci = th(th)->curmethod;
+				}
+				else
+					// Back up a frame
+					ci = th(th)->curmethod = ci->previous;
 				th(th)->stk_top = to; // Mark position of last returned
 
 				// Return to 'c' method caller, if we were called from there
@@ -734,7 +744,7 @@ void methodRunBC(Value th) {
 			AintIdx have = bc_b(i); // return values we have
 			if (have == BCVARRET) // have variable # of return values?
 				have = th(th)->stk_top - rega; // Get all up to top
-			AintIdx want = th(th)->curmethod->nresults; // how many caller wants
+			AintIdx want = ci->nresults; // how many caller wants
 			AintIdx nulls = 0; // how many nulls for padding
 			if (have != want && want!=BCVARRET) { // performance penalty only to mismatches
 				if (have > want) have = want; // cap down to what we want
@@ -776,7 +786,7 @@ void methodRunBC(Value th) {
 			}
 			break;
 
-		// OpYield: retTo(0 .. wanted) := R(A .. A+B-1); Return
+		// OpYield: retTo(0 .. wanted) := R(A .. A+B-1); expect := C. Return.
 	    //	if (B == 0xFF), it uses Top-1 (resets Top) rather than A+B-1 (Top=End)
 		//	Caller sets retTo and wanted (if 0xFF, all return values)
 		//  Return restores previous thread
@@ -786,7 +796,7 @@ void methodRunBC(Value th) {
 			AintIdx have = bc_b(i); // return values we have
 			if (have == BCVARRET) // have variable # of return values?
 				have = th(th)->stk_top - rega; // Get all up to top
-			AintIdx want = th(th)->curmethod->nresults; // how many caller wants
+			AintIdx want = ci->nresults; // how many caller wants
 			AintIdx nulls = 0; // how many nulls for padding
 			if (have != want && want!=BCVARRET) { // performance penalty only to mismatches
 				if (have > want) have = want; // cap down to what we want
@@ -803,6 +813,7 @@ void methodRunBC(Value th) {
 
 			// Fix yielder stack pointer for callback
 			th(th)->stk_top = rega;
+			ci->nresults = bc_c(i);
 
 			// Switch current thread/frame to caller
 			th = th(th)->yieldTo;
@@ -868,9 +879,8 @@ void setCall(Value th, int nparms, int nexpected) {
 	if (!canCall(*methodpos))
 		*methodpos = getProperty(th, *(methodpos+1), *methodpos);
 
-	// Prepare call frame and stack, then perform the call
-	switch (canCallMorC(*methodpos)? callMorCPrep(th, methodpos, nexpected, 1)
-		: isYielder(*methodpos)? callYielderPrep(th, methodpos, nexpected, 1)
+	// Prepare call frame and stack, then perform the call. Only closures can do set.
+	switch (isClosure(*methodpos)? callMorCPrep(th, methodpos, nexpected, 1)
 		: invalidCall(th, methodpos, nexpected)) {
 	case MethodBC:
 		methodRunBC(th);

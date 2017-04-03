@@ -283,13 +283,19 @@ $test.True(a===2 and b===9, "Yielder reset: a===2 and b===9")
 # Yielder with 'do' (.Begin/.End)
 ymeth = *[]
 	local a = 3
-	yield
+	yield a
 	a = a + 5
-	yield
+	yield a
 	a+1
 do (meth=ymeth())
 	local a = 10
 $test.True(meth()===9, "Yielder with do")
+
+meth=ymeth()
+meth(1) = 2
+$test.True(meth()===3, "Yielder set no-ops")
+$test.True(meth()===8, "Yielder set no-ops8")
+$test.True(meth()===9, "Yielder set no-ops9")
 
 # Yielder in each, using Reset with parms
 ymeth = *[start=1, inc=0]
@@ -304,6 +310,8 @@ each i:n in ymeth(2, 4)
 		i.Text;": ";n.Text;", "
 Vm.Print("\n")
 $test.True(a===9, "Fibo Yielder with each")
+meth = [ymeth] {ymeth();} # test tail call with yielder method
+$test.True(meth(ymeth).frames === 1, "Tail call with yielder method")
 
 # Yielder as a computed property, binding self
 Integer.traits

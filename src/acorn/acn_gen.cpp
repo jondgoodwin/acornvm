@@ -98,6 +98,7 @@ void genMaxStack(CompInfo *comp, AuintIdx reg) {
 
 void genExp(CompInfo *comp, Value astseg);
 void genStmts(CompInfo *comp, Value astseg);
+void genDoProp(CompInfo *comp, Value astseg, char byteop, Value rval, int nexpected);
 
 /** Return next available register to load values into */
 unsigned int genNextReg(CompInfo *comp) {
@@ -266,6 +267,54 @@ void genJumpExp(CompInfo *comp, Value astseg, int *failjump, int *passjump, bool
 	comp->nextreg = svnextreg;
 }
 
+/** Generate return or yield */
+void genReturn(CompInfo *comp, Value aststmt, int op, int expected) {
+	Value th = comp->th;
+	AuintIdx svnextreg = comp->nextreg;
+	Value retexp = astGet(th, aststmt, 1);
+	if (retexp==aNull)
+		genAddInstr(comp, BCINS_ABC(op, 0, 0, expected)); // return with no values
+	else {
+		int reg = genExpReg(comp, retexp);
+		// Return from a local variable registers
+		if (reg>=0)
+			genAddInstr(comp, BCINS_ABC(op, reg, 1, expected));
+		// Do tail call if we are calling another method as the return value
+		else if (op==OpReturn && isArr(retexp) && astGet(th, retexp, 0)==vmlit(SymCallProp))
+			genDoProp(comp, retexp, OpTailCall, aNull, 1);
+		// For solo splat, load parameter varargs and return them
+		else if (retexp == vmlit(SymSplat)) {
+			genAddInstr(comp, BCINS_ABC(OpLoadVararg, svnextreg, 0xFF, 0));
+			genAddInstr(comp, BCINS_ABC(op, svnextreg, 0xFF, expected));
+		}
+		// For comma-separated rvals, special handling in case ... splat appears (at end)
+		else if (isArr(retexp) && arrGet(th, retexp, 0)==vmlit(SymComma)) {
+			int nvals = arr_size(retexp)-1;
+			bool varrvals = false;
+			for (int i=1; i<=nvals; i++) {
+				Value rvali = astGet(th, retexp, i);
+				if (i==nvals && rvali==vmlit(SymSplat)) {
+					genAddInstr(comp, BCINS_ABC(OpLoadVararg, genNextReg(comp), 0xFF, 0));
+					varrvals = true;
+				}
+				else if (i==nvals && isArr(rvali) && astGet(th, rvali, 0)==vmlit(SymYield)) {
+					genReturn(comp, rvali, OpYield, 0xFF);
+					varrvals = true;
+				}
+				else
+					genExp(comp, rvali);
+			}
+			genAddInstr(comp, BCINS_ABC(op, svnextreg, varrvals? 0xFF : comp->nextreg - svnextreg, expected));
+		}
+		// Return calculated values on stack
+		else {
+			genExp(comp, retexp);
+			genAddInstr(comp, BCINS_ABC(op, svnextreg, comp->nextreg - svnextreg, expected));
+		}
+	}
+	comp->nextreg = svnextreg;
+}
+
 /** Return nonzero opcode if ast operator is a property/method call */
 char genIsProp(Value th, Value op, int setflag) {
 	if (vmlit(SymActProp) == op)
@@ -308,6 +357,11 @@ void genDoProp(CompInfo *comp, Value astseg, char byteop, Value rval, int nexpec
 			varparms = true;
 			break;
 		}
+		else if (i==getSize(astseg)-1 && isArr(parm) && arrGet(th, parm, 0)==vmlit(SymYield)) {
+			genReturn(comp, parm, OpYield, 0xFF);
+			varparms = true;
+			break;
+		}
 		else {
 			genExp(comp, parm);
 			comp->nextreg = rvalreg+1;
@@ -340,6 +394,10 @@ void genAssign(CompInfo *comp, Value lval, Value rval) {
 			// For method call, specify expected number of return values
 			if (isArr(rval) && (opcode = genIsProp(th, astGet(th, rval, 0), false))) {
 				genDoProp(comp, rval, opcode, aNull, nlvals);
+				varrvals = true;
+			}
+			else if (isArr(rval) && arrGet(th, rval, 0)==vmlit(SymYield)) {
+				genReturn(comp, rval, OpYield, nlvals);
 				varrvals = true;
 			}
 			// For solo splat, load needed number from parameter varargs
@@ -466,50 +524,6 @@ bool hasNoBool(Value th, Value astseg) {
 	return true;
 }
 
-/** Generate return or yield */
-void genReturn(CompInfo *comp, Value aststmt, int op) {
-	Value th = comp->th;
-	AuintIdx svnextreg = comp->nextreg;
-	Value retexp = astGet(th, aststmt, 1);
-	if (retexp==aNull)
-		genAddInstr(comp, BCINS_ABC(op, 0, 0, 0)); // return with no values
-	else {
-		int reg = genExpReg(comp, retexp);
-		// Return from a local variable registers
-		if (reg>=0)
-			genAddInstr(comp, BCINS_ABC(op, reg, 1, 0));
-		// Do tail call if we are calling another method as the return value
-		else if (op==OpReturn && isArr(retexp) && astGet(th, retexp, 0)==vmlit(SymCallProp))
-			genDoProp(comp, retexp, OpTailCall, aNull, 1);
-		// For solo splat, load parameter varargs and return them
-		else if (retexp == vmlit(SymSplat)) {
-			genAddInstr(comp, BCINS_ABC(OpLoadVararg, svnextreg, 0xFF, 0));
-			genAddInstr(comp, BCINS_ABC(op, svnextreg, 0xFF, 0));
-		}
-		// For comma-separated rvals, special handling in case ... splat appears (at end)
-		else if (isArr(retexp) && arrGet(th, retexp, 0)==vmlit(SymComma)) {
-			int nvals = arr_size(retexp)-1;
-			bool varrvals = false;
-			for (int i=1; i<=nvals; i++) {
-				Value rvali = astGet(th, retexp, i);
-				if (i==nvals && rvali==vmlit(SymSplat)) {
-					genAddInstr(comp, BCINS_ABC(OpLoadVararg, genNextReg(comp), 0xFF, 0));
-					varrvals = true;
-				}
-				else
-					genExp(comp, rvali);
-			}
-			genAddInstr(comp, BCINS_ABC(op, svnextreg, varrvals? 0xFF : comp->nextreg - svnextreg, 0));
-		}
-		// Return calculated values on stack
-		else {
-			genExp(comp, retexp);
-			genAddInstr(comp, BCINS_ABC(op, svnextreg, comp->nextreg - svnextreg, 0));
-		}
-	}
-	comp->nextreg = svnextreg;
-}
-
 /** Generate the appropriate code for something that places one or more values on the stack
 	beginning at comp->nextreg (which should be saved before calling this). The last value is at comp->nextreg-1 */
 void genExp(CompInfo *comp, Value astseg) {
@@ -560,7 +574,7 @@ void genExp(CompInfo *comp, Value astseg) {
 		} else if (vmlit(SymAssgn) == op) {
 			genAssign(comp, astGet(th, astseg, 1), astGet(th, astseg, 2));
 		} else if (vmlit(SymYield) == op) {
-			genReturn(comp, astseg, OpYield);
+			genReturn(comp, astseg, OpYield, 1);
 		} else if (vmlit(SymClosure) == op) {
 			Value newcloseg = astGet(th, astseg, 2);
 			// If no closure variables nor set method, don't generate closure, just the 'get' method
@@ -885,7 +899,9 @@ void genStmt(CompInfo *comp, Value aststmt) {
 	else if (op==vmlit(SymContinue) && comp->whileBegIp!=-1)
 		genAddInstr(comp, BCINS_AJ(OpJump, 0, comp->whileBegIp - comp->method->size-1));
 	else if (op==vmlit(SymReturn))
-		genReturn(comp, aststmt, OpReturn);
+		genReturn(comp, aststmt, OpReturn, 0);
+	else if (op==vmlit(SymYield))
+		genReturn(comp, aststmt, OpYield, 0);
 	else if (op==vmlit(SymAssgn)) 
 		genOptAssign(comp, astGet(th, aststmt,1), astGet(th, aststmt,2));
 	else 
