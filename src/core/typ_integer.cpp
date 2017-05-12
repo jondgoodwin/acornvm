@@ -285,15 +285,15 @@ int int_new(Value th) {
 
 /** Initialize the Integer type */
 void core_int_init(Value th) {
-	vmlit(TypeIntc) = pushType(th, vmlit(TypeType), 8);
+	vmlit(TypeIntc) = pushType(th, vmlit(TypeObject), 8);
 		pushSym(th, "Integer");
 		popProperty(th, 0, "_name");
-		vmlit(TypeIntm) = pushMixin(th, vmlit(TypeType), aNull, 30);
+		vmlit(TypeIntm) = pushMixin(th, vmlit(TypeObject), aNull, 30);
 			pushSym(th, "*Integer");
 			popProperty(th, 1, "_name");
 
 			pushCMethod(th, int_isint);
-			popProperty(th, 1, "Integer?");
+			popProperty(th, 1, "integer?");
 			pushCMethod(th, int_neg);
 			popProperty(th, 1, "-@");
 			pushCMethod(th, int_next);

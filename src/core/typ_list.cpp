@@ -355,14 +355,14 @@ int list_each(Value th) {
 
 /** Initialize the List type */
 void core_list_init(Value th) {
-	vmlit(TypeListc) = pushType(th, vmlit(TypeType), 4);
+	vmlit(TypeListc) = pushType(th, vmlit(TypeObject), 4);
 		pushSym(th, "List");
 		popProperty(th, 0, "_name");
-		vmlit(TypeListm) = pushMixin(th, vmlit(TypeType), aNull, 32);
+		vmlit(TypeListm) = pushMixin(th, vmlit(TypeObject), aNull, 32);
 			pushSym(th, "*List");
 			popProperty(th, 1, "_name");
 			pushCMethod(th, list_isempty);
-			popProperty(th, 1, "Empty?");
+			popProperty(th, 1, "empty?");
 			pushCMethod(th, list_get);
 			pushCMethod(th, list_set);
 			pushClosure(th, 2);

@@ -126,7 +126,7 @@ each key:b in index
 	$test.Equal(key, b, "Each on an Index")
 
 # dot operators
-type = +Type
+type = +Object
 	meth: []
 		3
 	.:meth = m = [] {4}
@@ -191,7 +191,7 @@ a
 $test.True(a===2, "block scope for local vars")
 
 # 'do' block test
-Res = +Type
+Res = +Object
 	val: 1
 	Begin:= [] {val: 2;}
 	End:= [] {val: 3;}

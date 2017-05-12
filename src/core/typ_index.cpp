@@ -87,11 +87,11 @@ void core_index_init(Value th) {
 	vmlit(TypeIndexc) = pushType(th, aNull, 4);
 		pushSym(th, "Index");
 		popProperty(th, 0, "_name");
-		vmlit(TypeIndexm) = pushMixin(th, vmlit(TypeType), aNull, 16);
+		vmlit(TypeIndexm) = pushMixin(th, vmlit(TypeObject), aNull, 16);
 			pushSym(th, "*Index");
 			popProperty(th, 1, "_name");
 			pushCMethod(th, index_isempty);
-			popProperty(th, 1, "Empty?");
+			popProperty(th, 1, "empty?");
 			pushCMethod(th, index_get);
 			pushCMethod(th, index_set);
 			pushClosure(th, 2);

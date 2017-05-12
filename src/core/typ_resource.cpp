@@ -629,10 +629,10 @@ int resource_inst_frag(Value th) {
 
 /** Initialize the Resource type */
 void core_resource_init(Value th) {
-	vmlit(TypeResc) = pushType(th, vmlit(TypeType), 8);
+	vmlit(TypeResc) = pushType(th, vmlit(TypeObject), 8);
 		pushSym(th, "Resource");
 		popProperty(th, 0, "_name");
-		vmlit(TypeResm) = pushMixin(th, vmlit(TypeType), aNull, 5);
+		vmlit(TypeResm) = pushMixin(th, vmlit(TypeObject), aNull, 5);
 			pushSym(th, "*Resource");
 			popProperty(th, 1, "_name");
 			pushCMethod(th, resource_inst_load);

@@ -95,7 +95,7 @@ int all_property(Value th) {
 
 /** Initialize the All type */
 void core_all_init(Value th) {
-	vmlit(TypeAll) = pushMixin(th, vmlit(TypeType), aNull, 32);
+	vmlit(TypeAll) = pushMixin(th, vmlit(TypeObject), aNull, 32);
 		pushSym(th, "All");
 		popProperty(th, 0, "_name");
 		pushCMethod(th, all_compare);

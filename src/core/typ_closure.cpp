@@ -57,10 +57,10 @@ int clo_getsize(Value th) {
 
 /** Initialize the Closure type */
 void core_clo_init(Value th) {
-	vmlit(TypeCloc) = pushType(th, vmlit(TypeType), 4);
+	vmlit(TypeCloc) = pushType(th, vmlit(TypeObject), 4);
 		pushSym(th, "Closure");
 		popProperty(th, 0, "_name");
-		vmlit(TypeClom) = pushMixin(th, vmlit(TypeType), aNull, 8);
+		vmlit(TypeClom) = pushMixin(th, vmlit(TypeObject), aNull, 8);
 			pushSym(th, "*Closure");
 			popProperty(th, 1, "_name");
 			pushCMethod(th, clo_get);

@@ -66,7 +66,7 @@ int file_get(Value th) {
 
 /** Initialize the File type */
 void core_file_init(Value th) {
-	Value typ = pushType(th, vmlit(TypeType), 4);
+	Value typ = pushType(th, vmlit(TypeObject), 4);
 		pushSym(th, "File");
 		popProperty(th, 0, "_name");
 		pushCMethod(th, file_get);

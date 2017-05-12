@@ -1,4 +1,4 @@
-/** Type type methods and properties
+/** Object type methods and properties
  *
  * @file
  *
@@ -13,20 +13,20 @@ namespace avm {
 extern "C" {
 #endif
 
-/** Create a new Type */
-int type_new(Value th) {
-	Value type = pushType(th, getLocal(th, 0), 4);
+/** Create a new Object */
+int object_new(Value th) {
+	pushType(th, getLocal(th, 0), 4);
 	return 1;
 }
 
-/** Lookup a value from type's named property */
-int type_get(Value th) {
+/** Lookup a value from object's named property */
+int object_get(Value th) {
 	pushValue(th, getTop(th)>=2? tblGet(th, getLocal(th,0), getLocal(th,1)) : aNull);
 	return 1;
 }
 
-/** Change a value for type's named property */
-int type_set(Value th) {
+/** Change a value for object's named property */
+int object_set(Value th) {
 	if (getTop(th)>=3)
 		tblSet(th, getLocal(th,0), getLocal(th,2), getLocal(th,1));
 	setTop(th, 1);
@@ -34,16 +34,16 @@ int type_set(Value th) {
 }
 
 /** Recursively determine whether valtype uses type anywhere */
-bool type_matchR(Value type, Value valtype) {
+bool object_matchR(Value type, Value valtype) {
 	if (isType(valtype))
-		return valtype==type || type_matchR(type, tbl_info(valtype)->inheritype);
+		return valtype==type || object_matchR(type, tbl_info(valtype)->inheritype);
 	
 	// Recursively examine each type in an array
 	else if (isArr(valtype)) {
 		Value *valtypes = arr_info(valtype)->arr;
 		AuintIdx ntypes = arr_size(valtype);
 		while (ntypes--) {
-			if (*valtypes==type || type_matchR(type, tbl_info(*valtypes)->inheritype))
+			if (*valtypes==type || object_matchR(type, tbl_info(*valtypes)->inheritype))
 				return true;
 			valtypes++;
 		}
@@ -51,8 +51,8 @@ bool type_matchR(Value type, Value valtype) {
 	return false;
 }
 
-/* Match whether passed value uses this type's trait */
-int type_match(Value th) {
+/* Match whether passed value uses this object's trait */
+int object_match(Value th) {
 	if (getTop(th)<2)
 		return 0;
 	Value val = getLocal(th, 1);
@@ -65,24 +65,24 @@ int type_match(Value th) {
 		traits = self;
 
 	// See if we find traits in inheritance list
-	pushValue(th, (isPrototype(traits)&&traits==val)||self==vmlit(TypeAll)||type_matchR(traits,getType(th, val))? aTrue : aFalse);
+	pushValue(th, (isPrototype(traits)&&traits==val)||self==vmlit(TypeAll)||object_matchR(traits,getType(th, val))? aTrue : aFalse);
 	return 1;
 }
 
 /** Initialize the Type type, used to create other types */
-void core_type_init(Value th) {
-	vmlit(TypeType) = pushType(th, aNull, 12);
-		pushSym(th, "Type");
+void core_object_init(Value th) {
+	vmlit(TypeObject) = pushType(th, aNull, 12);
+		pushSym(th, "Object");
 		popProperty(th, 0, "_name");
-		pushCMethod(th, type_new);
+		pushCMethod(th, object_new);
 		popProperty(th, 0, "New");
-		pushCMethod(th, type_get);
-		pushCMethod(th, type_set);
+		pushCMethod(th, object_get);
+		pushCMethod(th, object_set);
 		pushClosure(th, 2);
 		popProperty(th, 0, "[]");
-		pushCMethod(th, type_match);
+		pushCMethod(th, object_match);
 		popProperty(th, 0, "~~");
-	popGloVar(th, "Type");
+	popGloVar(th, "Object");
 	return;
 }
 

@@ -373,10 +373,10 @@ int text_each(Value th) {
 
 /** Initialize the Text type */
 void core_text_init(Value th) {
-	vmlit(TypeTextc) = pushType(th, vmlit(TypeType), 4);
+	vmlit(TypeTextc) = pushType(th, vmlit(TypeObject), 4);
 		pushSym(th, "Text");
 		popProperty(th, 0, "_name");
-		vmlit(TypeTextm) = pushMixin(th, vmlit(TypeType), aNull, 32);
+		vmlit(TypeTextm) = pushMixin(th, vmlit(TypeObject), aNull, 32);
 			pushSym(th, "*Text");
 			popProperty(th, 1, "_name");
 			pushCMethod(th, text_clone);
@@ -390,7 +390,7 @@ void core_text_init(Value th) {
 			pushCMethod(th, text_prepend);
 			popProperty(th, 1, ">>");
 			pushCMethod(th, text_isempty);
-			popProperty(th, 1, "Empty?");
+			popProperty(th, 1, "empty?");
 			pushCMethod(th, text_compare);
 			popProperty(th, 1, "<=>");
 			pushCMethod(th, text_getsize);

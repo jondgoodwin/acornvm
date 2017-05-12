@@ -60,7 +60,7 @@
     <ClCompile Include="src\core\typ_resource.cpp" />
     <ClCompile Include="src\core\typ_symbol.cpp" />
     <ClCompile Include="src\core\typ_text.cpp" />
-    <ClCompile Include="src\core\typ_type.cpp" />
+    <ClCompile Include="src\core\typ_object.cpp" />
     <ClCompile Include="src\core\typ_vm.cpp" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

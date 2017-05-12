@@ -30,10 +30,10 @@ int null_compare(Value th) {
 
 /** Initialize the Null type */
 void core_null_init(Value th) {
-	vmlit(TypeNullc) = pushType(th, vmlit(TypeType), 4);
+	vmlit(TypeNullc) = pushType(th, vmlit(TypeObject), 4);
 		pushSym(th, "Null");
 		popProperty(th, 0, "_name");
-		vmlit(TypeNullm) = pushMixin(th, vmlit(TypeType), aNull, 30);
+		vmlit(TypeNullm) = pushMixin(th, vmlit(TypeObject), aNull, 30);
 			pushSym(th, "*Null");
 			popProperty(th, 1, "_name");
 			pushCMethod(th, null_compare);

@@ -57,10 +57,10 @@ int symbol_text(Value th) {
 
 /** Initialize the Symbol type */
 void core_symbol_init(Value th) {
-	vmlit(TypeSymc) = pushType(th, vmlit(TypeType), 4);
+	vmlit(TypeSymc) = pushType(th, vmlit(TypeObject), 4);
 		pushSym(th, "Symbol");
 		popProperty(th, 0, "_name");
-		vmlit(TypeSymm) = pushMixin(th, vmlit(TypeType), aNull, 32);
+		vmlit(TypeSymm) = pushMixin(th, vmlit(TypeObject), aNull, 32);
 			pushSym(th, "*Symbol");
 			popProperty(th, 1, "_name");
 			pushCMethod(th, symbol_rocket);

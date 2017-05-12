@@ -169,13 +169,13 @@ Value pushTbl(Value th, Value type, AuintIdx size) {
 /* Push and return a new Type value */
 Value pushType(Value th, Value type, AuintIdx size) {
 	stkCanIncTop(th); /* Check if there is room */
-	return newType(th, th(th)->stk_top++, (type==aNull)? vmlit(TypeType) : type, size);
+	return newType(th, th(th)->stk_top++, (type==aNull)? vmlit(TypeObject) : type, size);
 }
 
 /* Push and return a new Mixin value */
 Value pushMixin(Value th, Value type, Value inheritype, AuintIdx size) {
 	stkCanIncTop(th); /* Check if there is room */
-	return newMixin(th, th(th)->stk_top++, (type==aNull)? vmlit(TypeType) : type, inheritype, size);
+	return newMixin(th, th(th)->stk_top++, (type==aNull)? vmlit(TypeObject) : type, inheritype, size);
 }
 
 /* Push and return the value for a method written in C */

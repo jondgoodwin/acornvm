@@ -285,7 +285,7 @@ void testCapi(void) {
 	t(getTop(th)==i, "getTop(th)==0");
 
 	// Closure test
-	pushGloVar(th, "Type");
+	pushGloVar(th, "Object");
 	pushCMethod(th, test_cloget);
 	pushCMethod(th, test_closet);
 	pushValue(th, anInt(-905));
@@ -293,19 +293,19 @@ void testCapi(void) {
 	popProperty(th, i, "closure");
 	popValue(th);
 	pushSym(th, "closure");
-	pushGloVar(th, "Type");
+	pushGloVar(th, "Object");
 	getCall(th, 1, 1);
 	t(-905 == toAint(popValue(th)), "Closure: -905 == toAint(popValue(th))");
 	pushSym(th, "closure");
-	pushGloVar(th, "Type");
+	pushGloVar(th, "Object");
 	getCall(th, 1, 1);
 	t(-904 == toAint(popValue(th)), "Closure: -904 == toAint(popValue(th))");
 	pushSym(th, "closure");
-	pushGloVar(th, "Type");
+	pushGloVar(th, "Object");
 	pushValue(th, anInt(25));
 	setCall(th, 2, 1);
 	pushSym(th, "closure");
-	pushGloVar(th, "Type");
+	pushGloVar(th, "Object");
 	getCall(th, 1, 1);
 	t(25 == toAint(popValue(th)), "Closure: 25 == toAint(popValue(th))");
 
@@ -317,7 +317,7 @@ void testCapi(void) {
 	t(popValue(th)==anInt(90), "popValue(th)==anInt(90)"); // Yay - first successful O-O request!
 	pushGloVar(th, "Integer");
 	t(isType(popValue(th)), "pushGloVar(th, 'Integer'); isType(popValue(th))");
-	pushGloVar(th, "Type");
+	pushGloVar(th, "Object");
 	Value typtyp = popValue(th);
 	pushGloVar(th, "Integer");
 	t(getType(th, popValue(th))==typtyp, "isType(getType(th, Global(th, 'Integer'))==Global(th, 'Type'))");

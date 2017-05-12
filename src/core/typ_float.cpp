@@ -269,17 +269,17 @@ int float_text(Value th) {
 
 /** Initialize the Integer type */
 void core_float_init(Value th) {
-	vmlit(TypeFloc) = pushType(th, vmlit(TypeType), 8);
+	vmlit(TypeFloc) = pushType(th, vmlit(TypeObject), 8);
 		pushSym(th, "Float");
 		popProperty(th, 0, "_name");
-		vmlit(TypeFlom) = pushMixin(th, vmlit(TypeType), aNull, 32);
+		vmlit(TypeFlom) = pushMixin(th, vmlit(TypeObject), aNull, 32);
 			pushSym(th, "*Float");
 			popProperty(th, 1, "_name");
 
 			pushCMethod(th, float_isfloat);
-			popProperty(th, 1, "Integer?");
+			popProperty(th, 1, "float?");
 			pushCMethod(th, float_isnan);
-			popProperty(th, 1, "Nan?");
+			popProperty(th, 1, "nan?");
 			pushCMethod(th, float_sign);
 			popProperty(th, 1, "Sign");
 

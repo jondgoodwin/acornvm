@@ -468,7 +468,7 @@ void tblSerialize(Value th, Value str, int indent, Value tbl) {
 	Node *last = &tbl_info(tbl)->nodes[1 << tbl_info(tbl)->lAvailNodes];
 	int ind;
 
-	const char *typ = isType(tbl)? "Type" : "Index";
+	const char *typ = isType(tbl)? "Object" : "Index";
 	Value typenm = getProperty(th, getType(th, tbl), vmlit(SymName));
 	if (isSym(typenm))
 		typ = toStr(typenm);

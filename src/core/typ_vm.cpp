@@ -48,7 +48,7 @@ int vm_log(Value th) {
 
 /** Initialize the List type */
 void core_vm_init(Value th) {
-	vmlit(TypeListc) = pushType(th, vmlit(TypeType), 4);
+	vmlit(TypeListc) = pushType(th, vmlit(TypeObject), 4);
 		pushSym(th, "Vm");
 		popProperty(th, 0, "_name");
 		pushCMethod(th, vm_print);

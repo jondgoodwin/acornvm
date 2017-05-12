@@ -167,8 +167,8 @@ Value *getPropR(Value type, Value methsym) {
 			if (NULL != (meth = tblGetp(*types, methsym)))
 				return meth;
 			// Or else try inherited properties
-/*			if (NULL != (meth = getPropR(tbl_info(*types++)->inheritype, methsym)))
-				return meth;*/
+			if (NULL != (meth = getPropR(tbl_info(*types)->inheritype, methsym)))
+				return meth;
 			types++;
 		}
 	}

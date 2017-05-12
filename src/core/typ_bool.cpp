@@ -30,10 +30,10 @@ int bool_compare(Value th) {
 
 /** Initialize the Bool type */
 void core_bool_init(Value th) {
-	vmlit(TypeBoolc) = pushType(th, vmlit(TypeType), 4);
+	vmlit(TypeBoolc) = pushType(th, vmlit(TypeObject), 4);
 		pushSym(th, "Bool");
 		popProperty(th, 0, "_name");
-		vmlit(TypeBoolm) = pushMixin(th, vmlit(TypeType), aNull, 30);
+		vmlit(TypeBoolm) = pushMixin(th, vmlit(TypeObject), aNull, 30);
 			pushSym(th, "*Bool");
 			popProperty(th, 1, "_name");
 			pushCMethod(th, bool_compare);

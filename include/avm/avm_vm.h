@@ -187,7 +187,7 @@ extern "C" {
 		SymResource, //!< 'Resource'
 
 		// Core type type
-		TypeType,	//!< Type
+		TypeObject,	//!< Type
 		TypeNullc,	//!< Null class
 		TypeNullm,	//!< Null mixin
 		TypeBoolc,	//!< Float class

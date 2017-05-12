@@ -280,7 +280,7 @@ void vm_litinit(Value th) {
 	arrSet(th, vm->literals, nVmLits-1, aNull);  // Ensure it is full with nulls
 
 	Value *vmlits = arr_info(vm->literals)->arr;
-	vmlits[TypeType] = aNull;
+	vmlits[TypeObject] = aNull;
 
 	// Load up literal symbols from table
 	const struct vmLitSymEntry *vmlittblp = &vmLitSymTable[0];
@@ -335,7 +335,7 @@ void core_text_init(Value th);
 void core_list_init(Value th);
 void core_clo_init(Value th);
 void core_index_init(Value th);
-void core_type_init(Value th);
+void core_object_init(Value th);
 
 void core_thread_init(Value th);
 void core_vm_init(Value th);
@@ -348,7 +348,7 @@ void core_file_init(Value th);
 /** Initialize all core types */
 void core_init(Value th) {
 
-	core_type_init(th); // Type must be first, so other types can use this as their type
+	core_object_init(th); // Type must be first, so other types can use this as their type
 	vmlit(TypeAll) = pushType(th, aNull, 0);
 	popGloVar(th, "All");
 

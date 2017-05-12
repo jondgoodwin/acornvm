@@ -100,7 +100,7 @@ meth(context.frames)
 
 # Type
 $test.True(4 ~~ 2 .. 5, "4 ~~ 2 .. 5")
-$test.True(Type ~~ Type, "Res ~~ Res")
-$test.True(Integer ~~ Type, "Res ~~ Type")
-$test.True(4 ~~ All, "Res ~~ All")
+$test.True(Object ~~ Object, "Object ~~ Object")
+$test.True(Integer ~~ Object, "Integer ~~ Object")
+$test.True(4 ~~ All, "4 ~~ All")
 $test.True(4 ~~ Integer, "4 ~~ Integer")

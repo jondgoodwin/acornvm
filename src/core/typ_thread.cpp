@@ -99,10 +99,10 @@ int context_stack(Value th) {
 
 /** Initialize the execution context types */
 void core_thread_init(Value th) {
-	vmlit(TypeYieldc) = pushType(th, vmlit(TypeType), 4);
+	vmlit(TypeYieldc) = pushType(th, vmlit(TypeObject), 4);
 		pushSym(th, "Yielder");
 		popProperty(th, 0, "_name");
-		vmlit(TypeYieldm) = pushMixin(th, vmlit(TypeType), aNull, 16);
+		vmlit(TypeYieldm) = pushMixin(th, vmlit(TypeObject), aNull, 16);
 			pushSym(th, "*Yielder");
 			popProperty(th, 1, "_name");
 			pushCMethod(th, context_isdone);

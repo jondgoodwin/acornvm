@@ -185,10 +185,10 @@ int range_match(Value th) {
 
 /** Initialize the Range type */
 void core_range_init(Value th) {
-	vmlit(TypeRangec) = pushType(th, vmlit(TypeType), 4);
+	vmlit(TypeRangec) = pushType(th, vmlit(TypeObject), 4);
 		pushSym(th, "Range");
 		popProperty(th, 0, "_name");
-		vmlit(TypeRangem) = pushMixin(th, vmlit(TypeType), aNull, 16);
+		vmlit(TypeRangem) = pushMixin(th, vmlit(TypeObject), aNull, 16);
 			pushSym(th, "*Range");
 			popProperty(th, 1, "_name");
 			pushCMethod(th, range_from_get);

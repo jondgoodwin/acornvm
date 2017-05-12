@@ -86,7 +86,7 @@ typedef struct TblInfo {
 	mem_free(th, (t));}
 
 /** Point to table information, by recasting a Value pointer */
-#define tbl_info(val) (assert_exp(isEnc(val,TblEnc), (TblInfo*) val))
+#define tbl_info(val) (assert_exp(isEnc(val,TblEnc), (TblInfo*) (val)))
 
 /** Return the number of Values stored in the table */
 #define tbl_size(val) (tbl_info(val)->size)
