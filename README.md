@@ -1,4 +1,4 @@
-# avm - Acorn Virtual Machine
+# acornvm - Acorn Virtual Machine
 
 This lightweight library supports the execution of Acorn programs within a dedicated virtual machine.
 Acorn is a dynamically typed, object-oriented language designed to make it easier to define
@@ -8,15 +8,14 @@ Acorn Virtual Machine library features:
 
 - Compilation of Acorn programs into byte-code.
 - Execution of compiled byte-code (or C) methods or functions
-- A object-oriented library of core data types
+- A object-oriented library for core types
 - Automated memory management and garbage collection
 
-It is designed to be embedded for use within another program, such as the Web3D browser or server.
+It is designed to be embedded for use within another program, such as a Web3D browser or server.
 
 ## Documentation
 
-The Acorn world-building language has a comprehensive [guide and reference document][acorn].
-This includes a guide to the C-API available for implementing high-performance types.
+The Acorn language has a comprehensive [reference document][acorn].
 
 [Doxygen][] can be used to generate [API documentation][doc] from the source code.
 The acorn_vm.conf Doxygen configuration file may be used to accomplish this.
@@ -37,7 +36,7 @@ To build the library:
 To run the test program:
 
 	test/test_data
-	
+
 ## Building (Windows)
 
 A Visual C++ 2010 solutions file can be created using the project files. 
@@ -46,21 +45,8 @@ solutions file.
 
 ## License
 
-Copyright (C) 2015  Jonathan Goodwin
-
- This library is free software; you can redistribute it and/or
-modify it under the terms of the GNU Lesser General Public
-License as published by the Free Software Foundation; either
-version 2.1 of the License, or (at your option) any later version.
-
-This library is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
-Lesser General Public License for more details.
-
-You should have received a copy of the GNU Lesser General Public
-License along with this library; if not, write to the Free Software
-Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
+The Acorn Virtual Machine (acornvm) is distributed under the terms of the MIT license. 
+See LICENSE and COPYRIGHT for details.
 
 [acorn]: http://web3d.jondgoodwin.com/acorn
 [doc]: http://web3d.jondgoodwin.com/acorndoc
