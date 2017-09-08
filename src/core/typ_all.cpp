@@ -93,6 +93,14 @@ int all_property(Value th) {
 	return 0;
 }
 
+/** .Mixin(mixin) */
+int all_mixin(Value th) {
+	if (getTop(th)>1)
+		addMixin(th, getLocal(th, 0), getLocal(th, 1));
+	setTop(th, 1);
+	return 1;
+}
+
 /** Initialize the All type */
 void core_all_init(Value th) {
 	vmlit(TypeAll) = pushMixin(th, vmlit(TypeObject), aNull, 32);
@@ -120,6 +128,8 @@ void core_all_init(Value th) {
 		popProperty(th, 0, "property");
 		pushCMethod(th, all_type);
 		popProperty(th, 0, "type");
+		pushCMethod(th, all_mixin);
+		popProperty(th, 0, "Mixin");
 	popGloVar(th, "All");
 	return;
 }

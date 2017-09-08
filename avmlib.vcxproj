@@ -48,6 +48,7 @@
     <ClCompile Include="src\core\typ_all.cpp" />
     <ClCompile Include="src\core\typ_bool.cpp" />
     <ClCompile Include="src\core\typ_closure.cpp" />
+    <ClCompile Include="src\core\typ_mixin.cpp" />
     <ClCompile Include="src\core\typ_thread.cpp" />
     <ClCompile Include="src\core\typ_file.cpp" />
     <ClCompile Include="src\core\typ_float.cpp" />

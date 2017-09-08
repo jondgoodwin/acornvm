@@ -155,6 +155,7 @@ extern "C" {
 		// Methods that are not compiler symbols
 		// Byte-code (and parser) standard methods
 		SymNew,		//!< 'New'
+		SymInit,	//!< 'Init'
 		SymLoad,	//!< 'Load'
 		SymGet,		//!< 'Get'
 		SymParas,	//!< '()'
@@ -188,6 +189,8 @@ extern "C" {
 
 		// Core type type
 		TypeObject,	//!< Type
+		TypeMixinc,  //!< Mixin class
+		TypeMixinm, //!< Mixin mixin
 		TypeNullc,	//!< Null class
 		TypeNullm,	//!< Null mixin
 		TypeBoolc,	//!< Float class

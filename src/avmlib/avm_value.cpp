@@ -37,18 +37,6 @@ Afloat toAfloat(Value v) {
 	return x.f; 
 }
 
-/* Set the type used by a value (if encoding allows it to change) */
-void setType(Value th, Value val, Value type) {
-	// Do nothing if value's encoding does not support typing
-	if (!isPtr(val) || ((MemInfo*)val)->enctyp < TypedEnc)
-		return;
-
-	((MemInfoT*)val)->type = type;
-	if (isTbl(val) && ((TblInfo*)val)->flags1 & ProtoType)
-		((TblInfo*)val)->inheritype = type;
-	mem_markChk(th, val, type);
-}
-
 /* Return the value's type (works for all values) */
 Value getType(Value th, Value val) {
 	// Decode the encoded Value
@@ -72,6 +60,56 @@ Value getType(Value th, Value val) {
 		return vmlit(val==aNull? TypeNullm : TypeBoolm);
 	}
 	return aNull; // Should not ever get here
+}
+
+/* Set the type used by a value (if encoding allows it to change) */
+void setType(Value th, Value val, Value type) {
+	// Do nothing if value's encoding does not support typing
+	if (!isPtr(val) || ((MemInfo*)val)->enctyp < TypedEnc)
+		return;
+
+	((MemInfoT*)val)->type = type;
+	if (isTbl(val) && ((TblInfo*)val)->flags1 & ProtoType)
+		((TblInfo*)val)->inheritype = type;
+	mem_markChk(th, val, type);
+}
+
+/* Add a mixin to value's type definition */
+void addMixin(Value th, Value val, Value mixin) {
+	// Do nothing if value's encoding does not support typing oe mixin is not a type
+	if (!isPtr(val) || ((MemInfo*)val)->enctyp < TypedEnc || !isType(mixin))
+		return;
+
+	// Change inheritype for mixins, otherwise change value's type
+	Value type = (isType(val) && !(tbl_info(val)->flags1 & ProtoType))?  tbl_info(val)->inheritype : ((MemInfoT*)val)->type;
+
+	// If existing type is array, insert mixin at beginning of list
+	if (isArr(type))
+		arrIns(th, type, 0, 1, mixin);
+
+	// Transform value's inherited type into an ordered array with mixin first
+	else {
+		Value arrtype = pushArray(th, aNull, 2);
+		arrSet(th, arrtype, 0, mixin);
+		if (type!=aNull)
+			arrSet(th, arrtype, 1, type);
+		// Set type if val is not a mixin
+		if (!isType(val) || (((TblInfo*)val)->flags1 & ProtoType))
+			((MemInfoT*)val)->type = arrtype;
+		// Set inheritype if val is a type
+		if (isType(val))
+			((TblInfo*)val)->inheritype = arrtype;
+		mem_markChk(th, val, arrtype);
+		popValue(th);
+	}
+
+	// Call mixin's Init method to initialize itself into self
+	Value initmeth = tblGet(th, mixin, vmlit(SymInit));
+	if (isCallable(initmeth)) {
+		pushValue(th, initmeth);
+		pushValue(th, val);
+		getCall(th, 1, 0);
+	}
 }
 
 /* Return 1 if callable: a method, closure or yielder */

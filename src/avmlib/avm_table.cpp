@@ -428,40 +428,6 @@ void tblSet(Value th, Value tbl, Value key, Value val) {
 	}
 }
 
-/* Add mixin to top of list of types found at inheritype */
-void addMixin(Value th, Value type, Value mixin) {
-	// Can only add mixins to prototypes and mixins
-	if (!isType(type))
-		return;
-	TblInfo *typp = tbl_info(type);
-
-	// If field is empty, give it the mixin as a value
-	if (typp->inheritype == aNull)
-		typp->inheritype = mixin;
-
-	// If field is a list already, add to top
-	else if (isArr(typp->inheritype))
-		arrIns(th, typp->inheritype, 0, 1, mixin);
-
-	// Field is a type; turn into an array
-	else {
-		Value arr = pushArray(th, aNull, 2);
-		arrSet(th, arr, 0, mixin);
-		arrSet(th, arr, 1, typp->inheritype);
-		typp->inheritype = popValue(th);
-	}
-
-	// If this is a prototype, sync change to type as well
-	if (typp->flags1 && ProtoType)
-		typp->type = typp->inheritype;
-
-	// Allow mixin to initialize itself or alter the type it joins
-	pushSym(th, "New");
-	pushValue(th, mixin);
-	pushValue(th, type);
-	getCall(th, 2, 0);
-}
-
 /* Serialize an table's contents to indented text */
 void tblSerialize(Value th, Value str, int indent, Value tbl) {
 	Node *n = tbl_info(tbl)->nodes;

@@ -934,7 +934,10 @@ Value astInsSeg(Value th, Value oldseg, Value astop, AuintIdx size);
 /** Recursively turn a method's implicit returns in the AST into explicit returns */
 void genFixReturns(CompInfo *comp, Value aststmts) {
 	Value th = comp->th;
-	assert(astGet(th, aststmts, 0)==vmlit(SymSemicolon));
+	if (!isArr(aststmts) || astGet(th, aststmts, 0)!=vmlit(SymSemicolon)) {
+		vmLog("A method's block is not properly formed (should use ';' AST)");
+		return;
+	}
 	Value laststmt = astGet(th, aststmts, arr_size(aststmts)-1);
 	Value lastop = isArr(laststmt)? astGet(th, laststmt, 0) : laststmt;
 	// Implicit return for loops is to return 'null' afterwards

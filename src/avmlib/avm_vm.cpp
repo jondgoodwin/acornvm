@@ -237,6 +237,7 @@ const struct vmLitSymEntry vmLitSymTable[] = {
 
 	// Methods that are not compiler symbols
 	{SymNew, "New"},
+	{SymInit, "Init"},
 	{SymLoad, "Load"},
 	{SymGet, "Get"},
 	{SymParas, "()"},
@@ -336,6 +337,7 @@ void core_list_init(Value th);
 void core_clo_init(Value th);
 void core_index_init(Value th);
 void core_object_init(Value th);
+void core_mixin_init(Value th);
 
 void core_thread_init(Value th);
 void core_vm_init(Value th);
@@ -351,6 +353,7 @@ void core_init(Value th) {
 	core_object_init(th); // Type must be first, so other types can use this as their type
 	vmlit(TypeAll) = pushType(th, aNull, 0);
 	popGloVar(th, "All");
+	core_mixin_init(th);
 
 	core_null_init(th);
 	core_bool_init(th);

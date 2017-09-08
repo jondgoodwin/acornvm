@@ -98,9 +98,32 @@ meth=[f]
 	$test.True(f+1===context.frames, "context.frames increment")
 meth(context.frames)
 
-# Type
+# ~~ Pattern matching (Range/Type)
 $test.True(4 ~~ 2 .. 5, "4 ~~ 2 .. 5")
 $test.True(Object ~~ Object, "Object ~~ Object")
 $test.True(Integer ~~ Object, "Integer ~~ Object")
 $test.True(4 ~~ All, "4 ~~ All")
 $test.True(4 ~~ Integer, "4 ~~ Integer")
+
+# Mixin
+do
+	local testMixin = +Mixin
+		Init:= []
+			# Override .New to initialize vel & pos
+			New:= +[super=.:New][]
+				super()
+					velocity: 0.
+					position: 0.
+		Move:= [dt=0.1]
+			.position = .velocity*dt + .position
+	local testProto = +Object
+		.Mixin(testMixin)
+		New:= +[super=.:New][]
+			super()
+				prop: 1
+	+testProto
+		$test.True(.prop===1, ".New initialized prop to 1")
+		$test.True(.velocity===0., "mixin initialized velocity to 0.")
+		velocity: 10.
+		.Move(2.0)
+		$test.True(.position==20., "mixin Move updated position")

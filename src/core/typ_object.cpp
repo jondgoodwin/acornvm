@@ -69,7 +69,7 @@ int object_match(Value th) {
 	return 1;
 }
 
-/** Initialize the Type type, used to create other types */
+/** Initialize the Object type, used to create other types */
 void core_object_init(Value th) {
 	vmlit(TypeObject) = pushType(th, aNull, 12);
 		pushSym(th, "Object");
