@@ -105,7 +105,7 @@ void arrForceSize(Value th, Value val, AuintIdx len) {
 Value arrGet(Value th, Value arr, AuintIdx pos) {
 	ArrInfo *a = arr_info(arr);
 	assert(isArr(arr));
-	return (pos > a->size)? aNull : a->arr[pos];
+	return (pos >= a->size)? aNull : a->arr[pos];
 }
 
 /* Put val into the array starting at pos.
@@ -116,10 +116,10 @@ void arrSet(Value th, Value arr, AuintIdx pos, Value val) {
 	assert(isArr(arr));
 
 	// Grow, if needed
-	if (pos+1>a->avail)
+	if (pos >= a->avail)
 		arrMakeRoom(th, arr, pos+1);
 	// Fill with nulls if pos starts after end of array
-	if (pos > a->size)
+	if (pos >= a->size)
 		for (i=a->size; i<pos; i++)
 			a->arr[i]=aNull;
 	// Perform copy

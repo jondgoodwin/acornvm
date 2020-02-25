@@ -85,7 +85,7 @@ MemInfo *mem_new(Value th, int enc, Auint sz) {
 #endif
 	vm(th)->gcnbrnew++;
 
-	MemInfo *o = (MemInfo*) (char *) mem_gcrealloc(th, NULL, 0, sz);
+	MemInfo *o = (MemInfo*) mem_gcrealloc(th, NULL, 0, sz);
 	o->marked = vm(th)->currentwhite & WHITEBITS;
 	o->enctyp = enc;
 
